@@ -149,7 +149,7 @@ while(<FILE>){
 						# Store initial cluster.
 						if($ind==0){
 							for my $k1(keys %entry_hash){
-								for my $k2(keys $entry_hash{$k1}){
+								for my $k2(keys %{$entry_hash{$k1}}){
 									$loci_store{$k1}{$k2}= $entry_hash{$k1}{$k2};
 								}
 							}
@@ -159,7 +159,7 @@ while(<FILE>){
 						if( ($g_no == $genome_no) && ($max==1) && ($loci==$total_ORFs)){
 
 							for my $k1(keys %entry_hash){
-								for my $k2(keys $entry_hash{$k1}){
+								for my $k2(keys %{$entry_hash{$k1}}){
 									$loci_store{$k1}{$k2} = $entry_hash{$k1}{$k2};
 								}
 							}
@@ -174,7 +174,7 @@ while(<FILE>){
 							$store=0;
 
 							for my $k1(keys %entry_hash){
-								for my $k2(keys $entry_hash{$k1}){
+								for my $k2(keys %{$entry_hash{$k1}}){
 
 									if( !$loci_fixed{$k1}==1 ){
 										$loci_store{$k1}{$k2} = $entry_hash{$k1}{$k2};
@@ -194,7 +194,7 @@ while(<FILE>){
 						elsif ($store == 1){ 
 
 							for my $k1(keys %entry_hash){
-								for my $k2(keys $entry_hash{$k1}){
+								for my $k2(keys %{$entry_hash{$k1}}){
 									if(!$loci_fixed{$k1}==1){
 										#print "$k2\n\n\n";
 										$loci_store{$k1}{$k2} = $entry_hash{$k1}{$k2};
@@ -215,7 +215,7 @@ while(<FILE>){
 			#print OUT "Loci Store:\n";
 			for my $ko1( sort keys %loci_store ){
 
-				for my $ko2( sort keys ${loci_store{$ko1}} ){
+				for my $ko2( sort keys %{${loci_store{$ko1}}} ){
 
 					$output{$loci_store{$ko1}{$ko2}}=$ko2;
 				}

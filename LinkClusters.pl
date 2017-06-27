@@ -22,12 +22,14 @@ unless ( $error_clusters eq "" ){
 	open ERR, $error_clusters or die $!;
 	while(<ERR>){
 		if(/^(\S+)\t\d+/){
-			#foreach( split( /\,/ , $1 ) ){
-				$err_clusters{$1} = 1;
-			#}
+			$err_clusters{$1} = 1;
 		}
 	}
 }
+
+# number of erroneous clusters to exclude and replace. 
+my $no_erroneous = scalar(keys(%err_clusters));
+print "$no_erroneous error clusters to exclude.\n";
 
 # variables
 my %original_cluster;
@@ -50,8 +52,8 @@ while ( <LOCI> ){
 	unless( $err_clusters{ $line[1] } ){
 		
 		$genomes { $line[4] } = 1; # genome for eaach loci.
-		$original_cluster { $line[0] } = $line[1]; # original cluster for ach loci.
-		$cluster_genes {$line[2]} {$line[3]} {$line[0]} = $line[1]; # full info per group
+		$original_cluster { $line[0] } = $line[1]; # original cluster for each loci.
+		$cluster_genes { $line[2] } { $line[3] } { $line[0] } = $line[1]; # full info per group
 		$round_cluster { $line[0] } { $line[2] } = $line[3]; # cluster per loci per round
 		
 		$cluster_genomes { $line[2] } { $line[1] } { $line[4] } ++; # Genomes per cluster.
@@ -60,6 +62,10 @@ while ( <LOCI> ){
 	}
 	
 }close LOCI;
+
+# number of original clusterss to process. 
+my $no_org = scalar(keys(%{$cluster_genomes{$AA_PER[0]}}));
+print "$no_org clusters in original file.\n";
 
 # parse additional loci list if available.
 unless ( $add_loci eq "" ){
@@ -70,22 +76,26 @@ unless ( $add_loci eq "" ){
 		chomp $line;
 	
 		my @line = split( /\t/ , $line );
-	
+		
 		# add loci to info hashes		
-		unless( $err_clusters{ $line[1] } ){
-		
-			$genomes { $line[4] } = 1; # genome for eaach loci.
-			$original_cluster { $line[0] } = $line[1]; # original cluster for ach loci.
-			$cluster_genes {$line[2]} {$line[3]} {$line[0]} = $line[1]; # full info per group
-			$round_cluster { $line[0] } { $line[2] } = $line[3]; # cluster per loci per round
-		
-			$cluster_genomes { $line[2] } { $line[1] } { $line[4] } ++; # Genomes per cluster.
-			if( $cluster_genomes { $line[2] } { $line[1] } { $line[4] } > 1 ){ $paralog_cluster { $line[1] } = 1 } # clusters containing paralogs
+		$genomes { $line[4] } = 1; # genome for each loci.
+		$original_cluster { $line[0] } = $line[1]; # original cluster for each loci.
+		$cluster_genes { $line[2] } { $line[3] } { $line[0] } = $line[1]; # full info per group
+		$round_cluster { $line[0] } { $line[2] } = $line[3]; # cluster per loci per round
 	
-		}
-	
+		$cluster_genomes { $line[2] } { $line[1] } { $line[4] } ++; # Genomes per cluster.
+		if( $cluster_genomes { $line[2] } { $line[1] } { $line[4] } > 1 ){ $paralog_cluster { $line[1] } = 1 } # clusters containing paralogs
+
 	}close ADD_LOCI; 
 }
+
+# number of additional clusters to include. 
+my $no_add = scalar(keys(%{$cluster_genomes{$AA_PER[0]}})) - $no_org;
+print "$no_add additional clusters.\n";
+
+# total clusters
+my $total_clusters = scalar(keys(%{$cluster_genomes{$AA_PER[0]}}));
+print "$total_clusters clusters to process from ",scalar(keys(%genomes)),"genomes.\n";
 
 # number of genomes
 my $no_samples = keys(%genomes);
@@ -187,11 +197,7 @@ for my $round(1..($no_runs-1)){
 					}
 				}
 			}				
-		#}
-		
-				
 		}			
-
 	}
 }
 

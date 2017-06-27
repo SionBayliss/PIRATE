@@ -44,7 +44,7 @@ open INPUT, "$in_file" or die $!;
 while(<INPUT>){
 
 	my $line=$_;
-	chomp $line;
+	$line =~ s/\R//g;
 	
 	if( $line =~ /^##FASTA/){ # store all lines after FASTA as one line fasta format.
 		
@@ -53,14 +53,14 @@ while(<INPUT>){
 
 	}elsif ( $line =~ /^>(.+)/ ){ # store previous sequence in output array.
 	
-		push(@output_array, $line);	# add header	
 		
 		# store sequence and print to file unless first entry.
-		if ( ($store == 1) && ( $fasta_line_count != 0) ){
-			$fasta_out = join("", @fasta_line);
-			push(@output_array, $fasta_out);			
-			@fasta_line=();
-		}
+		$fasta_out = join("", @fasta_line);
+		push(@output_array, $fasta_out) unless $fasta_line_count == 0;			
+		@fasta_line=();
+		
+		# add header
+		push(@output_array, $line);	
 		
 		# increment count in contig store sanity check 
 		$contig_check{$1}=1;

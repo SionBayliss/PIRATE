@@ -287,7 +287,7 @@ for my $file( @file ){
 			if($current_genomes{$curr_genome}==1){
 				
 				# Store cluster details.
-				my @loci=keys($genome_hash{$curr_genome});				
+				my @loci=keys(%{$genome_hash{$curr_genome}});				
 				$group_clusters{1}{$loci[0]}=1;
 				
 				foreach(@loci){ $group_clusters{"1"}{$_}=1 }

@@ -10,14 +10,6 @@ use Cwd 'abs_path';
 
 # To do:
 
-###### NOTES
-# Check alignment gives appropriate feedback and check for aligner errror
-# Add support for PRANK
-# Reannotate or rewrite IdentifyParalogs
-
-# add -force option
-# add core_per option.
-
 # Version
 
 =head1  SYNOPSIS
@@ -78,6 +70,7 @@ pod2usage(-verbose => 2) if $man;
 my $script_path = getcwd($0);
 
 # expand input and output directories
+$output_dir = $input_dir if $output_dir eq '';
 $input_dir = abs_path($input_dir);
 $output_dir = abs_path($output_dir);
 
@@ -123,9 +116,9 @@ unless( $quiet == 1 ){
 }
 
 # make PIRATE output directory
-my $pirate_dir = "$input_dir/PIRATE";
+my $pirate_dir = "$output_dir/PIRATE";
 if( -d $pirate_dir ){ print "PIRATE results directory already exists.\n" }
-else{ unless ( mkdir $pirate_dir ) { die "could not make PIRATE results directory in $input_dir\n" } }
+else{ unless ( mkdir $pirate_dir ) { die "could not make PIRATE results directory in $output_dir\n" } }
 
 $it_dir = "$pirate_dir/pangenome_iterations";
 if( -d $it_dir ){ print "iterative pangenome directory already exists.\n" }
@@ -177,7 +170,6 @@ for my $it ( @thresholds ){
 	unless ( $roary_off == 1 ){
 		my $command = "roary -p $threads -z -v -s -r -i $it -cd 100 $gff_dir/*.gff 2>&1";
 		my $roary = `$command`;
-		#my $roary = `roary -p $threads -z -v -s -r -i $it -cd 100 $gff_dir/*.gff 2>&1`;
 		print LOG "RUN $it\n$command\n$roary\n"; 
 		
 		# check that the gene_presence_absence.csv file has been created
@@ -213,8 +205,9 @@ print "$parse_results";
 print "\n-------------------------------\n\n";
 
 # sort non-paralogous alleles file 
-system ( "sort -t \"\t\" -k2,2 -k3,3 < $pirate_dir/cluster_alleles.tab > $pirate_dir/cluster_alleles.temp.tab" );
-`mv $pirate_dir/cluster_alleles.temp.tab $pirate_dir/cluster_alleles.tab`;
+my $sort_check = system( "sort -t \"\t\" -k2,2 -k3,3 < $pirate_dir/cluster_alleles.tab > $pirate_dir/cluster_alleles.temp.tab" );
+die "System failed to sort alleles.\n" if $sort_check;
+system( "mv $pirate_dir/cluster_alleles.temp.tab $pirate_dir/cluster_alleles.tab" );
 
 # check for paralogs and erroneous clusters (inconsistent clustering between iterations).
 print "Checking for inconsistent clustering:\n\n";
@@ -226,20 +219,19 @@ print "\n-------------------------------\n\n";
 
 # Extract paralog and erroneous cluster genes and align them.
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
-system( "perl $script_path/AggregateErroneousFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
+#system( "perl $script_path/AggregateErroneousFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
 print "\n-------------------------------\n\n";
 
 # check for erroneous clusters.
-my $no_erroneous = `cat $pirate_dir/error_links_summary.tab | wc -l`;
+my $no_erroneous = `awk '{print \$2}' $pirate_dir/error_links_summary.tab | uniq | wc -l`;
+my $error_dir = "$pirate_dir/recluster_erroneous/";
 if ( $no_erroneous > 0) { 
 
 	# Correct clustering of erroneous clusters - recluster with MCL at $steps thresholds but force clusters at higher thresholds to cluster as lower clusters.
 	print "Recluster Erroneous:\n\n";
-	system( "perl $script_path/PangenomeConstruction.pl $pirate_dir/erroneous_aa_sequences/ $steps 98 $threads $pirate_dir/recluster_erroneous/" );
+	system( "perl $script_path/PangenomeConstruction.pl $pirate_dir/erroneous_aa_sequences/ $steps 98 $threads $error_dir" );
 	
 	# make pseudo roary files for processing (temporary) and file structure expected for parsing genomes.
-	my $no_erroneous = `awk '{print \$2}' $pirate_dir/error_links_summary.tab | uniq | wc -l`;
-	my $error_dir = "$pirate_dir/recluster_erroneous/";
 	for my $ct (@thresholds){
 	
 		mkdir "$error_dir/$ct";
@@ -262,20 +254,17 @@ if ( $no_erroneous > 0) {
 	
 	# parse pangenome files
 	my $parse_results = `perl $script_path/ParsePangenomes.pl $error_dir $steps $no_files $error_dir`; 
-	die "ParsePangeomes.pl failed.\n" if $?;
+	die "ParsePangeomes.pl failed:\n$parse_results\n" if $?;
 	print "$parse_results";
 	print "\n-------------------------------\n\n";
 
 	# check for paralogs and erroneous clusters (inconsistent clustering between iterations).
 	my $error_results = `perl $script_path/CheckParalogs.pl $error_dir/loci_list.tab $steps $error_dir`; 
-	die "CheckParalogs.pl failed.\n" if $?;
+	die "CheckParalogs.pl failed:\n$error_results\n" if $?;
 	print "$error_results";
 	print "\n-------------------------------\n\n";
 	
-	# add paralogs to list of paralogs from before correction.
-	`cat $pirate_dir/loci_list.tab $error_dir/loci_list.tab > $pirate_dir/temp.tab`;
-	`mv $pirate_dir/temp.tab $pirate_dir/loci_list.tab`;
-	
+	# add paralogs to list of paralogs from before correction.	
 	`cat $pirate_dir/paralog_clusters.tab $error_dir/paralog_clusters.tab > $pirate_dir/temp.txt`;
 	`mv $pirate_dir/temp.txt $pirate_dir/paralog_clusters.tab`;
 	
@@ -292,7 +281,7 @@ if ( $no_erroneous > 0) {
 	# remove erroneous from alleles file.
 	open ACLUSTER, "$pirate_dir/cluster_alleles.tab" or die $!;
 	open TEMP2,">$pirate_dir/temp_cluster.tab" or die $!;
-	while (<PARA>){ if(/^\S+\t(\S+)\t/){ if (!$err_links{$1}){ print TEMP2 "$1\n" } } }
+	while (<ACLUSTER>){ if(/^\S+\t(\S+)\t/){ if (!$err_links{$1}){ print TEMP2 "$_" } } }
 	`mv $pirate_dir/temp_cluster.tab $pirate_dir/cluster_alleles.tab`;	
 	
 	# close files. 
@@ -301,13 +290,17 @@ if ( $no_erroneous > 0) {
 	close PARA;
 	close TEMP1;
 	close TEMP2;
-
+	
 }
 
 # Link clusters
 print "Link clusters between thresholds:\n\n";
 system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab $pirate_dir/recluster_erroneous/loci_list.tab");
 print "\n-------------------------------\n\n";
+
+# add addditioanl clusters to loci list.
+`cat $pirate_dir/loci_list.tab $error_dir/loci_list.tab > $pirate_dir/temp.tab`;
+`mv $pirate_dir/temp.tab $pirate_dir/loci_list.tab`;
 
 # Extract paralog and erroneous cluster genes and align them.
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
@@ -357,7 +350,7 @@ if ( $r_plots ne '' ){
 
 # End message
 print "\n-------------------------------\n\n";
-print "YARR!\n"
+print "YARR!\n";
 print "\n-------------------------------\n\n";
 
 exit
