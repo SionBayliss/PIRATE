@@ -30,6 +30,7 @@ In order to use R scripts and shiny interface:
 run_PIRATE.pl ---
 
 ## TO DO
+- Consolidate AggregateErroneous.pl and Nucleotide2AA.pl
 - Check gene names are corrected if they contain \/ in ParseGFFs.pl
 - AssignParalogs.pl - revise and tidy up
 - PangenomeConstruction.pl - Generalise and paralellise to optionally replace ROARY

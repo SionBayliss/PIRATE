@@ -95,7 +95,7 @@ print "$no_add additional clusters.\n";
 
 # total clusters
 my $total_clusters = scalar(keys(%{$cluster_genomes{$AA_PER[0]}}));
-print "$total_clusters clusters to process from ",scalar(keys(%genomes)),"genomes.\n";
+print "$total_clusters clusters to process from ",scalar(keys(%genomes))," genomes.\n";
 
 # number of genomes
 my $no_samples = keys(%genomes);

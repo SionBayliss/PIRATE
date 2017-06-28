@@ -105,10 +105,18 @@ while(<INPUT>){
 				$info_field = sprintf("ID=%s\_%05d", $file_name, $annotation_no);
 				$modded = 1;
 				$old_locus=sprintf("old_locus=%s", $1)
+			}elsif ( $_ =~ /gene=(.+)/ ) {
+				$old_locus=sprintf("old_locus=%s", $1);
+				my $modify = $1;
+				$modify =~ s/\//\_/g;
+				$info_field = sprintf( "gene=%s", $modify );
+				$modded = 1;
 			}else{
 				$info_field=$_;
 			}
 			
+			#Name=HP0041/HP0042;gene=HP0041/HP0042
+						
 			# add info field to output
 			push(@add_out, $info_field );	
 		}

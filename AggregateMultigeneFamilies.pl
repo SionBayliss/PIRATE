@@ -188,6 +188,9 @@ my $increment = int( $no_clusters/20 );
 my $curr_increment = $increment;
 my $arg_count = 0;
 
+# set feedback message
+print " - 0 % aligned";
+
 $| = 1; # turn off buffering for STDOUT feedback.
 for my $gene( keys %group_list ){
 	
@@ -211,8 +214,8 @@ for my $gene( keys %group_list ){
 	#print TEMP3 "$pirate_dir/cluster_aa_sequences/$gene.best.pep.fas\t$pirate_dir/cluster_aa_sequences/$gene.aa.fasta";
 	#print TEMP4 "$pirate_dir/cluster_aa_sequences/$gene.best.nuc.fas\t$pirate_dir/cluster_nucleotide_sequences/$gene.fasta"; ####
 	
-	# When processed = cores*5 or all samples are processed then align the files stored in temp files. 
-	if( ($arg_count == ($threads*5) ) || ( $processed == $no_groups ) ){ 
+	# When processed = cores or all samples are processed then align the files stored in temp files. 
+	if( ($arg_count == $threads ) || ( $processed == $no_groups ) ){ 
 	
 		close TEMP1;
 		close TEMP2;
@@ -239,7 +242,7 @@ for my $gene( keys %group_list ){
 		$arg_count = 0; 
 		if( $processed > $curr_increment ){ 
 			$curr_increment += $increment;		
-			print "\r - ",  int(($processed/$no_groups)*100), "% aligned";
+			print "\r - ",  int(($processed/$no_groups)*100), " % aligned";
 		}				
 	}
 }

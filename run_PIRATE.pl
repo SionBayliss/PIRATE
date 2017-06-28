@@ -219,7 +219,7 @@ print "\n-------------------------------\n\n";
 
 # Extract paralog and erroneous cluster genes and align them.
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
-#system( "perl $script_path/AggregateErroneousFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
+system( "perl $script_path/AggregateErroneousFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
 print "\n-------------------------------\n\n";
 
 # check for erroneous clusters.
@@ -306,6 +306,8 @@ print "\n-------------------------------\n\n";
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
 system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
 print "\n-------------------------------\n\n";
+
+exit;
 
 # Classify and assign paralog families.
 print "Classify paralog loci:\n\n";

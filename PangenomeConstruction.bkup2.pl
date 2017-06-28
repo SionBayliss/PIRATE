@@ -95,163 +95,135 @@ for my $file( @files ){
 	
 	# run at multiple thresholds.
 	`cp $working_dir/$sample.all_sequences.fasta $working_dir/$sample.temp.fasta`;
-	my $no_reduced = 0;
 	for (my $i = 100; $i >= $low_cdhit; $i -= 0.5) {	   		 
 	
 		my $curr_thresh = $i/100;
 		
-		`cdhit -i $working_dir/$sample.temp.fasta -o $working_dir/$sample.$i -c $curr_thresh -n 5 >> $cdhit_log`;
+		`cdhit -i $working_dir/$sample.temp.fasta -o $working_dir/$sample.$i -c $curr_thresh -n 5`;
 		
 		my $c_header="";
 		my $define = 0;
 		my @include_seq = ();
 		my $seed_cluster = "";
 		my $current_cluster = "";
-		
-		my %temp_clusters = ();
-		my $c_name = "";
+		my $no_clustered = 0;
 	
 		open CLUSTER, "$working_dir/$sample.$i.clstr" or die $!;
 		while(<CLUSTER>){
 	
-			# Add clustered loci to storage hash.
-			if(/^>(.+)*/){
+			if(/^>\S+/){
 
 				$define = 0; 
-				$c_name = $1;
 
+			}elsif( /^0\s+/ ){ 
+			
+				$_ =~ /\s+\>(\S+)\.\.\./;
+			
+				$seed_cluster = $1;
+				
+				$define = 1; 
+				
+				push(@include_seq, $seed_cluster);	
+					
 			}elsif( /^\d+\s+/ ){
 			
 				$_ =~ /\s+\>(\S+)\.\.\./;
-				$temp_clusters{$c_name}{$1} = 1;					
+			
+				$no_clustered++;
+				
+				$cluster_hash{$seed_cluster}{$1}++;
 										
 			}else{
 				die "$_ did not match cd-hit format.\n";
 			}
-			
-			# Add first hit to array of sequences to include.
-			if( /^0\s+/ ){ 
-			
-				$_ =~ /\s+\>(\S+)\.\.\./;
-				$seed_cluster = $1;
-				push(@include_seq, $seed_cluster);	
-					
-			}
 		}
-		
-		# Assign each loci to a prexisting or new cluster (named numerically).
-		for my $clust(keys (%temp_clusters)){
-		
-			# clusters with >1 isolate have been deflated.
-			unless( scalar(keys %{$temp_clusters{$clust}} ) == 1){
-			
-				# reset variables
-				my $temp_name = "";
-				my %temp_hash = ();
-				my $recluster = 0;
-				
-				# Check for isolates in the current cluster having been previously assigned to a cluster.
-				for my $c_iso( keys %{$temp_clusters{$clust}} ){
-				
-					if ( $cluster_hash{$c_iso} ){
-						$temp_name = $cluster_hash{$c_iso};
-						$temp_hash { $cluster_hash{$c_iso} } = 1;
-						$recluster = 1;
-					}
-					
-				}
-		
-				# Reassign isolates from clusters from previously iterations that cluster with this isolate.
-				# Assign clusters from current cluster.
-				if ( $recluster == 1 ){
-					
-					$no_reduced++;
-					$temp_name = $no_reduced;
-					
-					# previous iteration clusters reassigned.
-					for my $t ( keys ( %temp_hash ) ){
-						for my $c_iso( keys %cluster_hash ){
-						
-							if ( $cluster_hash {$c_iso} == $t ){
-								$cluster_hash {$c_iso} = $temp_name;
-							}
-							
-						}
-					}
-					
-					# current iteration clusters assigned.
-					# Assign all isolates to new cluster.
-					for my $c_iso(keys %{$temp_clusters{$clust}}){
-						$cluster_hash{$c_iso} = $temp_name;
-					}
-					
-				}else{
-				
-					# If no previously assigned cluster then provide a new cluster name.
-					$no_reduced++;
-					$temp_name = $no_reduced;
-					
-					# Assign all isolates to new cluster.
-					for my $c_iso(keys %{$temp_clusters{$clust}}){
-						$cluster_hash{$c_iso} = $temp_name;
-					}
-						
-				}
-			}
-			
-		}
-		
+	
 		open INCLUDE, ">$working_dir/$sample.$i.include" or die $!; 
 		print INCLUDE join("\n", @include_seq),"\n";
-		
-		print scalar(@include_seq), " sequences remaining to cluster in next round.\n";
 	
+		# print to log 
+		print CD_LOG "$i - $no_clustered\n";		
+		
 		# create new working fasta 
 		`grep -A 1 -f $working_dir/$sample.$i.include < $working_dir/$sample.temp.fasta | grep -v "^--" > $working_dir/$sample.temp2.fasta`;
 		`mv $working_dir/$sample.temp2.fasta $working_dir/$sample.temp.fasta`;
 		`mv $working_dir/$sample.$i.include $working_dir/$sample.included`;
 	
 	}close CD_LOG;
-	
-	open CLUSTERS, ">$working_dir/$sample.clusters2" or die $!;
-	foreach(keys %cluster_hash){
-		print CLUSTERS "$_\t$cluster_hash{$_}\n";	
-	}close CLUSTERS;
-	
+
+	# Make cluster file.
 	my $check_clusters = 0;
+	my %inflate_hash = ();
 	open INCLUDE, "$working_dir/$sample.included" or die $!;
 	open CLUSTERS, ">$working_dir/$sample.clusters" or die $!;
-	while(<INCLUDE>){
-			
+	while (<INCLUDE>) {
+	
 		if(/^(\S+)*/){
 		
 			my $cluster_seed = $1;
-			
-			# if the sample is in a cluster then print all isolates in cluster.
-			if ( $cluster_hash{$cluster_seed} ){
-			
-				my $c_tag = $cluster_hash{$cluster_seed};
-				
-				my @out_array = ();
-				for my $inc( keys %cluster_hash ){
-					if( $cluster_hash{$inc} == $c_tag ){
-						push(@out_array, $inc);
-						$check_clusters++;
-					}
-				}
-				
-				# print to file.
-				my $out_line = sprintf( "%s\t$c_tag\t%s\n", $cluster_seed, join("\t", @out_array) );
-				print CLUSTERS $out_line;
-			
-			}else{
-				
-				print CLUSTERS "$cluster_seed\t-\t$cluster_seed\n";
-				$check_clusters++;	
-			}
 		
+			# deflate cluster if there is a cd-hit match greater than threshold.
+			if( $cluster_hash{$cluster_seed} ){
+			
+				# Check for any more connected clusters.
+				my $remain_check = 0;
+				my %deflate_hash = ();
+				$deflate_hash {$cluster_seed} = 1;
+				
+				while( $remain_check == 0 ){
+				
+					# check if keys have an associated deflated sequence.
+					for my $check ( keys %deflate_hash ){
+					
+						# check if clusters to include have any linked clusters.
+						my $all_done = 1;
+						if( $deflate_hash {$check} == 1 ){
+							
+							# add all linked loci to hash - in furtehr loops these will be check again.
+							for my $k (keys $cluster_hash{$check} ){
+								$deflate_hash {$k} = 1;
+								$all_done = 0;
+							}
+							
+							# do not recheck this loci
+							$deflate_hash{$check} = 2;
+						}
+						
+						# if there are no more linked clusters then print cluster to file.
+						# the first isolate is the seed sequence.
+						if( $all_done == 0 ){
+							
+							# print to file
+							print CLUSTERS "$cluster_seed\t-\t",join("\t", keys %deflate_hash), "\n";
+							
+							# break while loop.
+							$remain_check = 1;
+							
+							# add to hash that includes info on removed clusters (key is remaining isolate)
+							$inflate_hash{$cluster_seed} = sprintf( "%s" , join("\t", keys %deflate_hash) );
+							
+							# increment check clusters
+							$check_clusters = $check_clusters + scalar(keys(%deflate_hash));
+						
+						}
+						
+					}					
+				}
+			}else{
+				# print to file
+				print CLUSTERS "$cluster_seed\t-\t$cluster_seed\n";
+							
+				# add to hash that includes info on removed clusters (key is remaining isolate)
+				$inflate_hash{$cluster_seed} = $cluster_seed;
+				
+				# increment check clusters
+				$check_clusters = $check_clusters + 1;			
+			
+			}
 		}
 	}
+	close INCLUDE;
+	close CLUSTERS;
 	
 	# check number of stored clusters equals number of starting sequences.
 	die "number of sequences clustered via cd-hit ($check_clusters) does not match number of input sequences ($no_sequences)" if $check_clusters != $no_sequences;
@@ -352,24 +324,25 @@ for my $file( @files ){
 			foreach my $inflat( split(/\t/ , $line) ){
 				
 				# if cluster was previsously deflated with cd-hit add in missing loci.				
-				if( !$cluster_hash{$inflat} ){
+				if( !$inflate_hash{$inflat} ){
 					push(@clusters_reinflated, $inflat);
+					#print "--$inflat\n";
 				}
-				else{	
-					my $index  = $cluster_hash{$inflat};	
-					foreach(keys %cluster_hash){
-						if ( $cluster_hash{$_} == $index ){
-							push(@clusters_reinflated, $_);
-						}
+				else{									
+					foreach ( split("\t", $inflate_hash{$inflat}) ){ 
+						push(@clusters_reinflated, $_);
+						#print "-- $inflate_hash{$inflat}\n";
 					}					
 				}
 			}
 			
 			# increase count of sequences in file.
 			my $out_clusters = join ("\t", @clusters_reinflated);
-			my $number_in_cluster = scalar (@clusters_reinflated);
+			my $number_tabs = () = $out_clusters =~ /\t/gi;
 
- 			$seq_count = $seq_count + $number_in_cluster;
+			#my $no_tabs =~ /\t/;
+ 			#$seq_count += scalar(@clusters_reinflated);
+ 			$seq_count = $seq_count + $number_tabs + 1;
  			
 			#print "@clusters_reinflated\n";			
 			print INFLAT join ("\t", @clusters_reinflated), "\n";			

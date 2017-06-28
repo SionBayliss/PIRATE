@@ -228,14 +228,14 @@ foreach( keys %cluster_check ){
 if ($fail_check > 0){ die "$fail_check loci sequences missing for input files.\n";}
 
 # Align all sequences using mafft on aa sequence and back translate to nucleotide sequence.
-print " - Aligning AA sequences using MAFFT and back-translating to nucleotide sequence.\n";
+print " - Translating nucleotide sequences to AA.\n";
 unless ( -e "$pirate_dir/erroneous_aa_sequences" ){ `mkdir $pirate_dir/erroneous_aa_sequences`; } 
 
 # Temp files for parallel.
 my $temp1 = "$pirate_dir/temp.tab";
-my $temp2 = "$pirate_dir/move.temp.tab";
+#my $temp2 = "$pirate_dir/move.temp.tab";
 open TEMP1, ">$temp1" or die $!;
-open TEMP2, ">$temp2" or die $!;
+#open TEMP2, ">$temp2" or die $!;
 	
 # Variables
 my $processed = 0; 
@@ -254,21 +254,21 @@ for my $gene( keys %group_list ){
 	
 	## MAFFT
 	print TEMP1 "$pirate_dir/erroneous_nucleotide_sequences/$gene.fasta\t$pirate_dir/erroneous_aa_sequences\n";
-	print TEMP2 "$pirate_dir/erroneous_aa_sequences/$gene.nucleotide.fasta\t$pirate_dir/erroneous_nucleotide_sequences/$gene.fasta\n";
+	#print TEMP2 "$pirate_dir/erroneous_aa_sequences/$gene.nucleotide.fasta\t$pirate_dir/erroneous_nucleotide_sequences/$gene.fasta\n";
 	
-	# When processed = cores*5 or all samples are processed then align the files stored in temp files. 
-	if( ($arg_count == ($threads*5) ) || ( $processed ==  $no_groups ) ){
+	# When processed = cores or all samples are processed then align the files stored in temp files. 
+	if( ($arg_count == $threads ) || ( $processed ==  $no_groups ) ){
 	
 		close TEMP1;
-		close TEMP2;
+		#close TEMP2;
 		
 		# MAFFT
-		`cat $temp1 | parallel --no-notice --jobs $threads --colsep "\t" perl $script_path/AAalign2nucleotide.pl {1} {2} 2>/dev/null`;
-		`cat $temp2 | parallel --no-notice --jobs $threads --colsep "\t" mv {1} {2} 2>/dev/null`;
+		print `cat $temp1 | parallel --no-notice --jobs $threads --colsep "\t" perl $script_path/Nucleotide2AA.pl {1} {2} 2>/dev/null`;
+		#`cat $temp2 | parallel --no-notice --jobs $threads --colsep "\t" mv {1} {2} 2>/dev/null`;
 
 		# Clear temp files.
 		open TEMP1, ">$temp1" or die $!;
-		open TEMP2, ">$temp2" or die $!;
+		#open TEMP2, ">$temp2" or die $!;
 		
 		# Reset variables and modify progress bar.
 		$arg_count = 0; 
@@ -279,12 +279,12 @@ for my $gene( keys %group_list ){
 	}
 }
 close TEMP1;
-close TEMP2;
+#close TEMP2;
 
 # Tidy up
 print "\r - 100 % aligned\n";
 unlink $temp1;
-unlink $temp2;
+#unlink $temp2;
 
 # Print group list.
 open TEMP, ">$pirate_dir/fasta_summary.txt" or die $!;
