@@ -204,7 +204,7 @@ for my $file( @files ){
 		open INCLUDE, ">$working_dir/$sample.$i.include" or die $!; 
 		print INCLUDE join("\n", @include_seq),"\n";
 		
-		print scalar(@include_seq), " sequences remaining to cluster in next round.\n";
+		#print scalar(@include_seq), " sequences remaining to cluster in next round.\n";
 	
 		# create new working fasta 
 		`grep -A 1 -f $working_dir/$sample.$i.include < $working_dir/$sample.temp.fasta | grep -v "^--" > $working_dir/$sample.temp2.fasta`;
@@ -348,7 +348,6 @@ for my $file( @files ){
 			
 			my @clusters_reinflated = ();
 			
-			print "$line\n";
 			foreach my $inflat( split(/\t/ , $line) ){
 				
 				# if cluster was previsously deflated with cd-hit add in missing loci.				

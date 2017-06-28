@@ -171,8 +171,8 @@ while(<ROUND>){
 		
 				# Increment variables.
 				my $groups = scalar(keys(%{$current_genomes{$a1}})); # Number of groups.
-				my $dosage = $dosage+$groups; # Increment dosage
-				my $mc_count=$mc_count+$groups; # Increment number of multicopy genes.
+				$dosage = $dosage+$groups; # Increment dosage
+				$mc_count=$mc_count+$groups; # Increment number of multicopy genes.
 			
 				# Count number of groups containing truncations.
 				my $ff_temp=0;
@@ -190,7 +190,7 @@ while(<ROUND>){
 		
 			# Calculate average dosage of ORFs per genome.
 			my $corr_dose = $dosage/$cluster_genomes;
-			
+
 			# Prepare outputs.
 			my $begin = "$gene_cluster\t$gene_cluster\t$headers[1]\t$cluster_genomes\t$corr_dose\t$min_dose\t$max_dose\t$ff_count\t$mc_count"; 
 			
@@ -295,8 +295,8 @@ while(<ROUND>){
 						
 							# Increment variables.
 							my $groups=scalar(keys(%{$current_genomes{$a1}})); # Number of groups.
-							my $dosage=$dosage+$groups; # Increment dosage
-							my $mc_count=$mc_count+$groups; # Increment number of multicopy genes.
+							$dosage=$dosage+$groups; # Increment dosage
+							$mc_count=$mc_count+$groups; # Increment number of multicopy genes.
 							
 							# Count number of groups containing truncations.
 							my $ff_temp=0;

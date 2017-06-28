@@ -274,7 +274,7 @@ for my $gene( keys %group_list ){
 		$arg_count = 0; 
 		if( $processed > $curr_increment ){ 
 			$curr_increment += $increment;		
-			print "\r - ",  int(($processed/$no_groups)*100), "% aligned";
+			print "\r - ",  int(($processed/$no_groups)*100), "% processed";
 		}				
 	}
 }
@@ -282,7 +282,7 @@ close TEMP1;
 #close TEMP2;
 
 # Tidy up
-print "\r - 100 % aligned\n";
+print "\r - 100 % processed\n";
 unlink $temp1;
 #unlink $temp2;
 

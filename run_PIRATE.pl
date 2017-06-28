@@ -93,7 +93,7 @@ pod2usage( {-message => "$no_files files with .gff extension in $input_dir", -ex
 my @thresholds=();
 if ( $steps eq '' ){
 	@thresholds=(50 , 60 , 70 , 80 , 90 , 95 , 98);
-	$steps="50,60,70,80,90,98";
+	$steps=join(",", @thresholds);
 }else{
 	@thresholds=sort( {$a<=>$b} split( /,/ , $steps) );
 	$steps=join(",", @thresholds);
@@ -307,8 +307,6 @@ print "Extract paralogous cluster nucleotide sequence and align:\n\n";
 system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
 print "\n-------------------------------\n\n";
 
-exit;
-
 # Classify and assign paralog families.
 print "Classify paralog loci:\n\n";
 system( "perl $script_path/IdentifyParalogs.pl $pirate_dir/cluster_nucleotide_sequences/ $gff_dir $pirate_dir");
@@ -317,7 +315,7 @@ system( "perl $script_path/AssignParalogs.pl $pirate_dir/round_clusters.tab $pir
 print "\n-------------------------------\n\n";
 
 # Identify most likely allele designation for each cluster
-system( "perl $script_path/Split_Paralogs.pl $pirate_dir/paralog_alleles.tab $pirate_dir/split_paralogs.tab" );
+#system( "perl $script_path/Split_Paralogs.pl $pirate_dir/paralog_alleles.tab $pirate_dir/split_paralogs.tab" );
 
 # Make gene family file from combined allele file - sort on number of genomes.
 `cat $pirate_dir/cluster_alleles.tab $pirate_dir/paralog_alleles.tab > $pirate_dir/alleles_combined.tab`;

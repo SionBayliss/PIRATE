@@ -41,8 +41,13 @@ run_PIRATE.pl ---
 - BGreat - graph building / mapping software
 - check genome name ordering in all files. 
 - Check alignment gives appropriate feedback and check for aligner errror
-- Add support for PRANK
-- Reannotate or rewrite IdentifyParalogs
+- Add/institute support for PRANK
+- Reannotate and rewrite IdentifyParalogs
 - add -force option
 - add core_per option.
-
+- pangenome fastq upload
+- upload full pangenome align script.
+- generalise pangenome script
+- update and upload correlation analysis scripts
+- Update and include familty plotting script 
+- Shiny interface

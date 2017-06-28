@@ -39,8 +39,6 @@ while(<CLUSTERS>){
 	
 }close CLUSTERS;
 
-#exit;
-
 # Parse all co-ordinate files for loci annotation info. 
 opendir(DIR, $coord_dir);
 my @coords = grep{/\.co-ords.tab/} readdir(DIR);
@@ -152,7 +150,7 @@ while(<TABLE>){
 		# Summarise gene name info 
 		my @g_names=();
 		my $top_gene="NA";
-		for my $g(sort keys %name_info){
+		for my $g(sort { $name_info{$b} <=> $name_info{$a} } keys %name_info){
 			if($g ne ""){
 				push(@g_names,"$g\($name_info{$g}\)" );
 				$top_gene = $g if $top_gene eq "NA";
@@ -165,7 +163,8 @@ while(<TABLE>){
 		
 		my @product = ();
 		my $top_product="NA";
-		for my $g(sort keys %product_info){
+		# $key (sort { $hash{$b} <=> $hash{$a} } keys %hash) {
+		for my $g(sort { $product_info{$b} <=> $product_info{$a} } keys %product_info){
 			if($g ne ""){
 				push(@product,"$g\($product_info{$g}\)" );
 				$top_product=$g if $top_product eq "NA";
