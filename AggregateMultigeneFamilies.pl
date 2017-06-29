@@ -173,7 +173,7 @@ foreach( keys %cluster_check ){
 if ($fail_check > 0){ die "$fail_check loci sequences missing for input files.\n";}
 
 # Align all sequences using mafft on aa sequence and back translate to nucleotide sequence.
-print " - Aligning AA sequences using MAFFT and back-translating to nucleotide sequence.\n";
+print " - Aligning aa sequences and back-translating to nucleotide sequence.\n";
 unless ( -e "$pirate_dir/cluster_aa_sequences" ){ `mkdir $pirate_dir/cluster_aa_sequences`; } 
 
 # Temp files for parallel.
@@ -214,8 +214,8 @@ for my $gene( keys %group_list ){
 	#print TEMP3 "$pirate_dir/cluster_aa_sequences/$gene.best.pep.fas\t$pirate_dir/cluster_aa_sequences/$gene.aa.fasta";
 	#print TEMP4 "$pirate_dir/cluster_aa_sequences/$gene.best.nuc.fas\t$pirate_dir/cluster_nucleotide_sequences/$gene.fasta"; ####
 	
-	# When processed = cores or all samples are processed then align the files stored in temp files. 
-	if( ($arg_count == $threads ) || ( $processed == $no_groups ) ){ 
+	# When processed = cores*3 or all samples are processed then align the files stored in temp files. 
+	if( ($arg_count == ($threads*3) ) || ( $processed == $no_groups ) ){ 
 	
 		close TEMP1;
 		close TEMP2;
