@@ -147,7 +147,7 @@ open G_LIST, ">$pirate_dir/genome_list.txt";
 for my $g( @files ){ $g =~ /(.+).gff/; print G_LIST "$1\n"; }
 close G_LIST;
 
-if( $debug == 1 ){
+unless( $debug == 1 ){
 
 	# create roary log file
 	my $log_file="$pirate_dir/roary_log.txt";
