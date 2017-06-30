@@ -47,6 +47,7 @@ my $steps = '';
 my $quiet = 0;
 my $r_plots = '';
 my $roary_off = 0;
+my $debug = 0;
 
 my $no_files = 0;
 my @files = ();
@@ -59,6 +60,7 @@ GetOptions(
 	'threads=i'	=> \$threads,
 	'steps=s'	=> \$steps,
 	'quiet'		=> \$quiet,	
+	'debug'		=> \$debug,	
 	'rplot'		=> \$r_plots,
 	'noroary'	=> \$roary_off,
 ) or pod2usage(2);
@@ -145,173 +147,180 @@ open G_LIST, ">$pirate_dir/genome_list.txt";
 for my $g( @files ){ $g =~ /(.+).gff/; print G_LIST "$1\n"; }
 close G_LIST;
 
-# create roary log file
-my $log_file="$pirate_dir/roary_log.txt";
-open LOG, ">$log_file" or die $!;
+if( $debug == 1 ){
 
-# run Roary with different % identity cuttoffs - paralog matching is switched off.
-print "Iteratively running roary at thresholds: $steps\n";
-my $it_count = 0;
-for my $it ( @thresholds ){
-	
-	++$it_count;
-	
-	print "Running AA identity $it\%\n";
-	
-	# create results directories
-	unless ( -d "$it_dir/$it"  ){
-		mkdir "$it_dir/$it";
-	}
-	
-	# change cwd to output folder (to capture all temp files).
-	chdir("$it_dir/$it") or die "$!";
+	# create roary log file
+	my $log_file="$pirate_dir/roary_log.txt";
+	open LOG, ">$log_file" or die $!;
 
-	# run ROARY
-	unless ( $roary_off == 1 ){
-		my $command = "roary -p $threads -z -v -s -r -i $it -cd 100 $gff_dir/*.gff 2>&1";
-		my $roary = `$command`;
-		print LOG "RUN $it\n$command\n$roary\n"; 
-		
-		# check that the gene_presence_absence.csv file has been created
-		die "ROARY did not sucessfully execute during iteration $it\n" unless -f "$it_dir/$it/gene_presence_absence.csv"; 
-
-	}else{
+	# run Roary with different % identity cuttoffs - paralog matching is switched off.
+	print "Iteratively running roary at thresholds: $steps\n";
+	my $it_count = 0;
+	for my $it ( @thresholds ){
 	
-		# check that the gene_presence_absence.csv is present
-		die "No roary iterations present for $it %\n" unless -f "$it_dir/$it/gene_presence_absence.csv"; 
+		++$it_count;
 	
-	}
+		print "Running AA identity $it\%\n";
 	
-}print "\n-------------------------------\n\n";
-
-# Identify gene feature co-ordinates.
-print "Making co-ordinate files:\n\n";
-my $coords_dir = "$pirate_dir/co-ords";
-if( -d "$coords_dir" ){ print "modified gff directory already exists.\n" }
-else{ unless ( mkdir "$coords_dir" ) { die "could not make PIRATE co-ords directory in $pirate_dir\n" } }
-for ( @files ){
-	my $temp_sample = $_;
-	$temp_sample =~ s/\.gff*//;	
-	`perl $script_path/feature_coordinate_extracter.pl $gff_dir/$temp_sample.gff $coords_dir/$temp_sample.co-ords.tab`;
-}
-print "\n-------------------------------\n\n";
-
-# parse pangenome files
-print "Parsing pangenome files:\n\n";
-chdir("$pirate_dir") or die "$!";
-my $parse_results = `perl $script_path/ParsePangenomes.pl $it_dir $steps $no_files $pirate_dir`; 
-die "ParsePangeomes.pl failed.\n" if $?;
-print "$parse_results";
-print "\n-------------------------------\n\n";
-
-# sort non-paralogous alleles file 
-my $sort_check = system( "sort -t \"\t\" -k2,2 -k3,3 < $pirate_dir/cluster_alleles.tab > $pirate_dir/cluster_alleles.temp.tab" );
-die "System failed to sort alleles.\n" if $sort_check;
-system( "mv $pirate_dir/cluster_alleles.temp.tab $pirate_dir/cluster_alleles.tab" );
-
-# check for paralogs and erroneous clusters (inconsistent clustering between iterations).
-print "Checking for inconsistent clustering:\n\n";
-chdir("$pirate_dir") or die "$!";
-my $error_results = `perl $script_path/CheckParalogs.pl $pirate_dir/loci_list.tab $steps $pirate_dir`; 
-die "CheckParalogs.pl failed.\n" if $?;
-print "$error_results";
-print "\n-------------------------------\n\n";
-
-# Extract paralog and erroneous cluster genes and align them.
-print "Extract paralogous cluster nucleotide sequence and align:\n\n";
-system( "perl $script_path/AggregateErroneousFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
-print "\n-------------------------------\n\n";
-
-# check for erroneous clusters.
-my $no_erroneous = `awk '{print \$2}' $pirate_dir/error_links_summary.tab | uniq | wc -l`;
-my $error_dir = "$pirate_dir/recluster_erroneous/";
-if ( $no_erroneous > 0) { 
-
-	# Correct clustering of erroneous clusters - recluster with MCL at $steps thresholds but force clusters at higher thresholds to cluster as lower clusters.
-	print "Recluster Erroneous:\n\n";
-	system( "perl $script_path/PangenomeConstruction.pl $pirate_dir/erroneous_aa_sequences/ $steps 98 $threads $error_dir" );
-	
-	# make pseudo roary files for processing (temporary) and file structure expected for parsing genomes.
-	for my $ct (@thresholds){
-	
-		mkdir "$error_dir/$ct";
-		`echo -n "" > $error_dir/$ct/gene_presence_absence.csv`;
-	
-		my $temp_count = 0;
-		for my $cg (1..$no_erroneous){
-	
-			system( "perl $script_path/Pangenome2Roary.pl $error_dir/Error_$cg.$ct.reclustered.reinflated $pirate_dir/loci_list.tab err$cg > $error_dir/$ct/temp.txt" );
-		
-			if ( $temp_count++ == 0 ){
-				`cat < $error_dir/$ct/temp.txt >> $error_dir/$ct/gene_presence_absence.csv`;
-			}else{
-				`sed 1d < $error_dir/$ct/temp.txt >> $error_dir/$ct/gene_presence_absence.csv`;
-			} 
-		
+		# create results directories
+		unless ( -d "$it_dir/$it"  ){
+			mkdir "$it_dir/$it";
 		}
-
-	}
 	
+		# change cwd to output folder (to capture all temp files).
+		chdir("$it_dir/$it") or die "$!";
+
+		# run ROARY
+		unless ( $roary_off == 1 ){
+			my $command = "roary -p $threads -z -v -s -r -i $it -cd 100 $gff_dir/*.gff 2>&1";
+			my $roary = `$command`;
+			print LOG "RUN $it\n$command\n$roary\n"; 
+		
+			# check that the gene_presence_absence.csv file has been created
+			die "ROARY did not sucessfully execute during iteration $it\n" unless -f "$it_dir/$it/gene_presence_absence.csv"; 
+
+		}else{
+	
+			# check that the gene_presence_absence.csv is present
+			die "No roary iterations present for $it %\n" unless -f "$it_dir/$it/gene_presence_absence.csv"; 
+	
+		}
+	
+	}print "\n-------------------------------\n\n";
+
+	# Identify gene feature co-ordinates.
+	print "Making co-ordinate files:\n\n";
+	my $coords_dir = "$pirate_dir/co-ords";
+	if( -d "$coords_dir" ){ print "modified gff directory already exists.\n" }
+	else{ unless ( mkdir "$coords_dir" ) { die "could not make PIRATE co-ords directory in $pirate_dir\n" } }
+	for ( @files ){
+		my $temp_sample = $_;
+		$temp_sample =~ s/\.gff*//;	
+		`perl $script_path/feature_coordinate_extracter.pl $gff_dir/$temp_sample.gff $coords_dir/$temp_sample.co-ords.tab`;
+	}
+	print "\n-------------------------------\n\n";
+
 	# parse pangenome files
-	my $parse_results = `perl $script_path/ParsePangenomes.pl $error_dir $steps $no_files $error_dir`; 
-	die "ParsePangeomes.pl failed:\n$parse_results\n" if $?;
+	print "Parsing pangenome files:\n\n";
+	chdir("$pirate_dir") or die "$!";
+	my $parse_results = `perl $script_path/ParsePangenomes.pl $it_dir $steps $no_files $pirate_dir`; 
+	die "ParsePangeomes.pl failed.\n" if $?;
 	print "$parse_results";
 	print "\n-------------------------------\n\n";
 
+	# sort non-paralogous alleles file 
+	my $sort_check = system( "sort -t \"\t\" -k2,2 -k3,3 < $pirate_dir/cluster_alleles.tab > $pirate_dir/cluster_alleles.temp.tab" );
+	die "System failed to sort alleles.\n" if $sort_check;
+	system( "mv $pirate_dir/cluster_alleles.temp.tab $pirate_dir/cluster_alleles.tab" );
+
 	# check for paralogs and erroneous clusters (inconsistent clustering between iterations).
-	my $error_results = `perl $script_path/CheckParalogs.pl $error_dir/loci_list.tab $steps $error_dir`; 
-	die "CheckParalogs.pl failed:\n$error_results\n" if $?;
+	print "Checking for inconsistent clustering:\n\n";
+	chdir("$pirate_dir") or die "$!";
+	my $error_results = `perl $script_path/CheckParalogs.pl $pirate_dir/loci_list.tab $steps $pirate_dir`; 
+	die "CheckParalogs.pl failed: $error_results\n" if $?;
 	print "$error_results";
 	print "\n-------------------------------\n\n";
+
+	# Extract paralog and erroneous cluster genes and align them.
+	print "Extract paralogous cluster nucleotide sequence and align:\n\n";
+	system( "perl $script_path/AggregateErroneousFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
+	print "\n-------------------------------\n\n";
+
+	# check for erroneous clusters.
+	my $no_erroneous = `awk '{print \$2}' $pirate_dir/error_links_summary.tab | uniq | wc -l`;
+	my $error_dir = "$pirate_dir/recluster_erroneous/";
+	if ( $no_erroneous > 0) { 
+
+		# Correct clustering of erroneous clusters - recluster with MCL at $steps thresholds but force clusters at higher thresholds to cluster as lower clusters.
+		print "Recluster Erroneous:\n\n";
+		system( "perl $script_path/PangenomeConstruction.pl $pirate_dir/erroneous_aa_sequences/ $steps 98 $threads $error_dir" );
 	
-	# add paralogs to list of paralogs from before correction.	
-	`cat $pirate_dir/paralog_clusters.tab $error_dir/paralog_clusters.tab > $pirate_dir/temp.txt`;
-	`mv $pirate_dir/temp.txt $pirate_dir/paralog_clusters.tab`;
+		# make pseudo roary files for processing (temporary) and file structure expected for parsing genomes.
+		for my $ct (@thresholds){
 	
-	# remove erroneous loci from paralog list.
-	my %err_links;
-	open ERR_LINK, "$pirate_dir/error_links_summary.tab" or die $!;
-	while (<ERR_LINK>){ if (/^(\S+)\t/){ $err_links{$1} = 1 } }
+			mkdir "$error_dir/$ct";
+			`echo -n "" > $error_dir/$ct/gene_presence_absence.csv`;
 	
-	open PARA, "$pirate_dir/paralog_clusters.tab" or die $!;
-	open TEMP1,">$pirate_dir/temp_para.tab" or die $!;
-	while (<PARA>){ if(/^(\S+)\n/){ if (!$err_links{$1}){ print TEMP1 "$1\n" } } }
-	`mv $pirate_dir/temp_para.tab $pirate_dir/paralog_clusters.tab`;
+			my $temp_count = 0;
+			for my $cg (1..$no_erroneous){
 	
-	# remove erroneous from alleles file.
-	open ACLUSTER, "$pirate_dir/cluster_alleles.tab" or die $!;
-	open TEMP2,">$pirate_dir/temp_cluster.tab" or die $!;
-	while (<ACLUSTER>){ if(/^\S+\t(\S+)\t/){ if (!$err_links{$1}){ print TEMP2 "$_" } } }
-	`mv $pirate_dir/temp_cluster.tab $pirate_dir/cluster_alleles.tab`;	
+				system( "perl $script_path/Pangenome2Roary.pl $error_dir/Error_$cg.$ct.reclustered.reinflated $pirate_dir/loci_list.tab err$cg > $error_dir/$ct/temp.txt" );
+		
+				if ( $temp_count++ == 0 ){
+					`cat < $error_dir/$ct/temp.txt >> $error_dir/$ct/gene_presence_absence.csv`;
+				}else{
+					`sed 1d < $error_dir/$ct/temp.txt >> $error_dir/$ct/gene_presence_absence.csv`;
+				} 
+		
+			}
+
+		}
 	
-	# close files. 
-	close ERR_LINK;
-	close ACLUSTER;
-	close PARA;
-	close TEMP1;
-	close TEMP2;
+		# parse pangenome files
+		my $parse_results = `perl $script_path/ParsePangenomes.pl $error_dir $steps $no_files $error_dir`; 
+		die "ParsePangeomes.pl failed:\n$parse_results\n" if $?;
+		print "$parse_results";
+		print "\n-------------------------------\n\n";
+
+		# check for paralogs and erroneous clusters (inconsistent clustering between iterations).
+		my $error_results = `perl $script_path/CheckParalogs.pl $error_dir/loci_list.tab $steps $error_dir`; 
+		die "CheckParalogs.pl failed:\n$error_results\n" if $?;
+		print "$error_results";
+		print "\n-------------------------------\n\n";
 	
+		# add paralogs to list of paralogs from before correction.	
+		`cat $pirate_dir/paralog_clusters.tab $error_dir/paralog_clusters.tab > $pirate_dir/temp.txt`;
+		`mv $pirate_dir/temp.txt $pirate_dir/paralog_clusters.tab`;
+	
+		# remove erroneous loci from paralog list.
+		my %err_links;
+		open ERR_LINK, "$pirate_dir/error_links_summary.tab" or die $!;
+		while (<ERR_LINK>){ if (/^(\S+)\t/){ $err_links{$1} = 1 } }
+	
+		open PARA, "$pirate_dir/paralog_clusters.tab" or die $!;
+		open TEMP1,">$pirate_dir/temp_para.tab" or die $!;
+		while (<PARA>){ if(/^(\S+)\n/){ if (!$err_links{$1}){ print TEMP1 "$1\n" } } }
+		`mv $pirate_dir/temp_para.tab $pirate_dir/paralog_clusters.tab`;
+	
+		# remove erroneous from alleles file.
+		open ACLUSTER, "$pirate_dir/cluster_alleles.tab" or die $!;
+		open TEMP2,">$pirate_dir/temp_cluster.tab" or die $!;
+		while (<ACLUSTER>){ if(/^\S+\t(\S+)\t/){ if (!$err_links{$1}){ print TEMP2 "$_" } } }
+		`mv $pirate_dir/temp_cluster.tab $pirate_dir/cluster_alleles.tab`;	
+	
+		# close files. 
+		close ERR_LINK;
+		close ACLUSTER;
+		close PARA;
+		close TEMP1;
+		close TEMP2;
+	
+	}
+
+	# Link clusters
+	print "Link clusters between thresholds:\n\n";
+	system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab $pirate_dir/recluster_erroneous/loci_list.tab");
+	print "\n-------------------------------\n\n";
+
+	# add addditioanl clusters to loci list.
+	`cat $pirate_dir/loci_list.tab $error_dir/loci_list.tab > $pirate_dir/temp.tab`;
+	`mv $pirate_dir/temp.tab $pirate_dir/loci_list.tab`;
+
+	# Extract paralog and erroneous cluster genes and align them.
+	print "Extract paralogous cluster nucleotide sequence and align:\n\n";
+	system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
+	print "\n-------------------------------\n\n";
+
 }
 
-# Link clusters
-print "Link clusters between thresholds:\n\n";
-system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab $pirate_dir/recluster_erroneous/loci_list.tab");
-print "\n-------------------------------\n\n";
-
-# add addditioanl clusters to loci list.
-`cat $pirate_dir/loci_list.tab $error_dir/loci_list.tab > $pirate_dir/temp.tab`;
-`mv $pirate_dir/temp.tab $pirate_dir/loci_list.tab`;
-
-# Extract paralog and erroneous cluster genes and align them.
-print "Extract paralogous cluster nucleotide sequence and align:\n\n";
-system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
-print "\n-------------------------------\n\n";
 
 # Classify and assign paralog families.
 print "Classify paralog loci:\n\n";
 system( "perl $script_path/IdentifyParalogs.pl $pirate_dir/cluster_nucleotide_sequences/ $gff_dir $pirate_dir");
+die "IdentifyParalogs.pl failed.\n" if $?;
 print "\n";
 system( "perl $script_path/AssignParalogs.pl $pirate_dir/round_clusters.tab $pirate_dir/loci_paralog_catagories.tab $pirate_dir/paralog_clusters.tab $pirate_dir/paralog_alleles.tab $pirate_dir/genome_list.txt" );
+die "AssignParalogs.pl failed.\n" if $?;
 print "\n-------------------------------\n\n";
 
 # Identify most likely allele designation for each cluster
