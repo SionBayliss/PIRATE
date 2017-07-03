@@ -8,6 +8,7 @@ use Pod::Usage;
 use Cwd;
 use Cwd 'abs_path';
 
+
 # To do:
 
 # Version
@@ -48,6 +49,8 @@ my $quiet = 0;
 my $r_plots = '';
 my $roary_off = 0;
 my $debug = 0;
+
+my $time_start = time();
 
 my $no_files = 0;
 my @files = ();
@@ -129,6 +132,7 @@ else{ unless ( mkdir $it_dir ) { die "could not make PIRATE iteration directory 
 # standardise and check input gffs (contain sequence and annotation matches contig nomenclature) 
 print "\n-------------------------------\n\n";
 print "Standardising and checking input files:\n";
+$time_start = time();
 my $gff_dir = "$pirate_dir/modified_gffs";
 if( -d $gff_dir ){ print "modified gff directory already exists.\n" }
 else{ unless ( mkdir $gff_dir ) { die "could not make PIRATE gff directory in $pirate_dir\n" } }
@@ -140,6 +144,7 @@ opendir(DIR, $gff_dir);
 $no_files=scalar(@files);
 close DIR;
 print "$no_files gff files passed QC and will be analysed by PIRATE.\n";
+print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
 # make genome list
@@ -155,12 +160,14 @@ open LOG, ">$log_file" or die $!;
 
 # run Roary with different % identity cuttoffs - paralog matching is switched off.
 print "Iteratively running roary at thresholds: $steps\n";
+$time_start = time();
 my $it_count = 0;
 for my $it ( @thresholds ){
 
 	++$it_count;
 
-	print "Running AA identity $it\%\n";
+	print "Running AA identity $it\%\r";
+	my $itime_start = time();
 
 	# create results directories
 	unless ( -d "$it_dir/$it"  ){
@@ -185,11 +192,15 @@ for my $it ( @thresholds ){
 		die "No roary iterations present for $it %\n" unless -f "$it_dir/$it/gene_presence_absence.csv"; 
 
 	}
+	print "Running AA identity $it\% \(", time() - $itime_start, "s\)\n";
 
-}print "\n-------------------------------\n\n";
+}
+print " - completed in: ", time() - $time_start,"s\n";
+print "\n-------------------------------\n\n";
 
 # Identify gene feature co-ordinates.
 print "Making co-ordinate files:\n\n";
+$time_start = time();
 my $coords_dir = "$pirate_dir/co-ords";
 if( -d "$coords_dir" ){ print "modified gff directory already exists.\n" }
 else{ unless ( mkdir "$coords_dir" ) { die "could not make PIRATE co-ords directory in $pirate_dir\n" } }
@@ -198,14 +209,17 @@ for ( @files ){
 	$temp_sample =~ s/\.gff*//;	
 	`perl $script_path/feature_coordinate_extracter.pl $gff_dir/$temp_sample.gff $coords_dir/$temp_sample.co-ords.tab`;
 }
+print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
 # parse pangenome files
 print "Parsing pangenome files:\n\n";
+$time_start = time();
 chdir("$pirate_dir") or die "$!";
 my $parse_results = `perl $script_path/ParsePangenomes.pl $it_dir $steps $no_files $pirate_dir`; 
 die "ParsePangeomes.pl failed.\n" if $?;
 print "$parse_results";
+print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
 # sort non-paralogous alleles file 
@@ -215,15 +229,19 @@ system( "mv $pirate_dir/cluster_alleles.temp.tab $pirate_dir/cluster_alleles.tab
 
 # check for paralogs and erroneous clusters (inconsistent clustering between iterations).
 print "Checking for inconsistent clustering:\n\n";
+$time_start = time();
 chdir("$pirate_dir") or die "$!";
 my $error_results = `perl $script_path/CheckParalogs.pl $pirate_dir/loci_list.tab $steps $pirate_dir`; 
 die "CheckParalogs.pl failed: $error_results\n" if $?;
 print "$error_results";
+print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
 # Extract paralog and erroneous cluster genes and align them.
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
+$time_start = time();
 system( "perl $script_path/AggregateErroneousFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
+print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
 # check for erroneous clusters.
@@ -233,6 +251,7 @@ if ( $no_erroneous > 0) {
 
 	# Correct clustering of erroneous clusters - recluster with MCL at $steps thresholds but force clusters at higher thresholds to cluster as lower clusters.
 	print "Recluster Erroneous:\n\n";
+	$time_start = time();
 	system( "perl $script_path/PangenomeConstruction.pl $pirate_dir/erroneous_aa_sequences/ $steps 98 $threads $error_dir" );
 
 	# make pseudo roary files for processing (temporary) and file structure expected for parsing genomes.
@@ -294,6 +313,8 @@ if ( $no_erroneous > 0) {
 	close PARA;
 	close TEMP1;
 	close TEMP2;
+	
+	print " - completed in: ", time() - $time_start,"s\n";
 
 }
 
@@ -308,11 +329,14 @@ print "\n-------------------------------\n\n";
 
 # Extract paralog and erroneous cluster genes and align them.
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
+$time_start = time();
 system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
+print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
 # Classify and assign paralog families.
 print "Classify paralog loci:\n\n";
+$time_start = time();
 system( "perl $script_path/IdentifyParalogs.pl $pirate_dir/cluster_nucleotide_sequences/ $gff_dir $pirate_dir");
 die "IdentifyParalogs.pl failed.\n" if $?;
 print "\n";
@@ -322,6 +346,7 @@ die "AssignParalogs.pl failed.\n" if $?;
 # Identify most likely allele designation for each cluster
 system( "perl $script_path/Split_Paralogs.pl $pirate_dir/paralog_alleles.tab $pirate_dir/split_paralogs.tab" );
 die "Split_Paralogs.pl failed.\n" if $?;
+print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
 }
