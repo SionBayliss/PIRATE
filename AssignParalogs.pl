@@ -127,7 +127,7 @@ while(<ROUND>){
 		# Process if gene cluster has been previously identified as a paralog.
 		if($paralogs{$gene_cluster}){
 		
-			print "$gene_cluster\n";
+			#print "$gene_cluster\n";
 		
 			## Summarise group at lowest AA% id ##
 			$entry = $line[1];
