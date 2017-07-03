@@ -319,6 +319,7 @@ if ( $no_erroneous > 0) {
 }
 
 # Link clusters
+print "\n-------------------------------\n\n";
 print "Link clusters between thresholds:\n\n";
 system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab $pirate_dir/recluster_erroneous/loci_list.tab");
 print "\n-------------------------------\n\n";
