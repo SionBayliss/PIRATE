@@ -8,16 +8,7 @@ use warnings;
 # B) If the cluster splits to contain one or more clusters that contain the same number of genomes.
 # i.e. a cluster of 4 genomes contain 7 ORFs splits into two clusters containing 4 and 3 ORFs (one per genome).
 
-# Dependencies
-#use List::Util qw(first max maxstr min minstr reduce shuffle sum);
-
 # Inputs
-#$paralog_alleles="/home/sb2145/Desktop/I_Roary/Intergenic_Example/PIRATE/Test/paralog_alleles.tab";
-#$output="/home/sb2145/Desktop/I_Roary/Intergenic_Example/PIRATE/Test/split_paralogs.tab";
-
-#$paralog_alleles="/home/sb2145/Desktop/I_Roary/Kaisa/PIRATE/Alignments/paralog_alleles.tab";
-#$output="/home/sb2145/Desktop/I_Roary/Kaisa/PIRATE/Alignments/split_paralogs.tab";
-
 my $paralog_alleles=$ARGV[0];
 my $output=$ARGV[1];
 

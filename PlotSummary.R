@@ -98,20 +98,29 @@ if(file.exists(per_cluster_summary)){
  
 
 ## Open output 
-pdf(sprintf("%s/PIRATE_Summary.pdf", output), width=12, height=7)
+if(file.exists(per_genome_summary)){
+  
+  pdf(sprintf("%s/PIRATE_Summary.pdf", output), width=12, height=7)
+    print(rs)
+    print(rp)
+    print(gs.plot)
+    print(gsin.plot)
+    plot(err.plot)
+    plot(prop.plot)
+    
+}else{
+  pdf(sprintf("%s/PIRATE_Summary.pdf", output), width=12, height=7)
   print(rs)
   print(rp)
-  print(gs.plot)
-  print(gsin.plot)
-  plot(err.plot)
   plot(prop.plot)
+
+}
 dev.off()
 
 # Individual Plots
 #tiff(sprintf("%s/PIRATE_Summary.core_accessory.tiff", output), width=10, height=5, res=100, units="in")
 #print(rs)
 #dev.off()
-
 
 # Individual Plots
 #tiff(sprintf("%s/PIRATE_Summary.core_accessory_diverse.tiff", output), width=10, height=5, res=100, units="in")

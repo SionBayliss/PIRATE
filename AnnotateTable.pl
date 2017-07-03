@@ -83,6 +83,7 @@ print OUTPUT "allele_name\tgene_cluster\tdiversity_signature\tdiversity_ID\tthre
 my %product_info;
 my %name_info;
 my @lengths=();
+#my %rename_check;
 
 open TABLE, $table or die $!;
 while(<TABLE>){
@@ -97,6 +98,9 @@ while(<TABLE>){
 		my $no_files = scalar(@line)-8;
 		
 		my @loci = @line[9..($no_entries-1)];
+		
+		#my $allele_name = $line[0];
+		#my $cluster_name = $line[0];
 		
 		%product_info=();
 		%name_info=();

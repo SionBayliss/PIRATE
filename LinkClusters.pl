@@ -622,21 +622,19 @@ for my $c_gene (sort keys %{$cluster_genes{$AA_PER[0]}}){
 	my $descriptor = "$conservation_status $c_type $p_type";	
 	
 	# Gene number info.
-	#my $c_info = $cluster_info{$c_gene};
-	my $c_info = "MISSING";
+	my $c_info = scalar keys $cluster_genomes{ $AA_PER[0] } {$c_gene}; 
 	
 	# Singleton/Orphan gene check.
-	#$c_info=~/^(\d+)\t/;
-	#my $single_check = $1;
+	my $single_check = 0;
+	$single_check = 1 if $c_info == 1;
 	
 	# Print to file.
-	# Check if there was ambiguous assignment of genes between clusters or singleton genes
-	#if($single_check == 1){
-	#	$descriptor="Singleton Accessory Gene";
-	#	print GENSUM "$c_gene\tSingleton Accessory Gene\tSingleton\tAccessory\t$p_type\t$g_sig\t$g_sig_id\t$c_info\n";
-	#}else{
+	if($single_check == 1){
+		$descriptor="Singleton Accessory Gene";
+		print GENSUM "$c_gene\tSingleton Accessory Gene\tSingleton\tAccessory\t$p_type\t$g_sig\t$g_sig_id\t$c_info\n";
+	}else{
 		print GENSUM "$c_gene\t$descriptor\t$conservation_status\t$c_type\t$p_type\t$g_sig\t$g_sig_id\t$c_info\n";			
-	#}	
+	}	
 	
 	# Store descriptor.
 	$gene_descriptor{$c_gene} = $descriptor;
