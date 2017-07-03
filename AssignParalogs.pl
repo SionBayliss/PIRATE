@@ -45,27 +45,20 @@ open OUT2, ">$output2" or die $!;
 print OUT2 "$header\n";
 
 # Parse paralogous ORFs identified by IdentifyParalogs.pl
-open PARA, $paralog_groups or die $1;
 my %paralogs=();
 my %group_list;
 my %lengthc_list;
 my %loci_list;
+
+open PARA, $paralog_groups or die $1;
 while(<PARA>){
 	if(/^\S+\t/){		
 		
 		# Info
 		my $line = $_;
 		chomp $line;
-		my @line=split(/\t/, $line);
-		
-		# Variables
-		my $loci = $line[0];
-		my $cluster = $line[1];
-		my $genome = $line[2];
-		my $mc = $line[3];
-		my $ff = $line[4];
-		my $t_group = $line[5];
-		my $l_cluster = $line[6];
+
+		my ($loci, $cluster, $genome, $mc, $ff, $t_group, $l_cluster) = split(/\t/, $line);
 		
 		# Store info.
 		if( $mc == 1 ){
@@ -76,15 +69,13 @@ while(<PARA>){
 		}
 		
 		# Store cluster group.
-		$group_list{$loci} = $t_group;
+		$group_list{$loci} = $t_group+1;
 		
 		# Store length cluster group.
 		$lengthc_list{$loci} = $l_cluster;
 		
 		# Store genome of loci.
 		$loci_list{$loci}=$genome;
-		
-		#if($cluster eq "group_32"){ die "$mc\t$ff\n" }
 		
 	}
 }close PARA;
@@ -108,7 +99,8 @@ while(<ROUND>){
 	my $line = $_;
 	$line =~ s/\R//g;
 	
-	# reset vars
+
+	# reset variables
 	my $entry = "";
 	my $sub_name = "";
 	my @sub_entry = ();
@@ -123,7 +115,7 @@ while(<ROUND>){
 	# Info line.
 	else{ 
 	
-		# check format
+		# check format of header line
 		if( scalar(@headers) == 0 ){
 			die "No headers found.\n";
 		}
@@ -134,6 +126,8 @@ while(<ROUND>){
 		
 		# Process if gene cluster has been previously identified as a paralog.
 		if($paralogs{$gene_cluster}){
+		
+			print "$gene_cluster\n";
 		
 			## Summarise group at lowest AA% id ##
 			$entry = $line[1];
@@ -151,9 +145,15 @@ while(<ROUND>){
 		
 			# Subset information for this cluster of genomes.
 			my %current_genomes = ();
-			for my $loci(@sub_entry){						
+			for my $loci(@sub_entry){	
+				
+				# sanity check 
+				die "No group found for loci $loci on line:\n$line\n" if !$group_list{$loci};	
 				my $group = $group_list{$loci};
+				
+				die "No group found for loci $loci on line:\n$line\n" if !$loci_list{$loci};	
 				my $genome = $loci_list{$loci};
+				
 				$current_genomes{$genome}{$group}{$loci}=1;
 			}
 		
@@ -161,11 +161,11 @@ while(<ROUND>){
 			my $cluster_genomes = scalar(keys(%current_genomes));
 		
 			# Calculate fission/fusion, multicopy and ORF dosage per genome.
-			my $ff_count=0;
-			my $mc_count=0;
-			my $dosage=0;
-			my $min_dose="";
-			my $max_dose="";
+			my $ff_count = 0;
+			my $mc_count = 0;
+			my $dosage = 0;
+			my $min_dose = "";
+			my $max_dose = "";
 			
 			for my $a1(keys %current_genomes){
 		
@@ -222,8 +222,6 @@ while(<ROUND>){
 			}			
 			my $end = join("\t" , @out_g);
 			
-	#if($gene_cluster eq "group_32"){die ""};
-			
 			# Print cluster summary of initial cluster.
 			print OUT1 "$begin\t$end\n";
 			
@@ -264,7 +262,7 @@ while(<ROUND>){
 						# Name and contents of sub-cluster
 						$sub =~ /(\S+)\((.+)\)/;
 						my $sub_name = $1;
-						my @sub_entry = split(/:/,$2);
+						my @sub_entry = split(/:/, $2);
 						
 						# No. of ORFs in sub-cluster.
 						my $cluster_size = @sub_entry;
@@ -294,7 +292,7 @@ while(<ROUND>){
 						for my $a1(keys %current_genomes){
 						
 							# Increment variables.
-							my $groups=scalar(keys(%{$current_genomes{$a1}})); # Number of groups.
+							my $groups = scalar(keys(%{$current_genomes{$a1}})); # Number of groups.
 							$dosage=$dosage+$groups; # Increment dosage
 							$mc_count=$mc_count+$groups; # Increment number of multicopy genes.
 							
@@ -459,39 +457,7 @@ while(<ROUND>){
 
 							}
 
-
-							
-							
-							#for $b1(keys %current_genomes){
-						
-								# Count distinct groups.
-							#	$groups=scalar(keys(%{$current_genomes{$b1}})); # Number of groups.
-								
-							#	if($groups>1){
-							#		print keys(%{$current_genomes{$b1}});
-							#		print "\n$groups\n"; exit;
-							#	}
-								#$dosage=$dosage+$groups; # Increment dosage
-								#$mc_count=$mc_count+$groups; # Increment number of multicopy genes.
-							
-								# Count number of groups containing truncations.
-								#$ff_temp=0;
-								#for $a2( keys %{$current_genomes{$a1}} ) {
-								#	$ff_temp++ if (scalar(keys( %{$current_genomes{$a1}{$a2}} )) > 1 )
-								#}
-							
-								# Find min and max dose						
-								#if ($min_dose eq "") { $min_dose=$groups } elsif ( $min_dose>$groups ) { $min_dose=$groups };
-								#if ($max_dose eq "") { $max_dose=$groups } elsif ( $max_dose<$groups ) { $max_dose=$groups };
-							
-								# Increment count of truncation groups
-								#$ff_count=$ff_count+$ff_temp;
-								
-							#}		
-							
-							#exit
 						}
-						 
 						
 						# Test to see if one ORF per genome AND loci have not already been processed.
 						if( ($corr_dose <= $no_genomes) && ($max_dose == 1) && !($processed_loci{$sub_entry[0]}) ){
@@ -511,16 +477,8 @@ while(<ROUND>){
 					}
 				}
 			}
-			
-			#$t++;
-			#if($t==3){exit};
-			
-			#print "\n";
 		}	
-		
 	}	
-	
-	
 }close ROUND;
 
 print "$test clusters found in round clusters\n";

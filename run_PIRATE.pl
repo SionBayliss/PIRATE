@@ -311,14 +311,14 @@ unless( $debug == 1 ){
 	system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
 	print "\n-------------------------------\n\n";
 
+	# Classify and assign paralog families.
+	print "Classify paralog loci:\n\n";
+	system( "perl $script_path/IdentifyParalogs.pl $pirate_dir/cluster_nucleotide_sequences/ $gff_dir $pirate_dir");
+	die "IdentifyParalogs.pl failed.\n" if $?;
+	print "\n";
+
 }
 
-
-# Classify and assign paralog families.
-print "Classify paralog loci:\n\n";
-system( "perl $script_path/IdentifyParalogs.pl $pirate_dir/cluster_nucleotide_sequences/ $gff_dir $pirate_dir");
-die "IdentifyParalogs.pl failed.\n" if $?;
-print "\n";
 system( "perl $script_path/AssignParalogs.pl $pirate_dir/round_clusters.tab $pirate_dir/loci_paralog_catagories.tab $pirate_dir/paralog_clusters.tab $pirate_dir/paralog_alleles.tab $pirate_dir/genome_list.txt" );
 die "AssignParalogs.pl failed.\n" if $?;
 print "\n-------------------------------\n\n";
