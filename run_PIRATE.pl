@@ -328,12 +328,16 @@ print "\n-------------------------------\n\n";
 `cat $pirate_dir/loci_list.tab $error_dir/loci_list.tab > $pirate_dir/temp.tab`;
 `mv $pirate_dir/temp.tab $pirate_dir/loci_list.tab`;
 
+}
+
 # Extract paralog and erroneous cluster genes and align them.
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
 $time_start = time();
 system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
 print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
+
+exit;
 
 # Classify and assign paralog families.
 print "Classify paralog loci:\n\n";
@@ -349,8 +353,6 @@ system( "perl $script_path/Split_Paralogs.pl $pirate_dir/paralog_alleles.tab $pi
 die "Split_Paralogs.pl failed.\n" if $?;
 print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
-
-}
 
 # rename duplicate allele names in split_paralog (temp until naming scheme is instituted).
 print `nawk -v OFS="\t" '\$1 in a {\$1=\$1 "_" ++a[\$1]}{a[\$1];print}' $pirate_dir/split_paralogs.tab > $pirate_dir/split_paralogs.renamed.tab`;
