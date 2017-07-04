@@ -356,11 +356,13 @@ print "\n-------------------------------\n\n";
 print `nawk -v OFS="\t" '\$1 in a {\$1=\$1 "_" ++a[\$1]}{a[\$1];print}' $pirate_dir/split_paralogs.tab > $pirate_dir/split_paralogs.renamed.tab`;
 
 # Make gene family file from combining split_paralogs and alleles from cluster_alleles file
-#`cat $pirate_dir/cluster_alleles.tab $pirate_dir/paralog_alleles.tab > $pirate_dir/alleles_combined.tab`;
 open ALL_OUT, "$pirate_dir/cluster_alleles.tab" or die $!;
 open FAMILY_OUT, ">$pirate_dir/cluster_families.tab " or die $!;
 while(<ALL_OUT>) { if(/^\S+\t\S+\t$thresholds[0]\t/){ print FAMILY_OUT "$_" } }
 `cat $pirate_dir/cluster_families.tab $pirate_dir/split_paralogs.renamed.tab > $pirate_dir/families_combined.tab`;
+
+# concatenate alleles files
+`cat $pirate_dir/cluster_alleles.tab $pirate_dir/paralog_alleles.tab > $pirate_dir/alleles_combined.tab`;
 
 # sort family_clusters files on number of genomes.
 `sort -k 4,4rn -k 2,2 < $pirate_dir/families_combined.tab > $pirate_dir/families_combined.temp.tab`;
