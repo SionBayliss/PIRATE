@@ -337,8 +337,6 @@ system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds
 print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
-exit;
-
 # Classify and assign paralog families.
 print "Classify paralog loci:\n\n";
 $time_start = time();
