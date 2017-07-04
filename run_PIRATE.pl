@@ -136,7 +136,7 @@ $time_start = time();
 my $gff_dir = "$pirate_dir/modified_gffs";
 if( -d $gff_dir ){ print "modified gff directory already exists.\n" }
 else{ unless ( mkdir $gff_dir ) { die "could not make PIRATE gff directory in $pirate_dir\n" } }
-`ls $input_dir/*.gff | parallel --no-notice -N $threads -j $threads perl $script_path/ParseGFF.pl {} $gff_dir`;
+`ls $input_dir/*.gff | parallel -j $threads perl $script_path/ParseGFF.pl {} $gff_dir`;
 
 # check number of sucessfully standardised gff files
 opendir(DIR, $gff_dir);

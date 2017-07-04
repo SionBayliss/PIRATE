@@ -263,7 +263,7 @@ for my $gene( keys %group_list ){
 		#close TEMP2;
 		
 		# MAFFT
-		print `cat $temp1 | parallel --no-notice -N $threads --jobs $threads --colsep "\t" perl $script_path/Nucleotide2AA.pl {1} {2} 2>/dev/null`;
+		print `parallel -a $temp1 --no-notice --jobs $threads --colsep "\t" perl $script_path/Nucleotide2AA.pl {1} {2} 2>/dev/null`;
 		#`cat $temp2 | parallel --no-notice --jobs $threads --colsep "\t" mv {1} {2} 2>/dev/null`;
 
 		# Clear temp files.

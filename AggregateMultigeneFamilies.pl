@@ -231,8 +231,8 @@ for my $gene( keys %group_list ){
 		#`cat $temp4 | parallel --no-notice --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
 		
 		# MAFFT
-		`cat $temp1 | parallel --no-notice -N $threads --jobs $threads --colsep '\t' perl $script_path/AAalign2nucleotide.pl {1} {2} 2> /dev/null`;
-		`cat $temp2 | parallel --no-notice -N $threads --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
+		`parallel -a $temp1 --jobs $threads --colsep '\t' perl $script_path/AAalign2nucleotide.pl {1} {2} >/dev/null 2>/dev/null`;
+		`parallel -a $temp1 --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
 
 		# Clear temp files.
 		open TEMP1, ">$temp1" or die $!;
