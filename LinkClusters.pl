@@ -622,7 +622,7 @@ for my $c_gene (sort keys %{$cluster_genes{$AA_PER[0]}}){
 	my $descriptor = "$conservation_status $c_type $p_type";	
 	
 	# Gene number info.
-	my $c_info = scalar keys $cluster_genomes{ $AA_PER[0] } {$c_gene}; 
+	my $c_info = scalar keys %{$cluster_genomes{ $AA_PER[0] }{$c_gene}}; 
 	
 	# Singleton/Orphan gene check.
 	my $single_check = 0;

@@ -30,26 +30,29 @@ In order to use R scripts and shiny interface:
 run_PIRATE.pl ---
 
 ## TO DO
-- institute allele naming scheme 
+
+### Bugs
 - rerunning in same folder may throw errors - add sample list to IdentifyParalogs.pl to avoid this.
-- Consolidate AggregateErroneous.pl and Nucleotide2AA.pl
-- Check gene names are corrected if they contain \/ in ParseGFFs.pl
-- AssignParalogs.pl - revise and tidy up
-- PangenomeConstruction.pl - Generalise and paralellise to optionally replace ROARY
-- IdentifyParalogs.pl - paralellise for speed.
-- Split-Paralogs.pl - revise - not working as intended.
-- Combine find erroneous and parse genomes + tidy up outputs. 
-- PerGenomeSummary.pl - Fix for updates scripts
-- BGreat - graph building / mapping software
 - check genome name ordering in all files. 
-- Check alignment gives appropriate feedback and check for aligner errror
+
+### Features
+- institute allele naming scheme 
+- PangenomeConstruction.pl - Generalise and parallelise to optionally replace ROARY
+- PerGenomeSummary.pl - Fix for updates scripts
 - Add/institute support for PRANK
-- Reannotate and rewrite IdentifyParalogs
 - add -force option
-- add core_per option.
-- pangenome fastq upload
+- add core_per option (?)
+- upload pangenome fastq script
 - upload full pangenome align script.
 - generalise pangenome script
 - update and upload correlation analysis scripts
-- Update and include familty plotting script 
+- Update and include family plotting script 
 - Shiny interface
+
+### Speed/Usability
+- Consolidate AggregateErroneous.pl and Nucleotide2AA.pl
+- AssignParalogs.pl - revise and tidy up
+- IdentifyParalogs.pl - paralellise for speed.
+- Combine find erroneous and parse genomes + tidy up outputs. 
+- Check alignment gives appropriate feedback and check for aligner error
+- Reannotate and rewrite IdentifyParalogs

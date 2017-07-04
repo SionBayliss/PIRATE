@@ -64,7 +64,7 @@ $clusters_found = scalar ( keys %clusters );
 
 # Check all genes/alleles found.
 if( $no_groups ne $clusters_found ){
-	die "Only $clusters_found of $no_groups gene clusters during round $round.\n";
+	#die "Error - Only found $clusters_found of $no_groups gene clusters during round $round.\n";
 }else{
 	print "$clusters_found paralog/erroneous clusters identified from ", scalar( keys %group_list ), " groups.\n";
 }
@@ -231,8 +231,8 @@ for my $gene( keys %group_list ){
 		#`cat $temp4 | parallel --no-notice --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
 		
 		# MAFFT
-		`cat $temp1 | parallel --no-notice --jobs $threads --colsep '\t' perl $script_path/AAalign2nucleotide.pl {1} {2} 2> /dev/null`;
-		`cat $temp2 | parallel --no-notice --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
+		`cat $temp1 | parallel --no-notice -N $threads --jobs $threads --colsep '\t' perl $script_path/AAalign2nucleotide.pl {1} {2} 2> /dev/null`;
+		`cat $temp2 | parallel --no-notice -N $threads --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
 
 		# Clear temp files.
 		open TEMP1, ">$temp1" or die $!;
