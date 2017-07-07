@@ -232,7 +232,7 @@ for my $gene( keys %group_list ){
 		
 		# MAFFT
 		`parallel -a $temp1 --jobs $threads --colsep '\t' perl $script_path/AAalign2nucleotide.pl {1} {2} >/dev/null 2>/dev/null`;
-		`parallel -a $temp1 --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
+		`parallel -a $temp2 --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
 
 		# Clear temp files.
 		open TEMP1, ">$temp1" or die $!;

@@ -157,6 +157,7 @@ open G_LIST, ">$pirate_dir/genome_list.txt";
 for my $g( @files ){ $g =~ /(.+).gff/; print G_LIST "$1\n"; }
 close G_LIST;
 
+my $error_dir = "$pirate_dir/recluster_erroneous/"; ############
 unless( $debug == 1 ){
 
 # create roary log file
@@ -323,6 +324,7 @@ if ( $no_erroneous > 0) {
 
 }
 
+}
 # Link clusters
 print "\n-------------------------------\n\n";
 print "Link clusters between thresholds:\n\n";
@@ -332,8 +334,6 @@ print "\n-------------------------------\n\n";
 # add additional clusters to loci list.
 `cat $pirate_dir/loci_list.tab $error_dir/loci_list.tab > $pirate_dir/temp.tab`;
 `mv $pirate_dir/temp.tab $pirate_dir/loci_list.tab`;
-
-}
 
 # Extract paralog and erroneous cluster genes and align them.
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
