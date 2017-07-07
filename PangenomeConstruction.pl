@@ -13,6 +13,12 @@ my $low_cdhit = $ARGV[2];
 my $threads = $ARGV[3];
 my $working_dir = $ARGV[4];
 
+# check dependencies # note - currently just checks cd-hit
+my $cd_hit_bin = "";
+$cd_hit_bin = "cdhit" if `command -v cdhit;`;
+$cd_hit_bin = "cd-hit" if `command -v cd-hit;`;
+die "cd-hit not found" if $cd_hit_bin eq "";
+
 # thresholds
 my @thresholds = split (/\,/, $steps);
 @thresholds = sort  {$a <=> $b} @thresholds;
@@ -100,7 +106,7 @@ for my $file( @files ){
 	
 		my $curr_thresh = $i/100;
 		
-		`cd-hit -i $working_dir/$sample.temp.fasta -o $working_dir/$sample.$i -c $curr_thresh -n 5 >> $cdhit_log`;
+		`$cd_hit_bin -i $working_dir/$sample.temp.fasta -o $working_dir/$sample.$i -c $curr_thresh -n 5 -M 0 >> $cdhit_log`;
 		
 		my $c_header="";
 		my $define = 0;
@@ -204,8 +210,6 @@ for my $file( @files ){
 		open INCLUDE, ">$working_dir/$sample.$i.include" or die $!; 
 		print INCLUDE join("\n", @include_seq),"\n";
 		
-		#print scalar(@include_seq), " sequences remaining to cluster in next round.\n";
-	
 		# create new working fasta 
 		`grep -A 1 -f $working_dir/$sample.$i.include < $working_dir/$sample.temp.fasta | grep -v "^--" > $working_dir/$sample.temp2.fasta`;
 		`mv $working_dir/$sample.temp2.fasta $working_dir/$sample.temp.fasta`;

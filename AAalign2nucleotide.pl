@@ -82,7 +82,8 @@ if( $no_seqs == 1 ){
 }
 
 # Pass translated amino acid sequence to mafft for alignment :
-`mafft --quiet --localpair --lop -4 --lep -1 --lexp -0.2 --maxiterate 1000 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`; 
+#`mafft --quiet --localpair --lop -4 --lep -1 --lexp -0.2 --maxiterate 1000 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`; 
+`mafft --auto --quiet --lop -4 --lep -1 --lexp -0.2 --maxiterate 10 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`; 
 
 # Other options (worse)
 #`mafft --quiet --localpair --lop -4 --lep 1 --lexp 1 --maxiterate 1000 $aa_dir/$isolate.temp.fasta > $aa_dir/$isolate.aa.fasta`; 

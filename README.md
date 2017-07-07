@@ -50,6 +50,7 @@ run_PIRATE.pl ---
 - Shiny interface
 
 ### Speed/Usability
+- add dependency checking in all scripts that run external programs.
 - add redirects for error messages to log file 
 - Consolidate AggregateErroneous.pl and Nucleotide2AA.pl
 - AssignParalogs.pl - revise and tidy up
