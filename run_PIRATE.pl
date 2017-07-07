@@ -43,7 +43,7 @@ $| = 1; # turn off buffering for real time feedback.
 #}
 
 # path to executing script
-my $script_path = dirname($0);
+my $script_path = abs_path(dirname($0));
 
 # command line options
 my $man = 0;
