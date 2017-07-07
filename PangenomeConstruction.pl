@@ -100,7 +100,7 @@ for my $file( @files ){
 	
 		my $curr_thresh = $i/100;
 		
-		`cdhit -i $working_dir/$sample.temp.fasta -o $working_dir/$sample.$i -c $curr_thresh -n 5 >> $cdhit_log`;
+		`cd-hit -i $working_dir/$sample.temp.fasta -o $working_dir/$sample.$i -c $curr_thresh -n 5 >> $cdhit_log`;
 		
 		my $c_header="";
 		my $define = 0;
