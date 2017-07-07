@@ -50,6 +50,7 @@ run_PIRATE.pl ---
 - Shiny interface
 
 ### Speed/Usability
+- add redirects for error messages to log file 
 - Consolidate AggregateErroneous.pl and Nucleotide2AA.pl
 - AssignParalogs.pl - revise and tidy up
 - IdentifyParalogs.pl - paralellise for speed.

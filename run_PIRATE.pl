@@ -22,28 +22,22 @@ use File::Basename;
 	-h|--help 		usage information
 	-m|--man		man page 
 	-i|--input		input directory containing gffs [mandatory]
-	-o|--output
+	-o|--output		output directory in which to create PIRATE folder [default: input_dir]]
 	-t|--threads	number of threads/cores used by PIRATE [default: 2]
-	-s|--steps
-	-q|--quiet
-	-r|--rplots
-	-n|--noroary
+	-s|--steps		AA % thresholds to use for pangenome construction [50,60,70,80,90,95,98]
+	-q|--quiet		switch off verbose [not instituted]
+	-r|--rplots		plot summaries using R [requires dependencies]
+	-n|--noroary	don't run pangenome tool [assumes files are in pangenome_iterations folder]
 	
 ...
 
 =cut
 
-# switch off buffering
-$| = 1; # turn off buffering for real time feedback.
-
-# execute command for scripts with feedback.
-#sub execute {
-#    my $cmd = shift;
-#    system($cmd);
-#}
-
 # path to executing script
 my $script_path = abs_path(dirname($0));
+
+# switch off buffering
+$| = 1; # turn off buffering for real time feedback.
 
 # command line options
 my $man = 0;
@@ -259,6 +253,7 @@ if ( $no_erroneous > 0) {
 	print "Recluster Erroneous:\n\n";
 	$time_start = time();
 	system( "perl $script_path/PangenomeConstruction.pl $pirate_dir/erroneous_aa_sequences/ $steps 98 $threads $error_dir" );
+	die "PangenomeConstruction.pl failed\n" if $?;
 
 	# make pseudo roary files for processing (temporary) and file structure expected for parsing genomes.
 	for my $ct (@thresholds){
@@ -270,7 +265,8 @@ if ( $no_erroneous > 0) {
 		for my $cg (1..$no_erroneous){
 
 			system( "perl $script_path/Pangenome2Roary.pl $error_dir/Error_$cg.$ct.reclustered.reinflated $pirate_dir/loci_list.tab err$cg > $error_dir/$ct/temp.txt" );
-	
+			die "Pangenome2Roary.pl failed\n" if $?;
+			
 			if ( $temp_count++ == 0 ){
 				`cat < $error_dir/$ct/temp.txt >> $error_dir/$ct/gene_presence_absence.csv`;
 			}else{
@@ -284,13 +280,11 @@ if ( $no_erroneous > 0) {
 	# parse pangenome files
 	my $parse_results = `perl $script_path/ParsePangenomes.pl $error_dir $steps $no_files $error_dir`; 
 	die "ParsePangeomes.pl failed:\n$parse_results\n" if $?;
-	print "$parse_results";
 	print "\n-------------------------------\n\n";
 
 	# check for paralogs and erroneous clusters (inconsistent clustering between iterations).
 	my $error_results = `perl $script_path/CheckParalogs.pl $error_dir/loci_list.tab $steps $error_dir`; 
 	die "CheckParalogs.pl failed:\n$error_results\n" if $?;
-	print "$error_results";
 	print "\n-------------------------------\n\n";
 
 	# add paralogs to list of paralogs from before correction.	
@@ -329,6 +323,7 @@ if ( $no_erroneous > 0) {
 print "\n-------------------------------\n\n";
 print "Link clusters between thresholds:\n\n";
 system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab $pirate_dir/recluster_erroneous/loci_list.tab");
+die "LinkClusters.pl failed.\n" if $?;
 print "\n-------------------------------\n\n";
 
 # add additional clusters to loci list.
@@ -339,6 +334,7 @@ print "\n-------------------------------\n\n";
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
 $time_start = time();
 system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
+die "AggregateMultigeneFamilies failed.\n" if $?;
 print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
@@ -375,7 +371,9 @@ while(<ALL_OUT>) { if(/^\S+\t\S+\t$thresholds[0]\t/){ print FAMILY_OUT "$_" } }
 
 # Make annotated output tables (families and alleles) - N.B. splits not working.
 `perl $script_path/AnnotateTable.pl $pirate_dir/alleles_combined.tab $pirate_dir/co-ords/ $pirate_dir/gene_cluster_summary.tab $pirate_dir/PIRATE.alleles.tab`;
+die "AnnotateTable failed.\n" if $?;
 `perl $script_path/AnnotateTable.pl $pirate_dir/families_combined.tab $pirate_dir/co-ords/ $pirate_dir/gene_cluster_summary.tab $pirate_dir/PIRATE.gene_families.tab`;
+die "AnnotateTable failed.\n" if $?;
 
 # tabular summaries
 print "Printing summary tables\n";
