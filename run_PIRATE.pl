@@ -5,9 +5,9 @@ use warnings qw(all);
 
 use Getopt::Long qw(GetOptions);
 use Pod::Usage;
-use Cwd;
+#use Cwd;
 use Cwd 'abs_path';
-
+use File::Basename;
 
 # To do:
 
@@ -22,7 +22,12 @@ use Cwd 'abs_path';
 	-h|--help 		usage information
 	-m|--man		man page 
 	-i|--input		input directory containing gffs [mandatory]
+	-o|--output
 	-t|--threads	number of threads/cores used by PIRATE [default: 2]
+	-s|--steps
+	-q|--quiet
+	-r|--rplots
+	-n|--noroary
 	
 ...
 
@@ -36,6 +41,9 @@ $| = 1; # turn off buffering for real time feedback.
 #    my $cmd = shift;
 #    system($cmd);
 #}
+
+# path to executing script
+my $script_path = dirname($0);
 
 # command line options
 my $man = 0;
@@ -70,9 +78,6 @@ GetOptions(
 pod2usage(1) if $help;
 pod2usage(-verbose => 2) if $man;
 #pod2usage("$0: No arguements passed to PIRATE") if ((@ARGV == 0 ) && (-t STDIN));  ####
-
-# path to executing script
-my $script_path = getcwd($0);
 
 # expand input and output directories
 $output_dir = $input_dir if $output_dir eq '';
@@ -136,7 +141,7 @@ $time_start = time();
 my $gff_dir = "$pirate_dir/modified_gffs";
 if( -d $gff_dir ){ print "modified gff directory already exists.\n" }
 else{ unless ( mkdir $gff_dir ) { die "could not make PIRATE gff directory in $pirate_dir\n" } }
-`ls $input_dir/*.gff | parallel -j $threads perl $script_path/ParseGFF.pl {} $gff_dir`;
+`ls $input_dir/*.gff | parallel -j $threads perl $script_path/ParseGFF.pl {} $gff_dir 2>/dev/null`;
 
 # check number of sucessfully standardised gff files
 opendir(DIR, $gff_dir);

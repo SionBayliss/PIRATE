@@ -99,9 +99,8 @@ for my $s(@AA_PER){
 					++$curr_cluster_size;
 					$round_samples{$curr_cluster_size}=$l[$i];
 					$round_genomes{$curr_cluster_size}=$headers[$i];
-					push( @out_line , $l[$i] );
 				}
-				
+				push( @out_line , $l[$i] );
 			}			
 				
 			# Store info in roary iterations for ascending AA% identity
