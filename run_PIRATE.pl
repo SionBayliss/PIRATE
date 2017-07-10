@@ -14,7 +14,7 @@ use File::Basename;
 
 =head1  SYNOPSIS
 
-	PIRATE 
+	PIRATE -i /path/to/directory/containing/gffs/ 
 
 =head1 Descriptions
 	

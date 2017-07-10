@@ -106,7 +106,7 @@ for my $file( @files ){
 	
 		my $curr_thresh = $i/100;
 		
-		`$cd_hit_bin -i $working_dir/$sample.temp.fasta -o $working_dir/$sample.$i -c $curr_thresh -n 5 -M 0 >> $cdhit_log`;
+		`$cd_hit_bin -i $working_dir/$sample.temp.fasta -o $working_dir/$sample.$i -c $curr_thresh -n 5 -M 0 -d 150 >> $cdhit_log`;
 		
 		my $c_header="";
 		my $define = 0;
@@ -217,10 +217,10 @@ for my $file( @files ){
 	
 	}close CD_LOG;
 	
-	open CLUSTERS, ">$working_dir/$sample.clusters2" or die $!;
-	foreach(keys %cluster_hash){
-		print CLUSTERS "$_\t$cluster_hash{$_}\n";	
-	}close CLUSTERS;
+	#open CLUSTERS, ">$working_dir/$sample.clusters2" or die $!;
+	#foreach(keys %cluster_hash){
+	#	print CLUSTERS "$_\t$cluster_hash{$_}\n";	
+	#}close CLUSTERS;
 	
 	my $check_clusters = 0;
 	open INCLUDE, "$working_dir/$sample.included" or die $!;
