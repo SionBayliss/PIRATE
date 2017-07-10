@@ -5,7 +5,6 @@ use warnings qw(all);
 
 use Getopt::Long qw(GetOptions);
 use Pod::Usage;
-#use Cwd;
 use Cwd 'abs_path';
 use File::Basename;
 
@@ -35,6 +34,10 @@ use File::Basename;
 
 # path to executing script
 my $script_path = abs_path(dirname($0));
+
+# check dependencies
+system( "perl $script_path/CheckDependencies.pl" );
+die if $?;
 
 # switch off buffering
 $| = 1; # turn off buffering for real time feedback.
@@ -224,7 +227,7 @@ print "\n-------------------------------\n\n";
 
 # sort non-paralogous alleles file 
 my $sort_check = system( "sort -t \"\t\" -k2,2 -k3,3 < $pirate_dir/cluster_alleles.tab > $pirate_dir/cluster_alleles.temp.tab" );
-die "System failed to sort alleles.\n" if $sort_check;
+die "System failed to sort alleles.\n" if $?;
 system( "mv $pirate_dir/cluster_alleles.temp.tab $pirate_dir/cluster_alleles.tab" );
 
 # check for paralogs and erroneous clusters (inconsistent clustering between iterations).

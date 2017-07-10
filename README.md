@@ -27,7 +27,23 @@ In order to use R scripts and shiny interface:
 
 ## Usage 
 
-run_PIRATE.pl ---
+```
+run_PIRATE.pl -i /path/to/directory/containing/gffs/
+```
+
+## Options
+
+```
+	-h|--help 		usage information
+	-m|--man		man page 
+	-i|--input		input directory containing gffs [mandatory]
+	-o|--output		output directory in which to create PIRATE folder [default: input_dir]]
+	-t|--threads	number of threads/cores used by PIRATE [default: 2]
+	-s|--steps		AA % thresholds to use for pangenome construction [50,60,70,80,90,95,98]
+	-q|--quiet		switch off verbose [not instituted]
+	-r|--rplots		plot summaries using R [requires dependencies]
+	-n|--noroary	don't run pangenome tool [assumes files are in pangenome_iterations folder]
+```
 
 ## TO DO
 
@@ -50,7 +66,7 @@ run_PIRATE.pl ---
 - Shiny interface
 
 ### Speed/Usability
-- add dependency checking in all scripts that run external programs.
+- add version checking to run_PIRATE and PangenomeConstruction.
 - add redirects for error messages to log file 
 - Consolidate AggregateErroneous.pl and Nucleotide2AA.pl
 - AssignParalogs.pl - revise and tidy up
