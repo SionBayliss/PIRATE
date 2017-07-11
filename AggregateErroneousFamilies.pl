@@ -19,18 +19,30 @@ my %gff_list;
 my %cluster_list;
 
 # Parse error links summary - store in groups hash.
+my $repeat_check = 0;
 open ERR, "$pirate_dir/error_links_summary.tab" or die $!;
 while(<ERR>){
 	if(/(\S+)\t(\S+)\n/){
 	
-		my $cluster = $1; 
-		my $clusters = $2;
+		#my $cluster = $1; 
+		#my $clusters = $2;
 		
-		$groups{ $1 } = "Error_$2";
-		$group_list{ "Error_$2" } = 1;
+		#$groups{ $1 } = "Error_$2";
+		#$group_list{ "Error_$2" } = 1;
 		
+		# Check for repeat loci.
+		if( $groups{ $1 } ){
+			print "Loci repeated in file - $1\n";
+			$repeat_check = 1;
+		}else{
+			
+			$groups{ $1 } = "Error_$2";
+			$group_list{ "Error_$2" } = 1;
+				
+		}
 	}
 }
+die "Something is wrong with inputs - loci assigned to multiple clusters.\n";
 
 
 # Parse identify all loci in each paralog/linked cluster.
@@ -214,7 +226,7 @@ for my $sample( keys %gff_list ){
 
 			}	
 		}
-	}	
+	}
 }
 
 # check all sequences were identified.

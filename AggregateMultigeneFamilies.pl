@@ -42,29 +42,40 @@ my $clusters_found = 0;
 my %clusters = ();
 
 # Parse loci list for cluster info.
+my $repeat_check = 0;
 open LIST, "$pirate_dir/loci_list.tab" or die $!;
 while(<LIST>){
 
 	# store only paralog clusters
 	if(/^(\S+)\t\S+\t$round\t(\S+)\t(\S+)\n/){
 		
+		# check for paralogs
 		if ( $groups{$2} ){
 		
-			$gff_list{$3}++;
-			$cluster_list{$1} = $2;
-			$clusters{$2} = 1;
+			# Check for repeat loci.
+			if( $cluster_list{$1} ){
+				print "Loci repeated in file - $1\n";
+				$repeat_check = 1;
+			}else{
+			
+				$gff_list{$3}++;
+				$cluster_list{$1} = $2;
+				$clusters{$2} = 1;
+				
+			}
 		}
 
 	}
 	
 }close LIST;
+die "Something is wrong with inputs - loci assigned to multiple clusters.\n";
 
 # number of clusters found.
 $clusters_found = scalar ( keys %clusters );
 
 # Check all genes/alleles found.
 if( $no_groups ne $clusters_found ){
-	#die "Error - Only found $clusters_found of $no_groups gene clusters during round $round.\n";
+	die "Error - Only found $clusters_found of $no_groups gene clusters during round $round.\n";
 }else{
 	print "$clusters_found paralog/erroneous clusters identified from ", scalar( keys %group_list ), " groups.\n";
 }

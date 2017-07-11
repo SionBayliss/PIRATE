@@ -236,7 +236,6 @@ $time_start = time();
 chdir("$pirate_dir") or die "$!";
 my $error_results = `perl $script_path/CheckParalogs.pl $pirate_dir/loci_list.tab $steps $pirate_dir`; 
 die "CheckParalogs.pl failed: $error_results\n" if $?;
-print "$error_results";
 print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
@@ -244,6 +243,7 @@ print "\n-------------------------------\n\n";
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
 $time_start = time();
 system( "perl $script_path/AggregateErroneousFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
+die "AggregateErroneousFamilies.pl failed\n" if $?;
 print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
