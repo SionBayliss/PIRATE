@@ -24,16 +24,12 @@ open ERR, "$pirate_dir/error_links_summary.tab" or die $!;
 while(<ERR>){
 	if(/(\S+)\t(\S+)\n/){
 	
-		#my $cluster = $1; 
-		#my $clusters = $2;
-		
-		#$groups{ $1 } = "Error_$2";
-		#$group_list{ "Error_$2" } = 1;
-		
 		# Check for repeat loci.
 		if( $groups{ $1 } ){
+		
 			print "Loci repeated in file - $1\n";
 			$repeat_check = 1;
+			
 		}else{
 			
 			$groups{ $1 } = "Error_$2";
@@ -41,8 +37,10 @@ while(<ERR>){
 				
 		}
 	}
-}
-die "Something is wrong with inputs - loci assigned to multiple clusters.\n";
+}close ERR;
+
+# sanity check
+die "Something is wrong with inputs - loci assigned to multiple clusters.\n" if $repeat_check == 1;
 
 
 # Parse identify all loci in each paralog/linked cluster.

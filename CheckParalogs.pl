@@ -23,7 +23,7 @@ my %erroneous_clusters;
 my $err_total = 0; 
 
 # parse loci list.
-open LOCI, $loci_file or die $!;
+open LOCI, $loci_file or die "$loci_file does not exist\n";
 while ( <LOCI> ){
 
 	my $line = $_;
@@ -64,32 +64,44 @@ for my $round(1..($no_runs)){
 			if( $original_check eq "" ){
 				$original_check = $original_cluster;
 			}
-			else{	
-				if( $original_check ne $original_cluster ) {
+			elsif( $original_check ne $original_cluster ) {
+			
+				# check if error has been previously scored as an error cluster + store using previous cluster designation.			
 				
-					# Store linked erroneous clusters
-					# check if error has been previously scored as an error cluster.
-					$err_check = 0;
-					for my $i(keys %erroneous_clusters){
-						for my $j(keys %{$erroneous_clusters{$i}} ){
-							if( ($j eq $original_check ) || ($j eq $original_cluster ) ){
-							
-								$erroneous_clusters{$i}{$original_check}=1;
-								$erroneous_clusters{$i}{$original_cluster}=1;
-								$err_check = 1;
-								
-							}
+				# both match - use value from first match
+				if( ($erroneous_clusters{$original_check}) && ($erroneous_clusters{$original_cluster}) ){
+				
+					my $store_val = $erroneous_clusters{$original_cluster};
+					
+					foreach( keys %erroneous_clusters ){
+					
+						if( $erroneous_clusters{$_} == $store_val ){
+							 $erroneous_clusters{$_} = $erroneous_clusters{$original_check};
 						}
+						
 					}
 					
-					# if cluster has not been identified as erroneous before then add it to a uniquely identified error cluster. 
-					if($err_check == 0){
-						++$err_total;
-						$erroneous_clusters{$err_total}{$original_cluster}=1;
-						$erroneous_clusters{$err_total}{$original_check}=1;
-					}
-											
 				}
+				# one matches
+				elsif( $erroneous_clusters{$original_check} ){
+				
+					$erroneous_clusters{$original_cluster} = $erroneous_clusters{$original_check};
+				
+				}elsif( $erroneous_clusters{$original_cluster} ){
+				
+					$erroneous_clusters{$original_check} = $erroneous_clusters{$original_cluster};
+				
+				}
+				#novel
+				else{
+				
+					++$err_total;
+					
+					$erroneous_clusters{$original_check} = $err_total;
+					$erroneous_clusters{$original_cluster} = $err_total;
+					
+				}
+											
 			}
 			
 
@@ -101,40 +113,54 @@ for my $round(1..($no_runs)){
 				
 				if( $prev_round_check eq "" ){
 					$prev_round_check = $previous_cluster;
-				}else{
-					if( $prev_round_check ne $previous_cluster ) {
+				}
+				elsif( $prev_round_check ne $previous_cluster ) {
 					
-						# Check all loci of both linked groups and do not process clusters with assignment uncertainties.
-						my %err_list = ();
-						foreach ( keys %{$cluster_genes{$prev_aa}{$previous_cluster}} ) {
-							$err_list{$round_clusters{$_}{$AA_PER[0]}}=1;
+					# Check all loci of both linked groups and do not process clusters with assignment uncertainties.
+					my %err_list = ();
+					foreach ( keys %{$cluster_genes{$prev_aa}{$previous_cluster}} ) {
+						$err_list{$round_clusters{$_}{$AA_PER[0]}}=1;
+					}
+					foreach ( keys %{$cluster_genes{$prev_aa}{$prev_round_check}} ) {
+						$err_list{$round_clusters{$_}{$AA_PER[0]}}=1;
+					}
+														
+					# check against pre-existing error clusters.
+					$err_check = 0;
+					my $reset_cluster = "";
+					foreach(keys %err_list){
+						if($erroneous_clusters{$_}){
+							$reset_cluster = $erroneous_clusters{$_};
+							$err_check = 1;
+							last;
 						}
-						foreach ( keys %{$cluster_genes{$prev_aa}{$prev_round_check}} ) {
-							$err_list{$round_clusters{$_}{$AA_PER[0]}}=1;
+					}
+					
+					# store if novel
+					if( $err_check == 0 ){
+						++$err_total;
+						foreach(keys %err_list){
+							$erroneous_clusters{$_}=$err_total;
 						}
-															
-						# check against preexisting error clusters.
-						$err_check = 0;
-						for my $i(keys %erroneous_clusters){
-							for my $j(keys %{$erroneous_clusters{$i}} ){
-								if( $err_list{$j} ){
-								 	foreach(keys %err_list){
-										$erroneous_clusters{$i}{$_}=1;
-									}
-									$err_check=1;
+					}
+					# otherwise set all found clusters to reset_cluster
+					else{					
+						for my $tid(keys %err_list){						
+							if( $erroneous_clusters{$tid} && ($erroneous_clusters{$tid} != $reset_cluster) ){
+							
+								my $store_value = $erroneous_clusters{$tid};
+								foreach( keys %erroneous_clusters ){									
+									if( $erroneous_clusters{$_} == $store_value ){
+										 $erroneous_clusters{$_} = $reset_cluster;
+									}						
 								}
+																
 							}
 						}
+					}
 						
-						# store if novel
-						if($err_check==0){
-							++$err_total;
-							foreach(keys %err_list){
-								$erroneous_clusters{$err_total}{$_}=1;
-							}
-						}
-					}				
-				}				
+					
+				}								
 			}			
 		}
 	}
@@ -142,19 +168,27 @@ for my $round(1..($no_runs)){
 
 # Print linked (unique) error clusters to file.
 # Output containing links between samples that do not consistently cluster with the same isolates between rounds - i.e. erroneous clusters.
-my $total_clusters = 0;
-open ERR_OUTPUT, ">$output_dir/error_links_summary.tab" or die "";
-for my $o1 ( sort {$a<=>$b} keys %erroneous_clusters ){
-	#$total_clusters+=scalar(keys(%{$erroneous_clusters{$_}}));
-	#print ERR_OUTPUT "$_\t" , join( ",", keys(%{$erroneous_clusters{$_}})  ), "\n";
-	for my $o2 ( keys(%{$erroneous_clusters{$o1}}) ){
-		++$total_clusters;
-		print ERR_OUTPUT "$o2\t$o1\n";
-	}
+my %out_check;
+my %cluster_count;
+open ERR_OUTPUT, ">$output_dir/error_links_summary.tab" or die ""; 
+for my $o ( sort { $erroneous_clusters{$a}<=>$erroneous_clusters{$b} } keys %erroneous_clusters ){
+		
+		# store clusters
+		$cluster_count{$erroneous_clusters{$o}} = 1;
+		
+		# sanity check
+		print "Error - Cluster $o is included multiple times.\n" if $out_check{$o};
+		$out_check{$o} = 1;
+		
+		# print to file
+		print ERR_OUTPUT "$o\t$erroneous_clusters{$o}\n";
+		
 }close ERR_OUTPUT;
 
-# feedback 
-print "\n$total_clusters clusters are contained in $err_total linked assignment ambiguities.\n ";
+# user feedback 
+my $total_error_clusters = scalar( keys %cluster_count );
+my $total_clusters = scalar( keys %out_check );
+print "\n$total_clusters clusters are contained in $total_error_clusters linked assignment ambiguities.\n ";
 
 
 exit

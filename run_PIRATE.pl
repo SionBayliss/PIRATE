@@ -140,7 +140,7 @@ if( -d $gff_dir ){ print "modified gff directory already exists.\n" }
 else{ unless ( mkdir $gff_dir ) { die "could not make PIRATE gff directory in $pirate_dir\n" } }
 `ls $input_dir/*.gff | parallel -j $threads perl $script_path/ParseGFF.pl {} $gff_dir 2>/dev/null`;
 
-# check number of sucessfully standardised gff files
+# check number of successfully standardised gff files
 opendir(DIR, $gff_dir);
 @files=grep{/\.gff/} readdir(DIR);
 $no_files=scalar(@files);
@@ -234,8 +234,8 @@ system( "mv $pirate_dir/cluster_alleles.temp.tab $pirate_dir/cluster_alleles.tab
 print "Checking for inconsistent clustering:\n\n";
 $time_start = time();
 chdir("$pirate_dir") or die "$!";
-my $error_results = `perl $script_path/CheckParalogs.pl $pirate_dir/loci_list.tab $steps $pirate_dir`; 
-die "CheckParalogs.pl failed: $error_results\n" if $?;
+system( "perl $script_path/CheckParalogs.pl $pirate_dir/loci_list.tab $steps $pirate_dir" ); 
+die "CheckParalogs.pl failed\n" if $?;
 print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
