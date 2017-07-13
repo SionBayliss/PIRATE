@@ -170,6 +170,7 @@ for my $round(1..($no_runs)){
 # Output containing links between samples that do not consistently cluster with the same isolates between rounds - i.e. erroneous clusters.
 my %out_check;
 my %cluster_count;
+my $err_count = 0;
 open ERR_OUTPUT, ">$output_dir/error_links_summary.tab" or die ""; 
 for my $o ( sort { $erroneous_clusters{$a}<=>$erroneous_clusters{$b} } keys %erroneous_clusters ){
 		
@@ -178,6 +179,7 @@ for my $o ( sort { $erroneous_clusters{$a}<=>$erroneous_clusters{$b} } keys %err
 		
 		# sanity check
 		print "Error - Cluster $o is included multiple times.\n" if $out_check{$o};
+		++$err_count if $out_check{$o};
 		$out_check{$o} = 1;
 		
 		# print to file
@@ -189,6 +191,6 @@ for my $o ( sort { $erroneous_clusters{$a}<=>$erroneous_clusters{$b} } keys %err
 my $total_error_clusters = scalar( keys %cluster_count );
 my $total_clusters = scalar( keys %out_check );
 print "\n$total_clusters clusters are contained in $total_error_clusters linked assignment ambiguities.\n ";
-
+die "$err_count loci have been included erroneously.\n";
 
 exit

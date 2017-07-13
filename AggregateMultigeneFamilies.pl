@@ -68,7 +68,7 @@ while(<LIST>){
 	}
 	
 }close LIST;
-die "Something is wrong with inputs - loci assigned to multiple clusters.\n";
+die "Something is wrong with inputs - loci assigned to multiple clusters.\n" if $repeat_check == 1;
 
 # number of clusters found.
 $clusters_found = scalar ( keys %clusters );
