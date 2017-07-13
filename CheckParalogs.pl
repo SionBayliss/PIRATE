@@ -191,6 +191,6 @@ for my $o ( sort { $erroneous_clusters{$a}<=>$erroneous_clusters{$b} } keys %err
 my $total_error_clusters = scalar( keys %cluster_count );
 my $total_clusters = scalar( keys %out_check );
 print "\n$total_clusters clusters are contained in $total_error_clusters linked assignment ambiguities.\n ";
-die "$err_count loci have been included erroneously.\n";
+die "$err_count loci have been included erroneously.\n" if $err_count > 0;
 
 exit
