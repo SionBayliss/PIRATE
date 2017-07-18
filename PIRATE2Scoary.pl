@@ -42,6 +42,10 @@ while(<INPUT>){
 		# prepare info from file
 		my @line_out = ("$vars[0]-$vars[1]-$vars[4]", $vars[11] , $vars[13] , $vars[5] , "" , "" , "", "" , "" , "" ,  "" ,  "" , "", "" );
 
+		# define empty array elements to avoid error messsages.
+		@samples = map { defined $_ ? $_ : '' } @samples;
+		@line_out = map { defined $_ ? $_ : '' } @line_out;
+
 		# print 
 		my $final_line = join( "\",\"" , @line_out, @samples );
 		print OUTPUT "\"$final_line\"\n";
