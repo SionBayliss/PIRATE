@@ -259,23 +259,35 @@ if ( $no_erroneous > 0) {
 	die "PangenomeConstruction.pl failed\n" if $?;
 
 	# make pseudo roary files for processing (temporary) and file structure expected for parsing genomes.
+	print "\n - Making pseudo-roary files.\n";
 	for my $ct (@thresholds){
+
+		# find error files 
+		opendir(DIR, $error_dir);
+		my @err_files = grep{/\.$ct.reclustered.reinflated/} readdir(DIR);
+		close DIR;
+
+		my $err_est = scalar(@err_files);
+		die "Incorrect number of error files found ($no_erroneous/$err_est) at $ct" if $err_est != $no_erroneous;
 
 		mkdir "$error_dir/$ct";
 		`echo -n "" > $error_dir/$ct/gene_presence_absence.csv`;
 
 		my $temp_count = 0;
-		for my $cg (1..$no_erroneous){
-
+		for my $curr_file (@err_files){
+	
+			$curr_file =~ /Error_(\d+)\.$ct.reclustered.reinflated/;
+			my $cg = $1;
+		
 			system( "perl $script_path/Pangenome2Roary.pl $error_dir/Error_$cg.$ct.reclustered.reinflated $pirate_dir/loci_list.tab err$cg > $error_dir/$ct/temp.txt" );
 			die "Pangenome2Roary.pl failed\n" if $?;
-			
+		
 			if ( $temp_count++ == 0 ){
 				`cat < $error_dir/$ct/temp.txt >> $error_dir/$ct/gene_presence_absence.csv`;
 			}else{
 				`sed 1d < $error_dir/$ct/temp.txt >> $error_dir/$ct/gene_presence_absence.csv`;
 			} 
-	
+
 		}
 
 	}

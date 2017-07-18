@@ -66,6 +66,8 @@ run_PIRATE.pl -i /path/to/directory/containing/gffs/
 - Shiny interface
 
 ### Speed/Usability
+- Rewrite pangenome2roary / parse_genomes (pangenome2roary is slow due to reading locus list multiple times).
+- check all loci in error files are identified before passing to PangenomeConstruction 
 - add version checking to run_PIRATE and PangenomeConstruction.
 - add redirects for error messages to log file 
 - Consolidate AggregateErroneous.pl and Nucleotide2AA.pl
