@@ -82,9 +82,12 @@ if( $no_seqs == 1 ){
 }
 
 # Pass translated amino acid sequence to mafft for alignment :
-#`mafft --quiet --localpair --lop -4 --lep -1 --lexp -0.2 --maxiterate 1000 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`; 
-`mafft --auto --quiet --lop -4 --lep -1 --lexp -0.2 --maxiterate 10 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`; 
+`mafft --auto --leavegappyregion --quiet --op 1.5 --ep 0.2 --lop -4 --lep -1 --lexp -0.2 --maxiterate 10 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`; # new 
+print "error - mafft threw an error at $isolate\n" if $?;
 
+# old options
+#`mafft --quiet --localpair --lop -4 --lep -1 --lexp -0.2 --maxiterate 1000 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`; # original 
+#`mafft --auto --quiet --lop -4 --lep -1 --lexp -0.2 --maxiterate 10 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`; # recent
 # Other options (worse)
 #`mafft --quiet --localpair --lop -4 --lep 1 --lexp 1 --maxiterate 1000 $aa_dir/$isolate.temp.fasta > $aa_dir/$isolate.aa.fasta`; 
 #`mafft --auto --op 5 --leavegappyregion /mnt/data/bioinformatics/Projects/IterativeRoary/temp.fasta > /mnt/data/bioinformatics/Projects/IterativeRoary/temp.fasta.aln`; # --quiet

@@ -10,7 +10,10 @@ my $loci_file = $ARGV[0];
 my $aa_identities = $ARGV[1];
 my $output_dir = $ARGV[2];
 my $error_clusters = $ARGV[3];
-my $add_loci = $ARGV[4];
+my $add_loci = ""; 
+if ( defined $ARGV[4] ){
+	$add_loci = $ARGV[4];
+}
 
 # Sort AA identities - these must correspond to the names of folders in input DIR. 
 my @AA_PER = sort {$a<=>$b} ( split(/,/ , $aa_identities ));
@@ -51,19 +54,19 @@ while ( <LOCI> ){
 	# add loci to info hashes		
 	unless( $err_clusters{ $line[1] } ){
 		
-		$genomes { $line[4] } = 1; # genome for eaach loci.
+		$genomes { $line[4] } = 1; # genome for each loci.
 		$original_cluster { $line[0] } = $line[1]; # original cluster for each loci.
 		$cluster_genes { $line[2] } { $line[3] } { $line[0] } = $line[1]; # full info per group
 		$round_cluster { $line[0] } { $line[2] } = $line[3]; # cluster per loci per round
 		
-		$cluster_genomes { $line[2] } { $line[1] } { $line[4] } ++; # Genomes per cluster.
-		if( $cluster_genomes { $line[2] } { $line[1] } { $line[4] } > 1 ){ $paralog_cluster { $line[1] } = 1 } # clusters containing paralogs
+		$cluster_genomes { $line[2] } { $line[3] } { $line[4] } ++; # Genomes per cluster.
+		if( $cluster_genomes { $line[2] } { $line[3] } { $line[4] } > 1 ){ $paralog_cluster { $line[1] } = 1 } # clusters containing paralogs
 	
 	}
 	
 }close LOCI;
 
-# number of original clusterss to process. 
+# number of original clusters to process. 
 my $no_org = scalar(keys(%{$cluster_genomes{$AA_PER[0]}}));
 print "$no_org clusters in original file.\n";
 
@@ -131,13 +134,6 @@ for my $round(1..($no_runs-1)){
 		# Get cluster size.
 		my $cluster_size = keys %{$cluster_genes{$threshold}{$cluster_id}};		
 		
-		# Store original cluster size as max cluster size.
-#		#if($process{$original_cluster}==1){
-#			$max_cluster_size{$original_cluster}{"1"}=$cluster_size{"1"}{$original_cluster};
-#			$max_cluster_name{$original_cluster}{"1"}=$original_cluster;
-#		#}
-#			
-
 		# Identify links between each isolate in the cluster and the clusters in the next round. 
 		# Clusters with no-unique links (i.e. variable assignment between rounds) have been identified in the previous step and will be removed at a later stage.
 		my %temp_hash = ();
@@ -437,12 +433,12 @@ for my $process_cluster( sort {$split_sig{$a}<=>$split_sig{$b}} keys %split_sig 
 					$no_isolates = scalar(keys(%{$cluster_genes{$s_round}{$round_cluster}}));					
 					
 					# Find cluster loci - sort and format with semicolons
-					my @c_genes = (); 
+					my @c_genes = ();
 					my $no_cluster = 0;
 					for my $genome_id (keys(%{$cluster_genomes{$AA_PER[$s_round]}{$next_cluster}})){
 						$no_cluster = $cluster_genomes{$AA_PER[$s_round]}{$next_cluster}{$genome_id};
-						for ( 1 .. $no_cluster ){ push(@c_genes,$genome_id);	}
-					} 
+						for ( 1 .. $no_cluster ){ push(@c_genes,$genome_id); }
+					}
 					my @sorted = sort @c_genes;
 					my $genomes = join(";",@sorted);	
 					
@@ -555,23 +551,40 @@ for my $process_cluster( sort {$split_sig{$a}<=>$split_sig{$b}} keys %split_sig 
 				}
 				
 				# Check number of matches is correct.
-				if($key_match==1){
+				if($key_match == 1){
 					my $match = 1;
 					foreach(sort keys %{$existing_sigs{$signature}{$sig_key}}){
-						unless($existing_sigs{$signature}{$sig_key}{$_}==$current_signature{$_}){
-							$match=0; last;							
+						unless($existing_sigs{$signature}{$sig_key}{$_} eq $current_signature{$_}){
+							$match=0; 
+							last;							
 						}
 					}
 					
 					# If a match was found break the loop and store the signature.
-					if($match==1){
+					if($match == 1){
 						$match_sig=1;
+						
 						$signature_contents{$signature}{$sig_key}{$process_cluster}=1;
 						$signature_by_gene{$process_cluster}="$signature:$sig_key";
-						last;						
+						last;				
 					}						
 				}			
 			}
+			
+			# If not found then include new new sub-signature for signature.
+			if( $match_sig == 0 ){
+
+				$count_sigs{$signature}++; 
+				my $new_sig = "$signature-$count_sigs{$signature}";
+		
+				foreach (sort keys %current_signature){
+					$existing_sigs{$signature}{$new_sig}{$_} = $current_signature{$_};
+					$signature_contents{$signature}{$new_sig}{$process_cluster} = 1;
+					$signature_by_gene{$process_cluster} = "$signature:$new_sig";
+				}
+												
+			}
+			
 		}
 	}
 }
@@ -653,7 +666,7 @@ open OUTPUT_SIGSUM, ">$output_dir/signature_summary.tab" or die "OUTPUT did not 
 ## By Signature
 print OUTPUT "SignatureGroup\tSignature\tGenesInCluster\tX\tY\tPreviousClusterName\tCurrentClusterName\tMembers\tGenomes\tDescription\n";
 print OUTPUTXY "GenesInCluster\tSignature\tSignatureGroup\tX\tY\tUniqueID\n";
-print OUTPUT_SIGSUM "Signature\tSignature_Group\tGene_Cluster_Contents\tDescriptor\n";# Headers
+print OUTPUT_SIGSUM "Signature\tSignature_Group\tGene_Cluster_Contents\tDescriptor\n";
 for my $k1(sort {$b<=>$a} keys %signature_contents){	
 	
 	for my $k2(sort { ($a=~/^\d+\-(\d+)/)[0] <=> ($b=~/^\d+\-(\d+)/)[0] } keys %{$signature_contents{$k1}}){
@@ -661,7 +674,7 @@ for my $k1(sort {$b<=>$a} keys %signature_contents){
 		# Find all genes and concatenate
 		my @clusters = keys( %{$signature_contents{$k1}{$k2}} );
 		my $clusters = join(":",sort(@clusters));
-
+		
 		# Print Info
 		foreach(sort {$a<=>$b} keys %{$hash_info{$clusters[0]}}){	
 			print OUTPUT "$k2\t$k1\t$clusters\t", $hash_info{$clusters[0]}{$_},"\t",$gene_descriptor{$clusters[0]},"\n";
@@ -677,9 +690,6 @@ for my $k1(sort {$b<=>$a} keys %signature_contents){
 	}
 }
 
-# Per gene cluster summary.
-
-
 # Print descriptor summary.
 print "\nSummary:\n\n";
 open SUMMARY, ">$output_dir/pirate_summary.tab" or die "OUTPUT did not open.\n";
@@ -689,4 +699,4 @@ foreach (sort keys %desc_store){
 }
 
 	
-
+exit

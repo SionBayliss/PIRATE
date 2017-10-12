@@ -6,7 +6,7 @@ use warnings;
 # Aggregate erroneous (i.e. inconsistently assigned gene families) from iterative pangenome clustering. 
 # Genes from GFFs are extracted and appended into a single file per cluster for downstream processing.
 
-# Input/Output ##### Include as inputs.
+# Input/Output 
 my $pirate_dir = $ARGV[0]; # PIRATE directory.
 my $round = $ARGV[1]; # Lowest AA% threshold.
 my $script_path = $ARGV[2];
@@ -39,14 +39,19 @@ while(<ERR>){
 	}
 }close ERR;
 
+# Exit if no erroneous clusters
+my $no_clusters = scalar(keys(%groups));
+if ( $no_clusters == 0 ){
+	print "No erroneous clusters.\n"; 
+	exit;
+}  
+
 # sanity check
 die "Something is wrong with inputs - loci assigned to multiple clusters.\n" if $repeat_check == 1;
-
 
 # Parse identify all loci in each paralog/linked cluster.
 	
 # Check variables.
-my $no_clusters = scalar(keys(%groups));
 my $no_groups = scalar(keys(%group_list));
 my $clusters_found = 0;
 my @headers = ();
@@ -170,7 +175,7 @@ for my $sample( keys %gff_list ){
 			if($line =~ /^>(\S+)/){
 				$contig_id = $1;		
 			}
-			elsif($line =~ /^([ATGCN]+)/){
+			elsif($line =~ /^([ATGCNatcgn]+)$/){
 
 				my $seq=$1;
 		

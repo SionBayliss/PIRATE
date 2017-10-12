@@ -3,7 +3,7 @@
 use strict;
 use warnings qw(all);
 
-use Getopt::Long qw(GetOptions);
+use Getopt::Long qw(GetOptions :config no_ignore_case);
 use Pod::Usage;
 use Cwd 'abs_path';
 use File::Basename;
@@ -15,19 +15,35 @@ use File::Basename;
 =head1  SYNOPSIS
 
 	PIRATE -i /path/to/directory/containing/gffs/ 
+	
+ -h|--help 		usage information
+ -m|--man		man page 
+ -i|--input		input directory containing gffs [mandatory]
+ -o|--output		output directory in which to create PIRATE folder [default: input_dir]
+ -t|--threads		number of threads/cores used by PIRATE [default: 2]
+ -s|--steps		AA % thresholds to use for pangenome construction [50,60,70,80,90,95,98]
+ -q|--quiet		switch off verbose [not instituted]
+ -r|--rplots		plot summaries using R [requires dependencies]
+ -R|--Roary		create pangenome using Roary [incompatible with --nucleotide]
+ --nopan		don't run pangenome tool [assumes files are in pangenome_iterations folder]
+ --nucleotide		create pangenome from nucleotide sequences [incompatible with -R|--Roary] [not instituted]
+ -d|--diamond		use diamond instead of blastp [incompatible with --nucleotide; default = off]
+
 
 =head1 Descriptions
 	
 	-h|--help 		usage information
 	-m|--man		man page 
 	-i|--input		input directory containing gffs [mandatory]
-	-o|--output		output directory in which to create PIRATE folder [default: input_dir]]
+	-o|--output		output directory in which to create PIRATE folder [default: input_dir]
 	-t|--threads	number of threads/cores used by PIRATE [default: 2]
 	-s|--steps		AA % thresholds to use for pangenome construction [50,60,70,80,90,95,98]
 	-q|--quiet		switch off verbose [not instituted]
 	-r|--rplots		plot summaries using R [requires dependencies]
-	-n|--noroary	don't run pangenome tool [assumes files are in pangenome_iterations folder]
-	
+	-R|--Roary		create pangenome using Roary [incompatible with --nucleotide]
+	--nopan			don't run pangenome tool [assumes files are in pangenome_iterations folder]
+	--nucleotide 	create pangenome from nucleotide sequences [incompatible with -R|--Roary] [not instituted]
+	-d|--diamond	use diamond instead of blastp [incompatible with --nucleotide; default = off]
 ...
 
 =cut
@@ -52,13 +68,17 @@ my $threads = 2;
 my $steps = '';
 my $quiet = 0;
 my $r_plots = '';
-my $roary_off = 0;
+my $pan_off = 0;
 my $debug = 0;
+my $roary = 0;
+my $diamond = 0;
 
 my $time_start = time();
 
 my $no_files = 0;
 my @files = ();
+
+my $test = 0;
 
 GetOptions(
 	'help|?' 	=> \$help,
@@ -70,24 +90,41 @@ GetOptions(
 	'quiet'		=> \$quiet,	
 	'debug'		=> \$debug,	
 	'rplot'		=> \$r_plots,
-	'noroary'	=> \$roary_off,
+	'nopan'		=> \$pan_off,
+	'Roary' 	=> \$roary,
+	'example'	=> \$test,
+	'diamond'	=> \$diamond,
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-verbose => 2) if $man;
-#pod2usage("$0: No arguements passed to PIRATE") if ((@ARGV == 0 ) && (-t STDIN));  ####
+
+# Test settings
+if ( $test == 1 ){
+	
+	$steps = "50,80,98";
+	$input_dir = abs_path("$script_path/TestFiles/");
+	$output_dir = abs_path("$script_path/TestFiles/");
+	$quiet = 0;
+	$pan_off = 0;
+	$roary = 0;
+	$r_plots = 0;
+
+}
 
 # expand input and output directories
-$output_dir = $input_dir if $output_dir eq '';
 $input_dir = abs_path($input_dir);
+$output_dir = "$input_dir/PIRATE" if $output_dir eq '';
+unless( -d "$output_dir" ){
+	 die "could not make working directory in $output_dir\n" unless mkdir "$output_dir"; 
+}
 $output_dir = abs_path($output_dir);
 
 # check for mandatory input arguments
 pod2usage( {-message => q{input directory is a required arguement}, -exitval => 1, -verbose => 1 } ) if $input_dir eq ''; 
 
 # check for presence of input/output directories.
-$output_dir = $input_dir if $output_dir eq '';
 pod2usage( {-message => "input directory:$input_dir is not a directory", -exitval => 1, -verbose => 1 } ) unless -d $input_dir; 
-pod2usage( {-message => "output directory:$output_dir is not a directory", -exitval => 1, -verbose => 1 } ) unless -d $output_dir; 
+#pod2usage( {-message => "output directory:$output_dir is not a directory", -exitval => 1, -verbose => 1 } ) unless -d $output_dir; 
 
 # Check for > 1 gff files in input directory.
 opendir(DIR, $input_dir);
@@ -109,21 +146,32 @@ if ( $steps eq '' ){
 		pod2usage( {-message => "$_ is not between 1-100%", -exitval => 1, -verbose => 1 } ) if $_>100;
 		pod2usage( {-message => "$_ is not between 1-100%", -exitval => 1, -verbose => 1 } ) if $_<=0;
 	}
-	pod2usage( {-message => "$no_files files with .gff extension in $input_dir", -exitval => 1, -verbose => 1 } ) if scalar(@thresholds)<2; 
 }
 
+# Check > 2 thresholds
+pod2usage( {-message => "$no_files files with .gff extension in $input_dir", -exitval => 1, -verbose => 1 } ) if scalar(@thresholds)<2; 
+
 # return command line summary
-unless( $quiet == 1 ){
+if ( $test == 1 ){
+	print "Running test mode.\n";
+}
+elsif( $quiet == 0 ){
 	print "\nPIRATE input options:\n";
 	print " - Input Directory = $input_dir\n";
 	print " - Output directory = $output_dir\n";
 	print " - PIRATE will run using $threads cores\n";
 	print " - $no_files files in input directory.\n";
-	print " - PIRATE will be run on $steps amino acid % identity thresholds.\n\n";
+	print " - PIRATE will be run on $steps amino acid % identity thresholds.\n";
+	print " - Roary will be used for pangenome construction instead of the native tool.\n" if $roary == 1 ; 
+	print "\n";
 }
 
+# make pangenome tool arguements
+my $panargs = "";
+$panargs = "-d" if $diamond == 1; 
+
 # make PIRATE output directory
-my $pirate_dir = "$output_dir/PIRATE";
+my $pirate_dir = "$output_dir";
 if( -d $pirate_dir ){ print "PIRATE results directory already exists.\n" }
 else{ unless ( mkdir $pirate_dir ) { die "could not make PIRATE results directory in $output_dir\n" } }
 
@@ -142,8 +190,8 @@ else{ unless ( mkdir $gff_dir ) { die "could not make PIRATE gff directory in $p
 
 # check number of successfully standardised gff files
 opendir(DIR, $gff_dir);
-@files=grep{/\.gff/} readdir(DIR);
-$no_files=scalar(@files);
+@files = grep{/\.gff/} readdir(DIR);
+$no_files = scalar(@files);
 close DIR;
 print "$no_files gff files passed QC and will be analysed by PIRATE.\n";
 print " - completed in: ", time() - $time_start,"s\n";
@@ -154,72 +202,150 @@ open G_LIST, ">$pirate_dir/genome_list.txt";
 for my $g( @files ){ $g =~ /(.+).gff/; print G_LIST "$1\n"; }
 close G_LIST;
 
-my $error_dir = "$pirate_dir/recluster_erroneous/"; ############
-unless( $debug == 1 ){
-
-# create roary log file
-my $log_file="$pirate_dir/roary_log.txt";
-open LOG, ">$log_file" or die $!;
-
-# run Roary with different % identity cuttoffs - paralog matching is switched off.
-print "Iteratively running roary at thresholds: $steps\n";
-$time_start = time();
-my $it_count = 0;
-for my $it ( @thresholds ){
-
-	++$it_count;
-
-	print "Running AA identity $it\%\r";
-	my $itime_start = time();
-
-	# create results directories
-	unless ( -d "$it_dir/$it"  ){
-		mkdir "$it_dir/$it";
-	}
-
-	# change cwd to output folder (to capture all temp files).
-	chdir("$it_dir/$it") or die "$!";
-
-	# run ROARY
-	unless ( $roary_off == 1 ){
-		my $command = "roary -p $threads -z -v -s -r -i $it -cd 100 $gff_dir/*.gff 2>&1";
-		my $roary = `$command`;
-		print LOG "RUN $it\n$command\n$roary\n"; 
-	
-		# check that the gene_presence_absence.csv file has been created
-		die "ROARY did not sucessfully execute during iteration $it\n" unless -f "$it_dir/$it/gene_presence_absence.csv"; 
-
-	}else{
-
-		# check that the gene_presence_absence.csv is present
-		die "No roary iterations present for $it %\n" unless -f "$it_dir/$it/gene_presence_absence.csv"; 
-
-	}
-	print "Running AA identity $it\% \(", time() - $itime_start, "s\)\n";
-
-}
-print " - completed in: ", time() - $time_start,"s\n";
-print "\n-------------------------------\n\n";
-
 # Identify gene feature co-ordinates.
 print "Making co-ordinate files:\n\n";
 $time_start = time();
 my $coords_dir = "$pirate_dir/co-ords";
 if( -d "$coords_dir" ){ print "modified gff directory already exists.\n" }
 else{ unless ( mkdir "$coords_dir" ) { die "could not make PIRATE co-ords directory in $pirate_dir\n" } }
-for ( @files ){
-	my $temp_sample = $_;
-	$temp_sample =~ s/\.gff*//;	
-	`perl $script_path/feature_coordinate_extracter.pl $gff_dir/$temp_sample.gff $coords_dir/$temp_sample.co-ords.tab`;
-}
+`cat $pirate_dir/genome_list.txt | parallel -j $threads perl $script_path/feature_coordinate_extracter.pl $gff_dir/{}.gff $coords_dir/{}.co-ords.tab`;
+die "feature co-ordinate extraction failed\n" if $?;
 print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
+
+# Make loci list.
+print "Making genome loci list:\n\n";
+$time_start = time();
+my $genome2loci = "$pirate_dir/genome2loci.tab";
+open GL, ">$genome2loci" or die "Failed to create genome2loci.tab\n";
+open GLIST, "$pirate_dir/genome_list.txt" or die "could not open $pirate_dir/genome_list.txt.\n";
+while (<GLIST>){
+	my $f = $_;
+	chomp $f;
+	open TFILE, "$coords_dir/$f.co-ords.tab" or die "could not open $coords_dir/$f.co-ords.tab.\n";
+	while (<TFILE>){
+		my $l = $_;
+		chomp $l;
+		my @line = split (/\t/, $l);
+		if( $line[0] ne "Name" ){
+			print GL "$line[0]\t$f\t$line[1]\t$line[8]\n";
+		}
+	}
+	close TFILE;
+}
+close GL;
+close GLIST;
+print " - completed in: ", time() - $time_start,"s\n";
+print "\n-------------------------------\n\n";
+
+# Collect all gene sequences
+unless ( $roary == 1 ){
+
+	print "Extracting pangenome sequences:\n\n";
+	$time_start = time();
+	
+	mkdir "$pirate_dir/genome_multifastas";
+	`cat $pirate_dir/genome_list.txt | parallel -k -j $threads perl $script_path/ExtractSequence.pl.new2 {} $pirate_dir $pirate_dir/genome_multifastas/{}.fasta`;#$pirate_dir/pan_sequences.fasta`;
+	die "ExtractSequence failed\n" if $?;
+	
+	my $panseq_file = "$pirate_dir/pan_sequences.fasta";
+	`cat $pirate_dir/genome_list.txt | xargs -I {} cat $pirate_dir/genome_multifastas/{}.fasta > $pirate_dir/pan_sequences.fasta`;
+		
+	print " - completed in: ", time() - $time_start,"s\n";
+	print "\n-------------------------------\n\n";
+	
+}
+
+my $error_dir = "$pirate_dir/recluster_erroneous/"; ############
+unless( $debug == 1 ){
+
+# create roary log file
+my $log_file="$pirate_dir/pangenome_log.txt";
+open LOG, ">$log_file" or die $!;
+
+# Create pangenome unless --nopan is toggled on
+if ( $pan_off == 1 ){
+
+	# check for presence of previously generated pangenome files
+	for my $it ( @thresholds ){
+		
+		if ( $roary == 1 ){
+			die "No pangenome iterations present for $it %\n" unless -f "$it_dir/$it/gene_presence_absence.csv"; 
+		}else{
+			die "No pangenome iterations present for $it %\n" unless -f "$it_dir/pan_sequences.$it.reclustered.reinflated";		
+		}		
+		
+	}	
+	print "Using previous pangenome files\n";
+	print "\n-------------------------------\n\n";
+				
+}
+else{
+
+	# use native tool
+	$time_start = time();
+	unless ( $roary == 1 ){
+		
+		print "Constructing pangenome sequences:\n\n";
+		system(	"perl $script_path/PangenomeConstruction.pl.new_updated.pl -i $pirate_dir/pan_sequences.fasta -o $it_dir -l $genome2loci -t $threads -s $steps $panargs" );
+		die "Pangenome construction failed\n" if $?;
+	
+	}
+	
+	# optional: use roary
+	else{
+
+		print "Iteratively running roary at thresholds: $steps\n";
+
+		my $it_count = 0;
+		for my $it ( @thresholds ){
+
+			++$it_count;
+
+			print "Running AA identity $it\%\r";
+			my $itime_start = time();
+
+			# create results directories
+			unless ( -d "$it_dir/$it"  ){
+				mkdir "$it_dir/$it";
+			}
+
+			# change cwd to output folder (to capture all temp files).
+			chdir("$it_dir/$it") or die "$!";
+
+			# run ROARY
+			my $command = "roary -p $threads -z -v -s -r -i $it -cd 100 $gff_dir/*.gff 2>&1";
+			my $roary = `$command`;
+			print LOG "RUN $it\n$command\n$roary\n"; 
+	
+			# check that the gene_presence_absence.csv file has been created
+			die "ROARY did not sucessfully execute during iteration $it\n" unless -f "$it_dir/$it/gene_presence_absence.csv"; 
+
+			# feedback
+			print "Running AA identity $it\% \(", time() - $itime_start, "s\)\n";
+
+		}
+	
+	}
+	
+	print " - completed in: ", time() - $time_start,"s\n";
+	print "\n-------------------------------\n\n";
+
+}
+
+### clean up files on repeat runs in same directory 
+unlink "$pirate_dir/error_links_summary.tab" if -f "$pirate_dir/error_links_summary.tab";
 
 # parse pangenome files
 print "Parsing pangenome files:\n\n";
 $time_start = time();
 chdir("$pirate_dir") or die "$!";
-my $parse_results = `perl $script_path/ParsePangenomes.pl $it_dir $steps $no_files $pirate_dir`; 
+my $parse_results = "";
+if ( $roary == 1 ){
+	$parse_results = `perl $script_path/ParsePangenomes.roary.pl $it_dir $steps $no_files $pirate_dir`; 
+}else{
+	$parse_results = `perl $script_path/ParsePangenomes.pl $it_dir $steps $genome2loci $pirate_dir`; 
+}
 die "ParsePangeomes.pl failed.\n" if $?;
 print "$parse_results";
 print " - completed in: ", time() - $time_start,"s\n";
@@ -248,7 +374,9 @@ print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
 # check for erroneous clusters.
-my $no_erroneous = `awk '{print \$2}' $pirate_dir/error_links_summary.tab | uniq | wc -l`;
+my $no_erroneous = 0;
+$no_erroneous = `awk '{print \$2}' $pirate_dir/error_links_summary.tab | uniq | wc -l` if ( -f "$pirate_dir/error_links_summary.tab" );
+$no_erroneous = 0 if $no_erroneous eq "";
 my $error_dir = "$pirate_dir/recluster_erroneous/";
 if ( $no_erroneous > 0) { 
 
@@ -293,7 +421,7 @@ if ( $no_erroneous > 0) {
 	}
 
 	# parse pangenome files
-	my $parse_results = `perl $script_path/ParsePangenomes.pl $error_dir $steps $no_files $error_dir`; 
+	my $parse_results = `perl $script_path/ParsePangenomes.roary.pl $error_dir $steps $no_files $error_dir`; 
 	die "ParsePangeomes.pl failed:\n$parse_results\n" if $?;
 	print "\n-------------------------------\n\n";
 
@@ -337,13 +465,19 @@ if ( $no_erroneous > 0) {
 # Link clusters
 print "\n-------------------------------\n\n";
 print "Link clusters between thresholds:\n\n";
-system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab $pirate_dir/recluster_erroneous/loci_list.tab");
+if( $roary == 1 ){
+	system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab $pirate_dir/recluster_erroneous/loci_list.tab");
+}else{
+	system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab");
+}
 die "LinkClusters.pl failed.\n" if $?;
 print "\n-------------------------------\n\n";
 
 # add additional clusters to loci list.
-`cat $pirate_dir/loci_list.tab $error_dir/loci_list.tab > $pirate_dir/temp.tab`;
-`mv $pirate_dir/temp.tab $pirate_dir/loci_list.tab`;
+if ( -f "$error_dir/loci_list.tab" ){
+	`cat $pirate_dir/loci_list.tab $error_dir/loci_list.tab > $pirate_dir/temp.tab`;
+	`mv $pirate_dir/temp.tab $pirate_dir/loci_list.tab`;
+}
 
 # Extract paralog and erroneous cluster genes and align them.
 print "Extract paralogous cluster nucleotide sequence and align:\n\n";
@@ -391,12 +525,12 @@ die "AnnotateTable failed.\n" if $?;
 die "AnnotateTable failed.\n" if $?;
 
 # tabular summaries
-print "Printing summary tables\n";
-`perl $script_path/RoarySummary.pl $pirate_dir/pangenome_iterations/ $steps $pirate_dir/roary_summary.tab`; # Summarise Roary.
-die "RoarySummary.pl failed.\n" if $?;
+#print "Printing summary tables\n";
+#`perl $script_path/RoarySummary.pl $pirate_dir/pangenome_iterations/ $steps $pirate_dir/roary_summary.tab`; # Summarise Roary.
+#die "RoarySummary.pl failed.\n" if $?;
 #`perl $script_path/PerGenomeSummary.pl $pirate_dir/round_genomes.tab $pirate_dir/gene_cluster_summary.tab $pirate_dir/per_genome_summary.tab`; # per genome summary
 #die "PerGenomeSummary.pl failed.\n" if $?;
-print "\n-------------------------------\n";
+#print "\n-------------------------------\n";
 
 # optional summary figures in R
 if ( $r_plots ne '' ){
@@ -409,8 +543,12 @@ if ( $r_plots ne '' ){
 	# TO DO
 }
 
-# End message
-print "YARR!\n";
-print "\n-------------------------------\n\n";
+# End message and joke
+print "\n\nYARR!\n\n";
+open JOKES, "$script_path/jokes.txt" or print "Out of jokes!\n"; 
+my $n_jokes = @{[<JOKES>]};
+my $r_joke = sprintf( "%ip", int(rand($n_jokes-1)+1) );
+system( "cat $script_path/jokes.txt | sed -n $r_joke | sed 's/ A:/\\\nA:/g'");
+print "\n\n-------------------------------\n\n";
 
 exit

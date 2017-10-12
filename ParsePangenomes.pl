@@ -5,21 +5,39 @@ use warnings;
 
 # Parse all gene_presence_absence files at different %AA thresholds 
 # Identify the group that the cluster came from at the lowest AA% id iteration. 
-# Print to file. 
 
 # Input variables.
 my $DIR = $ARGV[0];
 my $aa_identities = $ARGV[1];
-my $no_samples = $ARGV[2];
+my $genome_loci = $ARGV[2];
 my $output_dir = $ARGV[3];
 
 # Sort AA identities - these must correspond to the names of folders in input DIR. 
 my @AA_PER = sort {$a<=>$b} ( split(/,/ , $aa_identities ) );
 my $no_runs = scalar( @AA_PER );
 
-# Pre-run checks - Check directories exists.
-for ( @AA_PER ){ unless(-d "$DIR/$_") {	die "$_ directory does not exist.\n" } }			
-unless( -d "$output_dir" ) { die "$output_dir directory does not exist.\n" }	
+# parse genome loci file
+my %g_loci;
+my %genomes;
+open GL, $genome_loci or die "Could not find genome2loci.tab";
+while(<GL>){
+
+	chomp $_;
+	
+	# Split line and store
+	my @line = split(/\t/, $_);
+	$g_loci { $line[0] } = $line[1];
+	$genomes { $line[1] } = 1;
+	
+}
+my @genome_list =  sort (keys (%genomes));
+my $no_samples = keys (%genomes);
+
+# find appropriate number of significant figures to use.
+my $first_file = sprintf("%s/pan_sequences.%s.reclustered.reinflated", $DIR, $AA_PER[0]);
+die "pan_sequences.$AA_PER[0].reclustered.reinflated did not open.\n" if !( -f $first_file );
+my $no_sigfigs = `cat $first_file | wc -l`;
+my $l_sig = length($no_sigfigs);
 
 # output files
 open LOCI, ">$output_dir/loci_list.tab" or die $!; # List of loci and their associated genome/round.
@@ -28,16 +46,15 @@ open ALLELES, ">$output_dir/cluster_alleles.tab" or die $!; # List of paralogous
 
 # Variables
 my $para_count = 0;
-my $para_check = 0;
 my %paralog_clusters = ();
-my @headers = (); 
-my $n_headers = 0;
-my %cluster_info = ();
-my $curr_cluster_size = 0; 
-my %round_samples = (); 
-my %round_genomes = (); 
-my %cluster_store = ();
+my $cluster_count = 0;
+my $gene_cluster = "";
 my $org_cluster = "";
+my $curr_cluster_size = 0; 
+my %allele_count;
+my %round_samples = (); 
+my %cluster_store = ();
+my %round_genomes;
 
 # Process files in ascending order.
 my $count = 0;
@@ -48,140 +65,147 @@ for my $s(@AA_PER){
 	# AA% id round count.
 	++$count;
 	
-	# Open presence absence summary. 
-	open FILE, "$DIR/$s/gene_presence_absence.csv" or die "gene_presence_absence.csv in $s directory did not open.\n";
+	# Open pangenome file. 
+	open FILE, "$DIR/pan_sequences.$s.reclustered.reinflated" or die "pan_sequences.$s.reclustered.reinflated did not open.\n";
 	
 	# reset variables
 	$para_count = 0;
-	@headers = (); # File headers.
-	$n_headers = 0;
 	
 	while(<FILE>){
 		
 		# Preprocess line - remove return characters
 		my $line=$_;
-		$line =~ s/\R*//g;
+		chomp $line;
 		
-		# Header lines. 	
-		if(/^(\"Gene.+)/){
-				
-			# Store headers - i.e. info on filenames.
-			@headers=split(/","/,$line);						
-			s/"//g for @headers; # Remove additional characters
-			
-			# Sanity check - matching # of isolates. 
-			$n_headers=@headers;
-			if($n_headers-14 != $no_samples){ die "number of samples (", $n_headers-14,") in $s does not match input number ($no_samples).\n"; }
-	
-		}
-		# Store info lines
-		elsif(/^(\S+.+)/){
-		
-			# Split info line.
-			my @l = split(/","/,$line); 			
-			s/"//g for @l; # Remove additional characters
+		# Split info line.
+		my @l = split(/\t/,$line); 			
 
-			# Gene name.
-			my $gene_cluster = $l[0]; 			
-			
-			# Reset check and cluster/sample size info per line.	
-			$para_check = 0;	
-			$curr_cluster_size = 0; 
-			%round_samples = (); 
-			%round_genomes = (); 
-			
-			# Process info fields that contain locus tags.
-			my @out_line = ();	
-			for my $i(14..($n_headers-1)){
-			
-				# Only include samples with info in fields. 
-				if( $l[$i] ne '' ){				
-					++$curr_cluster_size;
-					$round_samples{$curr_cluster_size}=$l[$i];
-					$round_genomes{$curr_cluster_size}=$headers[$i];
-				}
-				push( @out_line , $l[$i] );
-			}			
-				
-			# Store info in roary iterations for ascending AA% identity
-			for my $k(keys %round_samples){
-
-				my $loci = $round_samples{$k}; # Current loci
-				
-				my $current_genome = $round_genomes{$k}; # current genome
-										
-				# Check to see if it contains paralogs.
-				if( $loci =~ /\t/ ){	
-				
-					# Store each locus_tag.
-					my @split_loci=split(/\t/,$loci);
-					for my $para_loci ( @split_loci ){
-					
-						# store initial round cluster per loci and/or print to loci file
-						if ( $count == 1 ){
-						
-							# store original cluster designation.
-							$cluster_store { $para_loci } = $gene_cluster;
-							$org_cluster = $gene_cluster;
-							print LOCI "$para_loci\t$gene_cluster\t$s\t$gene_cluster\t$current_genome\n";
-															
-						}else{
+		# Reset check and cluster/sample size info per line.	
+		%round_samples = ();
+		%round_genomes = ();
+		$org_cluster = "";
+		$gene_cluster = "";
 							
-							die "$para_loci not found in original file\n" if !$cluster_store {$para_loci};
-							$org_cluster = $cluster_store { $para_loci };
-							print LOCI "$para_loci\t$org_cluster\t$s\t$gene_cluster\t$current_genome\n";
-						
-						}			
-						
-						# store paralogous clusters (identify by original gene cluster).
-						$paralog_clusters { $cluster_store { $para_loci } } = 1;	
-						
-					}				
+		# Identify number of loci and origin genomes
+		$curr_cluster_size = 0;
+		for my $c_gene(@l){
+							
+				++$curr_cluster_size;
+				$round_samples{$curr_cluster_size} = $c_gene;
 					
-					# check for paralogs
-					$para_check=1;
-					
-				}
-				else{
-				
-					# Print to loci file
-					if ( $count == 1 ){ 
-						$cluster_store { $loci } = $gene_cluster;
-						$org_cluster = $gene_cluster;
-						print LOCI "$loci\t$gene_cluster\t$s\t$gene_cluster\t$current_genome\n";	
-					}else{
-						die "$loci not found in original file\n" if !$cluster_store { $loci };
-						$org_cluster = $cluster_store { $loci };
-						print LOCI "$loci\t$org_cluster\t$s\t$gene_cluster\t$current_genome\n";
-					}
-													
-				}				
+		}		
+		
+		# Group number is set by first iteration.
+		if( $count  == 1 ) {
+			++$cluster_count; 
+			$gene_cluster = sprintf("g%*d", $l_sig, $cluster_count);
+			$gene_cluster =~ tr/ /0/;
+			$org_cluster = $gene_cluster;
+			
+			# Store name per loci
+			for my $c_gene(@l){
+				 $cluster_store { $c_gene } = $gene_cluster;
 			}
 			
-			# increment paralog count.
-			++$para_count if $para_check == 1;
+			# allele count
+			$allele_count{ $gene_cluster } = 1;
 			
-			# print to allele file if the cluster dose not contain a paralog.
-			my $out_line = sprintf( "$gene_cluster\t$org_cluster\t$s\t$curr_cluster_size\t1\t1\t0\t0\t0\t%s\n" , join("\t", @out_line) ); 
-			print ALLELES "$out_line" if $para_check != 1;
+		}	
+		# Allele number is set as an $l_sig digit numerical increment with the root group as the identifier. 
+		else{
+			
+			# find original cluster
+			die "loci $l[0] not found in initial threshold file" if !( $cluster_store { $l[0] } );
+			$org_cluster = $cluster_store { $l[0] };
+			
+			# find no. allele for cluster 
+			my $a_count = $allele_count{$org_cluster}++;
+			
+			# nake allele name/number
+			my $a_name = sprintf("%*d", $l_sig, $a_count);
+			$a_name =~ tr/ /0/;
+			
+			# Set cluster name
+			$gene_cluster = "$org_cluster\_$a_name";
+			
+		}
+		
+		# Store info in roary iterations for ascending AA% identity
+		my $no_loci = 0;
+		for my $k(keys %round_samples){
+		
+			++$no_loci;
+
+			my $loci = $round_samples{$k}; # Current loci
+			my $current_genome = $g_loci{ $loci }; # current genome
+			
+			# Store loci in each genome 
+			$round_genomes {$current_genome} {$loci} = 1; 
+			
+			# sanity check 
+			die "loci $loci not found in initial threshold file" if !( $cluster_store { $loci } );
+			
+			# print to loci file
+			print LOCI "$loci\t$org_cluster\t$s\t$gene_cluster\t$current_genome\n";
+																	
+		}
+		
+		# Loci sorted on genome of origin for allele file. 
+		my $para_check = 0;
+		my $out_line = "$gene_cluster\t$org_cluster\t$s\t$curr_cluster_size\t1\t1\t0\t0\t0";
+		for my $k1 (@genome_list){
+			
+			# Blank if no loci for genome x.
+			if ( !$round_genomes{$k1} ){
+				$out_line = "$out_line\t";
+			}
+			# otherwise separate with spaces
+			else{
+				my @out_loci = ();
+				foreach( sort keys %{$round_genomes{$k1}} ){
+					push( @out_loci , $_);
+				}
+				$out_line = sprintf("$out_line\t%s", join(" ", @out_loci));
 				
-		}		
-	}
+				# check for paralogs
+				$para_check = 1 if scalar(keys %{$round_genomes{$k1}}) > 1;
+				
+			}
+			
+		}
+		$out_line = "$out_line\n";
+		
+		# if loci > no. genome then it is paralogous
+		if ( $para_check == 1 ){
+		
+			# store paralogous clusters (identify by original gene cluster).
+			$paralog_clusters { $org_cluster } = 1;	
+				
+			# increment paralog count.
+			++$para_count;
+			
+		}else{
+		
+			# print to allele file if the cluster dose not contain a paralog.
+			print ALLELES "$out_line"
+		
+		}
+					
+	}	
 	
 	# Feedback and close
 	print " - $para_count paralogous gene clusters.\n";
 	close FILE;
 	
-}
+}close LOCI;
 
-# Identify the cluster as containing paralogs. 
-my $para_total=0;
+# Identify the clusters containing paralogs. 
+my $para_total = 0;
 foreach( keys %paralog_clusters ){ 
 	print PARA "$_\n";
 	++$para_total;
 }print "\n$para_total paralog containing gene clusters detected.\n";
-
-close LOCI;
 close PARA;
+print "$no_samples genomes processed.\n";
 
 exit

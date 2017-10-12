@@ -29,6 +29,16 @@ my $R = 0;
 $R = 1 if `command -v R;`;
 print "roary not found in system path, cannot use -r command to plot output figures.\n" if $roary == 0;
 
+my $diamond_mkdb = ""; 
+my $diamond_bin = "";
+$diamond_mkdir = "diamond makedb" if `command -v diamond makedb;`;
+$diamond_bin = "diamond blastp" if `command -v diamond blastp;`;
+
+my $diamond_err = 0;
+$diamond_err = 1 if $diamond_mkdb eq "";
+$diamond_err = 1 if $diamond_bin eq "";
+print "Cannot find diamond binaries --diamond cannot be used.\n" if $diamond_err == 1;
+
 # die if dependencies are not available.
 if ( ($cd_hit == 0) || ($blast == 0) || ($mcl == 0) ) { die "Dependencies not correctly installed.\n" };
 

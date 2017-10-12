@@ -11,7 +11,7 @@ output_format<-args[3]
 
 ## Identify appropriate files in input directory ##
 roary_summary=sprintf("%s/roary_summary.tab", input_root)
-if(file.exists(roary_summary)){
+if( file.exists(roary_summary) ){
   
   ## Plot roary summary ##
   roary_data<-read.delim(roary_summary, header = T)
@@ -44,7 +44,6 @@ if(file.exists(roary_summary)){
  
 per_genome_summary=sprintf("%s/per_genome_summary.tab", input_root)
 if(file.exists(per_genome_summary)){
-  
   
   ## Plot per genome summary ###
   genome_data<-read.delim(per_genome_summary, header = T)
@@ -80,7 +79,7 @@ if(file.exists(per_genome_summary)){
 
 
 per_cluster_summary=sprintf("%s/gene_cluster_summary.tab", input_root)
-if(file.exists(per_cluster_summary)){
+if( file.exists(per_cluster_summary) ){
   
   ## Plot per cluster data ##
   cluster_data<-read.delim(per_cluster_summary, header = T)
@@ -101,8 +100,10 @@ if(file.exists(per_cluster_summary)){
 if(file.exists(per_genome_summary)){
   
   pdf(sprintf("%s/PIRATE_Summary.pdf", output), width=12, height=7)
-    print(rs)
-    print(rp)
+    if(file.exists(roary_summary)){
+      print(rs)
+      print(rp)
+    }
     print(gs.plot)
     print(gsin.plot)
     plot(err.plot)
@@ -110,8 +111,10 @@ if(file.exists(per_genome_summary)){
     
 }else{
   pdf(sprintf("%s/PIRATE_Summary.pdf", output), width=12, height=7)
-  print(rs)
-  print(rp)
+  if(file.exists(roary_summary)){
+    print(rs)
+    print(rp)
+  }
   plot(prop.plot)
 
 }

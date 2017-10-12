@@ -101,7 +101,7 @@ for my $sample( keys %gff_list ){
 	my %contig_hash=();
 	my $contig_id = "";
 	
-	open INPUT, "$pirate_dir/modified_gffs/$sample.gff" or die $!;
+	open INPUT, "$pirate_dir/modified_gffs/$sample.gff" or die "$pirate_dir/modified_gffs/$sample.gff not found.\n";
 	
 	while(<INPUT>){
  		
@@ -116,9 +116,10 @@ for my $sample( keys %gff_list ){
 			if($line =~ /^>(\S+)/){
 				$contig_id = $1;		
 			}
-			elsif($line =~ /^([ATGCN]+)/){
+			elsif($line =~ /^([ATGCNatcgn]+)$/){
 
-				my $seq=$1;
+				my $seq = $1;
+				$seq = uc ($seq);
 		
 				if(!$contig_hash{$contig_id}){
 					$contig_hash{$contig_id}=$seq;

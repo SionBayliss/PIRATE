@@ -176,8 +176,8 @@ for my $file( @file ){
 	my %process_cluster = ();
 	my $current_cluster = 0;
 	
-	# Find overlaps and check >95% of largest ORF - Sort on values ORF lengths.
-	# Cluster ORFs based upon >95% length similarity.
+	# Find overlaps and check >90% of largest ORF - Sort on values ORF lengths.
+	# Cluster ORFs based upon >90% length similarity.
 	for my $c1(  sort { $gene_lengths{$a} <=> $gene_lengths{$b} } keys(%gene_lengths) ){  
 	
 		if(!$process_cluster{$c1}){
@@ -379,8 +379,9 @@ for my $file( @file ){
 						
 									# Check for ORF fragmentation or multicopy genes.
 								
-									# If unique sites > overlap and overlap is > 75% of current/comparison gene length then ORF fragment found. 
+									# If unique sites > overlap and overlap is < 75% of current/comparison gene length then ORF fragment found. 
 									if( ($unique_sites>$overlap) && !( $overlap > (($gene_lengths{$curr})*0.75)) && !( $overlap > (($gene_lengths{$comp})*0.75)) ){ # More new sites than overlap && Overlap is not > 75% of length of original gene.								
+									#if( ($unique_sites>$overlap) && !( $overlap < (($gene_lengths{$curr})*0.75)) && !( $overlap < (($gene_lengths{$comp})*0.75)) ){ # More new sites than overlap && Overlap is not > 75% of length of original gene.								
 									
 										# Add to count hash 
 										#$count_hash{$curr_genome}{$curr}++;
