@@ -5,47 +5,6 @@
 use strict;
 use warnings;
 use Bio::Perl;
-use Getopt::Long qw(GetOptions :config no_ignore_case);
-use Pod::Usage;
-
-# Version
-
-=head1  SYNOPSIS
-
-
-=head1 Descriptions
-	
-...
-
-=cut
-
-# command line options
-my $man = 0;
-my $help = 0;
-my $sample = "";
-my $pirate_dir = '';
-my $input_file = '';
-my $output_file = '';
-
-my $check = 0;
-my $nuc = 0;
-my $length_threshold = 120;
-
-GetOptions(
-	'help|?' 	=> \$help,
-	'man' 		=> \$man,
-	'sample=s' => \$sample,
-	'directory=s' 	=> \$pirate_dir,
-	'output=s'	=> \$output_file,
-	'nucleotide' => \$nuc,
-	'threshold=i' => \$length_threshold,
-	'check' => \$check,
-) or pod2usage(2);
-pod2usage(1) if $help;
-pod2usage(-verbose => 2) if $man;
-
-# file check.
-die "$pirate_dir is not a directory.\n" unless -d "$pirate_dir";
 
 # stop codons
 my %stop_codons = (
@@ -65,8 +24,24 @@ my %start_codons = (
     
 );
 
-# Open output file
-open OUTFILE, ">$output_file" or die "ERROR: Could not open $output_file\n";		
+# input/output
+my $sample = $ARGV[0];
+my $pirate_dir = $ARGV[1];
+my $output_file = $ARGV[2];
+
+# check for nucleotide or amino acid sequence.
+my $nuc = 0;
+if ( defined($ARGV[3]) ) {
+	if( $ARGV[3] eq "nucl" ){
+		$nuc = 1;
+	}
+}
+
+# length threshold
+my $length_threshold = 125;
+
+# check for presence of output file - must be created beforehand
+die "No output file.\n" unless -f $output_file;  
 
 # variables
 my $include = 0;
@@ -75,7 +50,7 @@ my $contig_id = "";
 my $count = 0;
 
 # Open gff and store contig sequence.
-open INPUT, "$pirate_dir/modified_gffs/$sample.gff" or die "ERROR: Could not open $pirate_dir/modified_gffs/$sample.gff";		
+open INPUT, "$pirate_dir/modified_gffs/$sample.gff" or die $!;
 while(<INPUT>){
 	
 	my $line=$_;
@@ -118,7 +93,7 @@ while(<INPUT>){
 }close INPUT;
 
 #Parse co-ordinate file.
-open COORDS, "$pirate_dir/co-ords/$sample.co-ords.tab" or die "ERROR: Could not open $pirate_dir/co-ords/$sample.co-ords.tab";
+open COORDS, "$pirate_dir/co-ords/$sample.co-ords.tab" or die $!;
 while(<COORDS>){
 	unless(/^Name\tGene/){
 	
@@ -139,7 +114,7 @@ while(<COORDS>){
 		my $seq = substr($contig_hash{$contig}, $start-1, $len); # account for zero indexing
 		
 		# revcomp if necessary.
-		if( $strand eq "Reverse" ){
+		if($strand eq "Reverse"){
 			$seq = reverse_complement($seq)->seq();
 		}
 		
@@ -180,22 +155,23 @@ while(<COORDS>){
 			$include = 0;
 		}
 		
-		if ( ($include == 1) || ( $check == 1 ) ){
+		if ( $include == 1 ){
 		
 			# optionally tranlate to amino acid sequence.
 			if( $nuc == 0 ){
 				$seq = translate($seq)->seq();
 			}	
 		
-			# Print to file.				
+			# Find appropriate output filename.					
+			open OUTFILE, ">>$output_file" or die $!;		
 			print OUTFILE ">$locus_tag\n$seq\n";
+			close OUTFILE;
 			
 		}
 	
 	}
 	
 }close COORDS;
-close OUTFILE;
 
 exit
 

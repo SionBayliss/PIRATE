@@ -28,6 +28,9 @@ use File::Basename;
  --nopan		don't run pangenome tool [assumes files are in pangenome_iterations folder]
  --nucleotide		create pangenome from nucleotide sequences [incompatible with -R|--Roary] [not instituted]
  -d|--diamond		use diamond instead of blastp [incompatible with --nucleotide; default = off]
+ -f|--features		'features=s' => \$features,
+ -a|--align		'align' => \$align,
+ -p|--para-off	'para-off' => \$para_off,
 
 
 =head1 Descriptions
@@ -76,6 +79,8 @@ my $debug = 0;
 my $roary = 0;
 my $diamond = 0;
 my $nucleotide = 0;
+my $align = 0;
+my $para_off = 0;
 
 my $features = "CDS";
 my $no_files = 0;
@@ -99,6 +104,8 @@ GetOptions(
 	'diamond'	=> \$diamond,
 	'nucleotide'	=> \$nucleotide,
 	'features=s' => \$features,
+	'align' => \$align,
+	'para-off' => \$para_off,
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-verbose => 2) if $man;
@@ -482,72 +489,86 @@ if ( $no_erroneous > 0) {
 }
 
 # Link clusters
-print "\n-------------------------------\n\n";
-print "Link clusters between thresholds:\n\n";
-if( $roary == 1 ){
-	system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab $pirate_dir/recluster_erroneous/loci_list.tab");
-}else{
-	system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab");
-}
-die "LinkClusters.pl failed.\n" if $?;
-print "\n-------------------------------\n\n";
+#print "\n-------------------------------\n\n";
+#print "Link clusters between thresholds:\n\n";
+#if( $roary == 1 ){
+#	system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab $pirate_dir/recluster_erroneous/loci_list.tab");
+#}else{
+#	system( "perl $script_path/LinkClusters.pl $pirate_dir/loci_list.tab $steps $pirate_dir $pirate_dir/error_links_summary.tab");
+#}
+#die "LinkClusters.pl failed.\n" if $?;
+#print "\n-------------------------------\n\n";
 
 # add additional clusters to loci list.
-if ( -f "$error_dir/loci_list.tab" ){
-	`cat $pirate_dir/loci_list.tab $error_dir/loci_list.tab > $pirate_dir/temp.tab`;
-	`mv $pirate_dir/temp.tab $pirate_dir/loci_list.tab`;
-}
+#if ( -f "$error_dir/loci_list.tab" ){
+#	`cat $pirate_dir/loci_list.tab $error_dir/loci_list.tab > $pirate_dir/temp.tab`;
+#	`mv $pirate_dir/temp.tab $pirate_dir/loci_list.tab`;
+#}
 
-# Extract paralog and erroneous cluster genes and align them.
-print "Extract paralogous cluster nucleotide sequence and align:\n\n";
-$time_start = time();
+if ( $para_off == 0 ){
 
-if ( $nucleotide == 0 ){
-	system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
-	die "AggregateMultigeneFamilies failed.\n" if $?;
+	if ($align == 1){
+
+		# Classify paralogous clusters using mafft for alignment.
+		print "Extract paralogous cluster nucleotide sequence and align:\n\n";
+		$time_start = time();
+
+		if ( $nucleotide == 0 ){
+			system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads" );
+			die "AggregateMultigeneFamilies failed.\n" if $?;
+		}else{
+			system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads nucl" );
+			die "AggregateMultigeneFamilies failed.\n" if $?;
+		}
+		print " - completed in: ", time() - $time_start,"s\n";
+		print "\n-------------------------------\n\n";
+
+		# Classify and assign paralog families.
+		print "Classify paralog loci:\n\n";
+		$time_start = time();
+		system( "perl $script_path/IdentifyParalogs.pl $pirate_dir/cluster_nucleotide_sequences/ $gff_dir $pirate_dir");
+		die "IdentifyParalogs.pl failed.\n" if $?;
+		print "\n";
+	
+
+	}else{
+
+		# Classify paralogous clusters using blast
+		print "Classify paralogous clusters:\n\n";
+		$time_start = time();
+
+		if ( $nucleotide == 0 ){
+			system("perl $script_path/run_IdentifyParalogs.pl -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0]");
+			die "IdentifyParalogs failed.\n" if $?;
+		}else{
+			system("perl $script_path/run_IdentifyParalogs.pl -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --nucleotide");
+			die "IdentifyParalogs failed.\n" if $?;
+		}
+		print " - completed in: ", time() - $time_start,"s\n";
+		print "\n-------------------------------\n\n";
+	
+	}
+
+	# Seperate paralogous clusters if dosage == 1 per genome at any threshold.
+	print "Split paralogous clusters:\n\n";
+	$time_start = time();
+	system( "perl $script_path/Split_Paralogs.update.pl $pirate_dir/loci_paralog_catagories.tab $pirate_dir/loci_list.tab $pirate_dir/ $threads");
+	die "Split_Paralogs failed.\n" if $?;
+	print "\n-------------------------------\n\n";
+
+	# Make annotated output tables (families and alleles) 
+	system( "perl $script_path/LinkClusters_updated.pl -l $pirate_dir/loci_list.tab -l $pirate_dir/split_paralog_loci.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --paralogs $pirate_dir/loci_paralog_catagories.tab -e $pirate_dir/paralog_clusters.tab --parallel $threads");
+	die "Link clusters failed.\n" if $?;
+	print "\n-------------------------------\n\n";
+	
 }else{
-	system( "perl $script_path/AggregateMultigeneFamilies.pl $pirate_dir $thresholds[0] $script_path $threads nucl" );
-	die "AggregateMultigeneFamilies failed.\n" if $?;
+
+	# Make annotated output tables (families and alleles) 
+	system( "perl $script_path/LinkClusters_updated.pl -l $pirate_dir/loci_list.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --parallel $threads");
+	die "Link clusters failed.\n" if $?;
+	print "\n-------------------------------\n\n";
+
 }
-print " - completed in: ", time() - $time_start,"s\n";
-print "\n-------------------------------\n\n";
-
-# Classify and assign paralog families.
-print "Classify paralog loci:\n\n";
-$time_start = time();
-system( "perl $script_path/IdentifyParalogs.pl $pirate_dir/cluster_nucleotide_sequences/ $gff_dir $pirate_dir");
-die "IdentifyParalogs.pl failed.\n" if $?;
-print "\n";
-system( "perl $script_path/AssignParalogs.pl $pirate_dir/round_clusters.tab $pirate_dir/loci_paralog_catagories.tab $pirate_dir/paralog_clusters.tab $pirate_dir/paralog_alleles.tab $pirate_dir/genome_list.txt" );
-die "AssignParalogs.pl failed.\n" if $?;
-
-# Identify most likely allele designation for each cluster
-system( "perl $script_path/Split_Paralogs.pl $pirate_dir/paralog_alleles.tab $pirate_dir/split_paralogs.tab" );
-die "Split_Paralogs.pl failed.\n" if $?;
-print " - completed in: ", time() - $time_start,"s\n";
-print "\n-------------------------------\n\n";
-
-# rename duplicate allele names in split_paralog (temp until naming scheme is instituted).
-print `nawk -v OFS="\t" '\$1 in a {\$1=\$1 "_" ++a[\$1]}{a[\$1];print}' $pirate_dir/split_paralogs.tab > $pirate_dir/split_paralogs.renamed.tab`;
-
-# Make gene family file from combining split_paralogs and alleles from cluster_alleles file
-open ALL_OUT, "$pirate_dir/cluster_alleles.tab" or die $!;
-open FAMILY_OUT, ">$pirate_dir/cluster_families.tab " or die $!;
-while(<ALL_OUT>) { if(/^\S+\t\S+\t$thresholds[0]\t/){ print FAMILY_OUT "$_" } }
-`cat $pirate_dir/cluster_families.tab $pirate_dir/split_paralogs.renamed.tab > $pirate_dir/families_combined.tab`;
-
-# concatenate alleles files
-`cat $pirate_dir/cluster_alleles.tab $pirate_dir/paralog_alleles.tab > $pirate_dir/alleles_combined.tab`;
-
-# sort family_clusters files on number of genomes.
-`sort -k 4,4rn -k 2,2 < $pirate_dir/families_combined.tab > $pirate_dir/families_combined.temp.tab`;
-`mv $pirate_dir/families_combined.temp.tab $pirate_dir/families_combined.tab`;
-
-# Make annotated output tables (families and alleles) - N.B. splits not working.
-`perl $script_path/AnnotateTable.pl $pirate_dir/alleles_combined.tab $pirate_dir/co-ords/ $pirate_dir/gene_cluster_summary.tab $pirate_dir/PIRATE.alleles.tab`;
-die "AnnotateTable failed.\n" if $?;
-`perl $script_path/AnnotateTable.pl $pirate_dir/families_combined.tab $pirate_dir/co-ords/ $pirate_dir/gene_cluster_summary.tab $pirate_dir/PIRATE.gene_families.tab`;
-die "AnnotateTable failed.\n" if $?;
 
 # tabular summaries
 #print "Printing summary tables\n";

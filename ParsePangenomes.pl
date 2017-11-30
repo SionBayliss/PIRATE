@@ -121,7 +121,7 @@ for my $s(@AA_PER){
 			# find no. allele for cluster 
 			my $a_count = $allele_count{$org_cluster}++;
 			
-			# nake allele name/number
+			# make allele name/number
 			my $a_name = sprintf("%*d", $l_sig, $a_count);
 			$a_name =~ tr/ /0/;
 			

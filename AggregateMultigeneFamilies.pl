@@ -12,6 +12,12 @@ my $round = $ARGV[1]; # Lowest AA% threshold.
 my $script_path = $ARGV[2];
 my $threads = $ARGV[3];
 
+# Check for nucletide sequence.
+my $nucleotide = 0;
+if ( defined($ARGV[4]) ){
+	$nucleotide = 1;
+} 
+
 # variables
 my %groups; # list of group a cluster falls into.
 my %group_list; # list of all groups to process 
@@ -185,8 +191,8 @@ foreach( keys %cluster_check ){
 if ($fail_check > 0){ die "$fail_check loci sequences missing for input files.\n";}
 
 # Align all sequences using mafft on aa sequence and back translate to nucleotide sequence.
-print " - Aligning aa sequences and back-translating to nucleotide sequence.\n";
-unless ( -e "$pirate_dir/cluster_aa_sequences" ){ `mkdir $pirate_dir/cluster_aa_sequences`; } 
+print " - Aligning sequences.\n";
+unless ( (-e "$pirate_dir/cluster_aa_sequences") || ($nucleotide == 1) ){ `mkdir $pirate_dir/cluster_aa_sequences`; } 
 
 # Temp files for parallel.
 my $temp1 = "$pirate_dir/temp.tab";
@@ -213,8 +219,16 @@ for my $gene( keys %group_list ){
 	# Print to temp file.
 	
 	## MAFFT
-	print TEMP1 "$pirate_dir/cluster_nucleotide_sequences/$gene.fasta\t$pirate_dir/cluster_aa_sequences\n";
-	print TEMP2 "$pirate_dir/cluster_aa_sequences/$gene.nucleotide.fasta\t$pirate_dir/cluster_nucleotide_sequences/$gene.fasta\n";
+	# amino acid sequence - MAFFT on aa an back translate
+	if( $nucleotide == 0 ){
+		print TEMP1 "$pirate_dir/cluster_nucleotide_sequences/$gene.fasta\t$pirate_dir/cluster_aa_sequences\n";
+		print TEMP2 "$pirate_dir/cluster_aa_sequences/$gene.nucleotide.fasta\t$pirate_dir/cluster_nucleotide_sequences/$gene.fasta\n";
+	}
+	# nucleotide - MAFFT on nucelotide sequence.
+	else{
+		print TEMP1 "$pirate_dir/cluster_nucleotide_sequences/$gene\n";
+		print TEMP2 "$pirate_dir/cluster_nucleotide_sequences/$gene.nucleotide.fasta\t$pirate_dir/cluster_nucleotide_sequences/$gene.fasta\n";
+	}
 	
 	# PRANK
 	#my $temp3 = "$pirate_dir/move.temp.2.tab";
@@ -242,10 +256,19 @@ for my $gene( keys %group_list ){
 		#`cat $temp3 | parallel --no-notice --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
 		#`cat $temp4 | parallel --no-notice --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
 		
-		# MAFFT
-		`parallel -a $temp1 --jobs $threads --colsep '\t' perl $script_path/AAalign2nucleotide.pl {1} {2} >/dev/null 2>/dev/null`;
-		`parallel -a $temp2 --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
-
+		# amino acid sequence - MAFFT on aa an back translate
+		if( $nucleotide == 0 ){
+			`parallel -a $temp1 --jobs $threads --colsep '\t' perl $script_path/AAalign2nucleotide.pl {1} {2} >/dev/null 2>/dev/null`;
+			`parallel -a $temp2 --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
+		}
+		# nucleotide - MAFFT on nucelotide sequence.
+		else{
+			
+			`parallel -a $temp1 --jobs $threads --colsep '\t' \"mafft --auto --leavegappyregion --quiet --op 1.5 --ep 0.2 --lop -4 --lep -1 --lexp -0.2 --maxiterate 10 {}.fasta > {}.nucleotide.fasta\"`;
+			`parallel -a $temp2 --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
+			
+		}
+		
 		# Clear temp files.
 		open TEMP1, ">$temp1" or die $!;
 		open TEMP2, ">$temp2" or die $!;

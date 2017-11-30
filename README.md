@@ -50,6 +50,7 @@ run_PIRATE.pl -i /path/to/directory/containing/gffs/
 ### Bugs
 - rerunning in same folder may throw errors - add sample list to IdentifyParalogs.pl to avoid this.
 - check genome name ordering in all files. 
+- Paralog classification doesn't display a "- 100% complete" message when finished.
 
 ### Features
 - institute allele naming scheme 

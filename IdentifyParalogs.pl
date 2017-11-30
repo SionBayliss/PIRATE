@@ -46,33 +46,50 @@ for my $file( @files ){
 	# extract locus and position info.
 	while(<TEMP_GFF>){
 	
-		if($_=~/^(\S+)\s+\S+\s+(CDS)\s+/){
+		my $line = $_;
+		chomp $line;
 		
-			my @line = split("\t", $_); 
-			my @data = split(";", $line[8]);
+		my @split_line = split("\t", $line, -1); 
 		
-			# Find CDS number and contig id.
-			if($ct_store ne $1){
-				$ct_store=$1;
-				$ct_no++;
-				$lt_no=1;			
-			}else{$lt_no++}
+		
+		if(/^##FASTA/){
+			last;
+			# dont read fasta sequence	
+		}
+		elsif(/^#/){
+			# headers
+		}
+		else{
+		
+			unless( $split_line[2] eq "gene" ){ 
+		
+				print $line if $split_line[8] eq "";
 			
-			# Locus tag.
-			my $lt = "";
-			my @out1 = ();		
+				my @data = split(";", $split_line[8]);
+		
+				# Find CDS number and contig id.
+				if($ct_store ne $split_line[0]){
+					$ct_store = $split_line[0];
+					$ct_no++;
+					$lt_no = 1;			
+				}else{$lt_no++}
+			
+				# Locus tag.
+				my $lt = "";
+				my @out1 = ();		
 					
-			foreach(@data){
+				foreach(@data){
 			
-				if( $_ =~ /locus_tag=/ ){
-					@out1 = split("=", $_);
-					$lt = $out1[1];
+					if( $_ =~ /^locus_tag=(.+)/ ){
+						$lt = $1;
+					}
+				
 				}
+				# Store locus tag info and position within assembly.
+				$locus_list{$lt}=$file;
+				$pos_list{$lt}=$lt_no;
 				
 			}
-			# Store locus tag info and position within assembly.
-			$locus_list{$lt}=$file;
-			$pos_list{$lt}=$lt_no;
 	
 		}
 	}close TEMP_GFF;
@@ -443,6 +460,8 @@ for my $file( @file ){
 		print "\r - ", int(($processed_count / scalar(@file) )*100) , "% processed";
 	}
 
-}print "\n";
+}
+print "\r - ", "100% processed";
+print "\n";
 
 exit

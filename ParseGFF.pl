@@ -27,7 +27,7 @@ $file_name =~ s/_+/_/g;
 my $out_file = sprintf( "%s/%s.gff" , $out_dir , $file_name );
 
 # set variables
-my $annotation_no = 0;
+my %annotation_no = ();
 my $store = 0;
 my $fasta_out = "";
 my @fasta_line = ();
@@ -80,52 +80,69 @@ while(<INPUT>){
 		
 	}elsif ( (/locus_tag=\S+/) || (/ID=\S+/) ){ # name loci after file
 	
-		$annotation_no++ unless $line =~ /^\S+\s+\S+\s+gene\t/; # increment count for all but gene annotation (gene annotation is redundant)
-	
 		@split_line = split( "\t" , $line ); 
+		
+		# Increment annotation by feature type.
+		my $feature_type = $split_line[2];
+		$feature_type =~ s/\s+/\_/g;
+		
+		# make output tag name.
+		my $output_type = "";
+		$output_type = "$feature_type\_" if $feature_type ne "CDS";
+		
+		# Increase annotation type number.
+		$annotation_no{$feature_type}++ unless $line =~ /^\S+\s+\S+\s+gene\t/; # increment count for all but gene annotation (gene annotation is redundant)
+	
+		# variable that checks if there is a fasta header matching each line of annotation.  
 		$annotation_check{ $split_line[0] } = 1;
 		
-		# split tag info
-		@add_data = split( ";" , $split_line[8] );
-		my @add_out=();
-		my $modded=0;
-		my $old_locus="";
+		# note field variables
+		my $prev_locus = "";
+		my $prev_ID = "";
+		my $prev_gene = "";
 		
 		# check each tag for ID or locus_tag
+		my @add_out = ();
+		@add_data = split( ";" , $split_line[8] );
 		foreach( @add_data ){
 			
 			my $info_field = "";
 		
 			# standardise nomenclature.
 			if( $_ =~ /locus_tag=(.+)/ ){
-				$info_field = sprintf("locus_tag=%s\_%05d", $file_name, $annotation_no);
-				$modded = 1;
-				$old_locus=sprintf("old_locus=%s", $1)
+			
+				$prev_locus = sprintf("prev_locus=%s", $1);
+				$info_field = sprintf("locus_tag=%s\_%s%05d", $file_name, $output_type,  $annotation_no{$feature_type});
+				
 			}elsif ( $_ =~ /ID=(.+)/ ) {
-				$info_field = sprintf("ID=%s\_%05d", $file_name, $annotation_no);
-				$modded = 1;
-				$old_locus=sprintf("old_locus=%s", $1)
+				
+				$prev_ID = sprintf("prev_ID=%s", $1);
+				$info_field = sprintf("ID=%s\_%s%05d", $file_name, $output_type, $annotation_no{$feature_type});
+				
 			}elsif ( $_ =~ /gene=(.+)/ ) {
-				$old_locus=sprintf("old_locus=%s", $1);
+			
+				$prev_gene = sprintf( "prev_gene=%s", $1 );
+				
 				my $modify = $1;
 				$modify =~ s/\//\_/g;
 				$info_field = sprintf( "gene=%s", $modify );
-				$modded = 1;
+				
 			}else{
 				$info_field=$_;
 			}
 			
-			#Name=HP0041/HP0042;gene=HP0041/HP0042
-						
 			# add info field to output
 			push(@add_out, $info_field );	
 		}
 		
 		# add old locus tag if locus tag was modified.
-		push(@add_out, $old_locus) unless $old_locus eq "";
+		push(@add_out, $prev_locus) unless $prev_locus eq "";
+		push(@add_out, $prev_ID) unless $prev_ID eq "";
+		push(@add_out, $prev_gene) unless $prev_gene eq "";
 		
 		# add to output array
 		push( @output_array, join("\t", @split_line[0..7], join(";", @add_out) ) );
+		#print join("\t", @split_line[0..7], join(";", @add_out) ), "\n";
 		
 	}elsif(/^#/){
 		push(@output_array, $line);

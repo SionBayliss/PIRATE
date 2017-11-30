@@ -58,7 +58,7 @@ for my $file(@coords){
 		my $line = $_;
 		$line =~ s/\R//g;
 
-		unless( (/^Name\t/) || !(/CDS/) ){
+		unless( /^Name\t/ ){
 			my @info = split(/\t/, $line);
 			
 			my $gene = $info[1];

@@ -61,10 +61,8 @@ unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){
 
 =head1  SYNOPSIS
 
-	pangenome_construction.pl -i /path/to/fasta 
+	pangenome_construction.pl -i /path/to/fasta -o /path/to/output/
 
-=head1 Descriptions
-	
 	-h|--help 			usage information
 	-m|--man			man page 
 	-i|--input			input fasta file [nucleotide/aa]
@@ -76,12 +74,12 @@ unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){
 	-q|--quiet			switch off verbose
 	-cdl|--cdlow		cdhit lowest percentage id [default: 98]
 	-cds|--cdstep		cdhit step size [default: 0.5]
-	-f|--flat			mcl inflation value [default:2]
+	-f|--flat			mcl inflation value [default: 2]
 	-r|--retain			do not delete temp files
 	-n|--nucleotide		create pangenome on nucleotide sequence [default: amino acid]
-	-e|--evalue			e-value used for blast hit filtering [default: 0.01]
-	-d|--diamond		use diamond instead of blast - incompatible with --nucleotide [default - off]
-	
+	-e|--evalue			e-value used for blast hit filtering [default: 1E-6]
+	-d|--diamond		use diamond instead of BLAST - incompatible with --nucleotide [default: off]
+	--hsp_prop			remove BLAST hsps that are < hsp_prop proportion of query length/query hsp length [default: 0]
 ...
 
 =cut
@@ -110,6 +108,7 @@ my $cd_low = 98;
 my $cd_step = 0.5;
 my $evalue = "1E-6";
 my $inflation_value = 1.5;
+my $hsp_perc_length = 0;
 
 my $diamond = 0;
 
@@ -129,7 +128,8 @@ GetOptions(
 	'quiet'		=> \$quiet,
 	'retain' => \$retain,
 	'nucleotide' => \$nucleotide,
-	'evalue' => \$evalue,
+	'evalue=f' => \$evalue,
+	'hsp_prop=f' => \$hsp_perc_length,
 	'diamond' => \$diamond
 	
 ) or pod2usage(2);
@@ -215,6 +215,7 @@ if ($quiet == 0 ){
 	print "Number of input files: $no_files\n";
 	print "Threshold(s): @thresholds\n";
 	print "MCL inflation value: $inflation_value\n";
+	print "Homology test cutoff: $evalue\n";
 	print "Loci file contains $no_loci loci from $no_genomes genomes.\n" if $loci_list ne '';
 	print "\n";
 }
@@ -553,7 +554,7 @@ for my $file( @files ){
 			#`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "diamond blastp -d $output_dir/$sample.diamond_db --masking 0 --evalue 1E-6 --max-hsps 1 --threads 1 --outfmt 6 --more-sensitive --max-target-seqs 0" > $blast_out 2>/dev/null`; # --evalue 10
 			
 			# run as one file (faster than parallel)
-			`diamond blastp -q $blast_in -d $output_dir/$sample.diamond_db -c 1 --masking 0 --evalue $evalue --max-hsps 1 --threads $threads --outfmt 6 --more-sensitive --max-target-seqs 0 > $blast_out 2>/dev/null`; # --evalue 10
+			`diamond blastp -q $blast_in -d $output_dir/$sample.diamond_db -c 1 --masking 0 --evalue $evalue --max-hsps 1 --threads $threads --outfmt 6 --more-sensitive --max-target-seqs 0 > $blast_out 2>/dev/null`;
 			
 			# error check
 			die "diamond blastp failed.\n" if $?;
@@ -588,26 +589,61 @@ for my $file( @files ){
 
 	# ensure blast output has all representative sequences vs themselves (short sequences maybe removed on e-value).
 	open BLAST_OUT, "$blast_out" or die $!;
+	open BLAST_TEMP, ">$blast_out.temp" or die $!;
 	my $av_bit = ""; # average bit score of same-same blast results for dataset.
 	while (<BLAST_OUT>){
 	
+		my $line = $_;
+		my @line = split(/\t/, $line);
+	
 		# identify same-same lines
-		my @line = split(/\t/, $_);
 		if( $line[0] eq $line[1] ){
 			$rep { $line[0] } = 2;
 			
 			$av_bit = $line[11] if $av_bit eq "";
 			$av_bit = ($av_bit + $line[11]) / 2;
-		}	
+			
+			print BLAST_TEMP "$line";
+		}
+		# [optional] filter on hsp percentage length - > hsp_perc_length removed.
+		elsif( $hsp_perc_length > 0 ){
 		
-	}close BLAST_OUT;
+			my $q_len = $line[3];
+			my $q_hsp_len = ($line[7] - $line[6]) + 1;
+			my $s_hsp_len = ($line[9] - $line[8]) + 1;
+			
+			# test hsp length against original sequence length and subject hsp alignment length vs query hsp length.			
+			my $hspVSq = $q_len / $s_hsp_len;
+			$hspVSq = 1 - ($hspVSq - 1) if $hspVSq > 1; 
+			my $hspVShsp = $q_hsp_len / $s_hsp_len;
+			$hspVShsp = 1 - ($hspVShsp - 1) if $hspVShsp > 1; 
+			
+			# print if both are > hsp_perc_length
+			if ( ( $hspVSq > $hsp_perc_length ) && ( $hspVShsp > $hsp_perc_length) ){
+				print BLAST_TEMP "$line";
+			}		
+		
+		}
+		# otherwise print
+		else{
+		
+			print BLAST_TEMP "$line";
+			
+		}
+		
+	}
+	close BLAST_OUT;
+	close BLAST_TEMP;
+	
+	# replace original file.
+	`mv $blast_out.temp $blast_out`;
 	
 	# Add missing representative sequences.
 	open BLAST_OUT, ">>$blast_out" or die $!;
 	for my $rloci ( keys %rep ){
 
 		if ( $rep{$rloci} == 1){
-			print BLAST_OUT "$rloci	$rloci	100.00	100	0	0	1	81	1	81	2e-60	$av_bit\n";
+			print BLAST_OUT "$rloci	$rloci	100.00	100	0	0	1	100	1	100	0.0e+00	$av_bit\n";
 		} 
 		
 	}
@@ -618,7 +654,8 @@ for my $file( @files ){
 	
 	# Filter BLAST files at all thresholds and perform MCL on filtered hits.
 	# Iterate through all clusters at higher thresholds.
-	print "\n - running mcl on $sample\n" if $quiet == 0;
+	#print "\n - running mcl on $sample\n" if $quiet == 0;
+	print "\n" if $quiet == 0;
 	my $previous_clusters = ""; 
 	for my $c(0..(scalar(@thresholds)-1) ){
 	
@@ -638,6 +675,11 @@ for my $file( @files ){
 			
 			# set working file for next iteration
 			$previous_clusters = "$output_dir/$sample.mcl_$threshold.clusters";
+			
+			# feedback 
+			my $no_clusters = `cat $output_dir/$sample.mcl_$threshold.clusters | wc -l`;
+			$no_clusters =~ s/\n//;
+			print " - $no_clusters clusters at $threshold %";
 		
 		}else{
 		
@@ -711,6 +753,11 @@ for my $file( @files ){
 			# set working file for next iteration
 			$previous_clusters = "$output_dir/$sample.mcl_$threshold.clusters";
 			unlink "$output_dir/mcl_sub/list.txt";
+			
+			# feedback 
+			my $no_clusters = `cat $output_dir/$sample.mcl_$threshold.clusters | wc -l`;
+			$no_clusters =~ s/\n//;
+			print " - $no_clusters clusters at $threshold %";
 						
 		}
 		time_update();
