@@ -86,7 +86,11 @@ while (<DATA>){
 
 # Run blast on input fatsa
 print "\n - making BLAST databases for $group\n" if $quiet == 0;
-`makeblastdb -in $working/$group.fasta -dbtype prot`;
+if ( $nucleotide == 0 ){
+	`makeblastdb -in $working/$group.fasta -dbtype prot`;
+}else{
+	`makeblastdb -in $working/$group.fasta -dbtype nucl`;
+}
 
 # blast all vs all - clusters vs self ### NOTE: adjust gap penalties.
 print " - running cluster vs self BLAST on $group\n" if $quiet == 0;

@@ -179,8 +179,10 @@ elsif( $quiet == 0 ){
 }
 
 # make pangenome tool arguements
-my $panargs = "";
-$panargs = "-d" if $diamond == 1; 
+my @pargs = ();
+push(@pargs, "-d") if $diamond == 1; 
+push(@pargs, "--nucleotide") if $nucleotide == 1; 
+my $panargs = join(" ", @pargs);
 
 # Check features are CDS or alternative features.
 my $genic = 0;
