@@ -372,10 +372,10 @@ for my $file( @files ){
 		
 		# run cdhit
 		print " - Passing $no_included loci to cd-hit at $i%  \n" if $quiet == 0;
-		if( $nucleotide == 0 ){
+		if( $nucleotide == 1 ){
 			`$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n 5 -M $m_required -d 256 >> $cdhit_log`;
 		}else{
-			`$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n 5 -M $m_required -d 256 >> $cdhit_log`;
+			`$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n 10 -M $m_required -d 256 >> $cdhit_log`;
 		}
 		die "cdhit failed.\n" if $?;
 		
