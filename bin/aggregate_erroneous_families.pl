@@ -42,7 +42,6 @@ while(<ERR>){
 # Exit if no erroneous clusters
 my $no_clusters = scalar(keys(%groups));
 if ( $no_clusters == 0 ){
-	print "No erroneous clusters.\n"; 
 	exit;
 }  
 

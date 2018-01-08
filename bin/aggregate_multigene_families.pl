@@ -60,7 +60,7 @@ while(<LIST>){
 		
 			# Check for repeat loci.
 			if( $cluster_list{$1} ){
-				print "Loci repeated in file - $1\n";
+				print " - loci repeated in file - $1\n";
 				$repeat_check = 1;
 			}else{
 			
@@ -83,7 +83,7 @@ $clusters_found = scalar ( keys %clusters );
 if( $no_groups ne $clusters_found ){
 	die "Error - Only found $clusters_found of $no_groups gene clusters during round $round.\n";
 }else{
-	print "$clusters_found paralog/erroneous clusters identified from ", scalar( keys %group_list ), " groups.\n";
+	print " - $clusters_found paralog/erroneous clusters identified from ", scalar( keys %group_list ), " groups.\n";
 }
 
 # Parse all co-ordinate files for position in sequence of feature and extract sequence.
@@ -95,7 +95,7 @@ unless ( -e  "$pirate_dir/cluster_nucleotide_sequences" ){ `mkdir $pirate_dir/cl
 foreach( keys %group_list ){ `echo -n "" > $pirate_dir/cluster_nucleotide_sequences/$_.fasta` }
 
 # fill fasta files from with sequence from matching features.
-print " - Identifying features and sequences.\n";
+print " - identifying features and sequences.\n";
 
 # initialise variables
 my %cluster_check = map { $_ => 1 } keys( %cluster_list );
@@ -184,14 +184,14 @@ for my $sample( keys %gff_list ){
 my $fail_check = 0;
 foreach( keys %cluster_check ){
 	if( $cluster_check{$_} == 1 ){
-		print "$_ from cluster ${groups{$cluster_list{$_}}} is missing.\n";
+		print " - $_ from cluster ${groups{$cluster_list{$_}}} is missing.\n";
 		$fail_check++;
 	}
 }
 if ($fail_check > 0){ die "$fail_check loci sequences missing for input files.\n";}
 
 # Align all sequences using mafft on aa sequence and back translate to nucleotide sequence.
-print " - Aligning sequences.\n";
+print " - aligning sequences.\n";
 unless ( (-e "$pirate_dir/cluster_aa_sequences") || ($nucleotide == 1) ){ `mkdir $pirate_dir/cluster_aa_sequences`; } 
 
 # Temp files for parallel.
@@ -258,14 +258,18 @@ for my $gene( keys %group_list ){
 		
 		# amino acid sequence - MAFFT on aa an back translate
 		if( $nucleotide == 0 ){
-			`parallel -a $temp1 --jobs $threads --colsep '\t' perl $script_path/AAalign2nucleotide.pl {1} {2} >/dev/null 2>/dev/null`;
+			`parallel -a $temp1 --jobs $threads --colsep '\t' perl $script_path/aa_align_to_nucleotide.pl {1} {2} >/dev/null 2>/dev/null`;
+			die " - ERROR: aa_align_to_nucleotide failed.\n" if $?;
 			`parallel -a $temp2 --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
+			die " - ERROR: failed to move back translated files.\n" if $?;
 		}
 		# nucleotide - MAFFT on nucelotide sequence.
 		else{
 			
 			`parallel -a $temp1 --jobs $threads --colsep '\t' \"mafft --auto --leavegappyregion --quiet --op 1.5 --ep 0.2 --lop -4 --lep -1 --lexp -0.2 --maxiterate 10 {}.fasta > {}.nucleotide.fasta\"`;
+			die " - ERROR: mafft failed.\n" if $?;
 			`parallel -a $temp2 --jobs $threads --colsep '\t' mv {1} {2} 2> /dev/null`;
+			die " - ERROR: failed to move aligned files.\n" if $?;
 			
 		}
 		

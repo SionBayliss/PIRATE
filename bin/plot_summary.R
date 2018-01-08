@@ -45,7 +45,7 @@ scale_colour_custom <- function(...){
 args = commandArgs(trailingOnly=TRUE)
 input_root <- args[1]
 
-input_root <- "~/Desktop/Ben_Campy/IBS/PIRATE/"
+#input_root <- "~/Desktop/Ben_Campy/IBS/PIRATE/"
   
 ## Identify appropriate files in input directory
 
@@ -288,6 +288,8 @@ if ( (require('ggtree')) & (require('phangorn')) & (require('ggstance')) ) {
     theme(legend.position = "none") +
     scale_fill_manual(values = c("blue"))
   test_heat 
+  
+  }
 }
 
 # Prepare output pdf

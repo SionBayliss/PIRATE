@@ -238,7 +238,7 @@ for my $p ( sort keys %paralogs ){
 
 # run Identify paralogs in parallel.
 print " - identifying paralogs\n" if $quiet == 0;
-`parallel -a $working/list.txt -j $threads "perl $script_path/IdentifyParalogs_slave.pl -g {} -f $working/{}.fasta -d $working/{}.data -o $working" -m $n_max --nucleotide $nucleotide --threshold $threshold -k $keep -q $quiet`;
+`parallel -a $working/list.txt -j $threads "perl $script_path/classify_paralogs_slave.pl -g {} -f $working/{}.fasta -d $working/{}.data -o $working" -m $n_max --nucleotide $nucleotide --threshold $threshold -k $keep -q $quiet`;
 	
 # Concatenate outputs into one output file.
 my @errors = ();
