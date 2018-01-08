@@ -10,15 +10,17 @@ my $input = $ARGV[0];
 my $output_file = $ARGV[1];
 
 # Frequency threshold
-my $l_threshold = 0.04;
-my $h_threshold = 0.96;
+my $l_threshold = 0.05;
+my $h_threshold = 0.95;
 
 # parse input file.
 my @headers = ();
 my @samples = ();
 my %out_hash = ();
-my @allele_list = ();
+my @gene_list = ();
+my %include = ();
 
+my $gene_count = 0;
 open INPUT, $input or die "Input file did not open.\n";
 while(<INPUT>){
 	
@@ -31,65 +33,58 @@ while(<INPUT>){
 	if(/^allele_name/){
 		
 		@headers = @line;
-		@samples = @headers[18..$#headers];
+		@samples = @headers[19..$#headers];
 		
 	}else{
 	
-		my $c_name = $line[0];
+		++$gene_count;
 		
-		push(@allele_list, $c_name);
+		my $g_name = $line[1];
+		
+		push(@gene_list, $g_name);
 		
 		# store presence/absence
-		for my $i (18..$#line){
-			#$out_hash{$c_name}{$headers[$i]} = 0;
-			$out_hash{$c_name}{$headers[$i]} = 1 if $line[$i] ne "";
-			#print "$c_name\t$headers[$i]\t$line[$i]\n" if $line[$i] ne "";
+		my $a_count = 0;
+		for my $i (19..$#line){
+			$out_hash{$g_name}{$headers[$i]} = 1 if $line[$i] ne "";
+			++$a_count if $line[$i] ne "";
+		}
+		
+		# identify variants within threshold frequencies
+		my $prop = $a_count/scalar(@samples);
+		if ( ($prop >= $l_threshold) && ($prop <= $h_threshold) ){
+			$include{$g_name} = 1;
 		}
 	}
 		
 }close INPUT;
 
+# feedback
+my $no_included = keys(%include);
+print " - $no_included genes of ($gene_count) were between a frequency of $l_threshold-$h_threshold.\n";
+
 # print to file
 open OUT, ">$output_file" or die "Output file ($output_file) would not open for writing\n";
 
+# identify genes to include
+my @included = sort(keys(%include));
+
 # headers
-#print OUT join("\t", "Sample", @allele_list ), "\n"; 
-print OUT join("\t", @allele_list ), "\n"; 
-
-# remove variants > threshold.
-my %include = ();
-my $no_sample = @samples;
-my $temp = 0;
-for my $a ( keys %out_hash ){
-	
-	my $a_count = 0;
-	for my $sample(@samples){
-		$a_count++ if $out_hash{ $a }{ $sample };
-	}
-	
-	my $prop = $a_count/$no_sample;
-		
-	if ( ($prop >= $l_threshold) && ($prop <= $h_threshold) ){
-		$include{$a} = 1;
-	}	
-
-}
+print OUT join("\t", "Samples", @included ), "\n"; 
 
 # per sample
 for my $sample(@samples){
 	
 	# print binary present/absent
 	my @outline = ($sample);
-	for my $a (@allele_list){	
+	for my $a (@included){
 	
-		if ($include {$a}){
-			if ($out_hash{ $a }{ $sample }){
-				push(@outline, "1" );
-			}else{
-				push(@outline, "0" );
-			}
+		if ($out_hash{ $a }{ $sample }){
+			push(@outline, "1" );
+		}else{
+			push(@outline, "0" );
 		}
-	
+		
 	}
 	
 	# print 

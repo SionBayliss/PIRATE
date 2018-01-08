@@ -10,8 +10,8 @@ my $vcf = $ARGV[0];
 my $output_file = $ARGV[1];
 
 # frequency threshold
-my $l_threshold = 0.05;
-my $h_threshold = 0.95;
+my $l_threshold = 0.1;
+my $h_threshold = 0.90;
 
 # parse vcf file.
 my $no_sites = 0;
@@ -48,62 +48,71 @@ while(<VCF>){
 		my $alt = lc($line[4]);
 		
 		# Print alternative alleles
-		my @sub = split(/,/, $alt);
+		my @sub = ($ref);		
+		push (@sub, split(/,/, $alt)); 
+		
+		# count gap characters.
+		my $gap_count = 0;
+		for my $g (@sub){
+			++$gap_count if $g eq "-";
+			++$gap_count if $g eq "*";
+			++$gap_count if $g eq "N";
+		}
+		
+		# total base character alleles
+		my $total_alleles = scalar(@sub) - $gap_count; 
+		
+		# store N site positions.
+		my %n_sites = ();
+		for my $i(0..$#sub){
+			
+			my $allele = $sub[$i];
+					
+			# store positions
+			if ( ($allele eq "*") || ($allele eq "-") || ($allele eq "N") ){
+					
+					# Check allele for each sample.
+					for my $j (9..$#headers){			
+						$n_sites{$j} = 1 if $line[$j] == $i;
+					}
+					
+			}			
+		}
+		
 		my $a_count = 0;
 		for my $allele(@sub){
 		
 			# exclude n sites (*/N/-). 
-			unless ( $allele eq "*" ){
+			unless ( ($allele eq "*") || ($allele eq "-") || ($allele eq "N") ){
 			
-				++$a_count;
+					++$a_count;
 					
-				my $a_name = sprintf( "%sref\_%s.%s", $pos, $ref, $allele );
-				push(@allele_list, $a_name);
+					my $a_name = sprintf( "%sref\_%s.%s", $pos, $ref, $allele );
+					push(@allele_list, $a_name);
 			
-				# Check allele for each sample.
-				foreach(9..$#headers){
+					# Check allele for each sample.
+					for my $j (9..$#headers){
 			
-					my $c_sample = $headers[$_];
+						my $c_sample = $headers[$j];
 				
-					if ( $line[$_] == $a_count ){
-						$out_hash {$a_name} { $c_sample } = 1;
-					} 
-					else{
-						$out_hash {$a_name} { $c_sample } = 0;
-					}
+						if ( $line[$j] == $a_count ){
+							$out_hash {$a_name} { $c_sample } = 1;
+						} 
+						elsif( $n_sites{$j} ){
+							$out_hash {$a_name} { $c_sample } = "NA";
+						}else{
+							$out_hash {$a_name} { $c_sample } = 0;
+						}
 					
-				}
-			}
-		}
-		
-		# print reference allele if there is > 1 alternative alleles (otherwise the ref is the inverse of the variant).
-		if ( scalar(@sub) > 1 ){ 
-		
-			my $allele = $ref;
-			$a_count = 0;
-			
-			# exclude n-sites (this should not happen)
-			unless ( $allele eq "*" ){
-			
-				my $a_name = sprintf( "%sref\_%s.%s", $pos, $ref, $allele );
-				push(@allele_list, $a_name);
-		
-				# Check allele for each sample.
-				foreach(9..$#headers){
-		
-					my $c_sample = $headers[$_];
-			
-					if ( $line[$_] == $a_count ){
-						$out_hash {$a_name} { $c_sample } = 1;
 					}
-					else{
-						$out_hash {$a_name} { $c_sample } = 0;
-					}	
-						
-				}
-				
 			}
-		}	 		
+			
+			# only print reference if there is only two character states
+			# alternative allele is just the inverse of the ref 
+			if ( ($total_alleles == 2) && ($gap_count == 0) && ($a_count == 1) ){
+				last;
+			}
+		}		 		
 	}		
 }close VCF;
 
@@ -115,7 +124,7 @@ for my $a ( keys %out_hash ){
 	
 	my $a_count = 0;
 	for my $sample(@samples){
-		$a_count++ if $out_hash{ $a }{ $sample } == 1;
+		$a_count++ if $out_hash{ $a }{ $sample } eq "1";
 	}
 	
 	my $prop = $a_count/$no_sample;
@@ -146,7 +155,8 @@ open OUT, ">$output_file" or die "Output file ($output_file) would not open for 
 
 # headers for file (only included alleles)
 my @included = sort(keys(%include));
-print OUT sprintf( "\t%s\n", join("\t", @included) );
+#print OUT sprintf( "\t%s\n", join("\t", @included) );
+print OUT sprintf( "Samples\t%s\n", join("\t", @included) );
 
 # per sample
 for my $sample(@samples){

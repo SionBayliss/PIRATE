@@ -36,10 +36,10 @@ die "Dependencies missing.\n" if $dep_err == 1;
 	-q|--quiet			verbose off [default: on]
 	-i|--input			input PIRATE.gene_families.tab file [required]
 	-g|--gff			gff file directory [required]
-	-o|-output			output directory [default: input file path]	
+	-o|--output			output directory [default: input file path]	
 	-p|--processes		no threads/parallel processes to use [default: 2]
 	-t|--threshold		percentage threshold below which clusters are excluded [default: 0]
-
+	-d|--dosage			upper threshold of dosage to exclude from alignment [default: 1]
 ...
 
 =cut
@@ -57,6 +57,7 @@ my $quiet = 0;
 my $threads = 2; 
 
 my $threshold = 0;
+my $dosage_threshold = 1;
 
 my $input_file = '';
 my $gff_dir = '';
@@ -72,16 +73,18 @@ GetOptions(
 	'output=s'	=> \$output_dir,
 	'processes=i'	=> \$threads,
 	'threshold=i'	=> \$threshold,
+	'dosage=f'	=> \$dosage_threshold,
 	
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-verbose => 2) if $man;
 
-print "$output_dir\n";
+# make paths absolute
+$input_file = abs_path($input_file);
+$gff_dir = abs_path($gff_dir);
 
 # expand input and output files/directories
 die "Input file not found.\n" unless -f "$input_file";
-$input_file = abs_path($input_file);
 my $input_dir = dirname(abs_path($input_file));
 if ( $output_dir eq '' ){
 	$output_dir = $input_dir if $output_dir eq '';
@@ -113,7 +116,7 @@ my @genomes = ();
 my $total_genomes = 0;
 my $no_headers = 0; 
 
-# Parse multigene/paralog clusters - store in groups hash.
+# Parse all groups and exclude gene families that do not meet threshold requirements
 open GC, "$input_file" or die "$!";
 while(<GC>){
 	
@@ -125,7 +128,7 @@ while(<GC>){
 		@headers = split (/\t/, $line, -1 );
 		$no_headers = scalar(@headers);
 		
-		@genomes = @headers[18.. ($no_headers-1) ];
+		@genomes = @headers[19.. ($no_headers-1) ];
 		$total_genomes = scalar(@genomes);		
 		
 	}else{
@@ -137,14 +140,16 @@ while(<GC>){
 		
 		# define group values
 		my $group = $l[1];
-		my $no_genomes = $l[5];		
+		my $no_genomes = $l[6];	
+		my $dosage = $l[7]; # average dose (make max)##########
 		my $per_genomes = ($no_genomes / $total_genomes) * 100;
 		
-		# filter on threshold
-		if ( $per_genomes >= $threshold ){
+		# filter on thresholds
+		#print "$per_genomes >= $threshold) && ($dosage < $dosage_threshold)\n";
+		if ( ($per_genomes >= $threshold) && ($dosage <= $dosage_threshold) ){
 		
 			# Store all loci for group
-			for my $idx ( 18..(scalar(@l)-1) ){
+			for my $idx ( 19..$#l ){
 			
 				my $entry = $l[$idx];
 				my $entry_genome = $headers[ $idx ];
@@ -218,7 +223,7 @@ for my $genome ( @genomes ){
 		elsif( $include == 1){
 		
 			# header is used as contig id.
-			if($line =~ /^>(\S+)/){
+			if($line =~ /^>(.+)$/){
 			
 				++$count;
 				
@@ -234,7 +239,7 @@ for my $genome ( @genomes ){
 						
 			}
 			# sequence is stored in hash.
-			elsif($line =~ /^([ATGCNatcgn]+)*/){
+			elsif($line =~ /^([ATGCNatcgn-]+)$/){
 
 				# sanity check - each contig should have id
 				die "Contig has no header" if $contig_id eq "" ;
@@ -297,7 +302,7 @@ for my $genome ( @genomes ){
 				# Split info line.
 				my @info = split (/;/, $line_array[8]);
 				foreach( @info ){
-					if ($_ =~ /ID=(.+)/){
+					if ($_ =~ /^locus_tag=(.+)/){
 						$id = $1;
 					}
 				}
@@ -352,7 +357,7 @@ for my $genome ( @genomes ){
 
 # Check all sequenced have been extracted.
 for my $l_check ( keys %loci_group ){
-	die "No sequence found for $l_check " unless $stored_loci {$l_check};
+	die " - ERROR: No sequence found for $l_check.\n" unless $stored_loci {$l_check};
 }
 
 # Align aa/nucleotide sequence using mafft/PRANK in parallel - back-translate if amino acid sequence.

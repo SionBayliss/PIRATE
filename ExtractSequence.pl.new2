@@ -182,7 +182,7 @@ while(<COORDS>){
 		
 		if ( ($include == 1) || ( $check == 1 ) ){
 		
-			# optionally tranlate to amino acid sequence.
+			# optionally translate to amino acid sequence.
 			if( $nuc == 0 ){
 				$seq = translate($seq)->seq();
 			}	

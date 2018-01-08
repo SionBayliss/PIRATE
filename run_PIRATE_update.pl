@@ -28,9 +28,9 @@ use File::Basename;
  --nopan		don't run pangenome tool [assumes files are in pangenome_iterations folder]
  --nucleotide		create pangenome from nucleotide sequences [incompatible with -R|--Roary] [not instituted]
  -d|--diamond		use diamond instead of blastp [incompatible with --nucleotide; default = off]
- -f|--features		'features=s' => \$features,
- -a|--align		'align' => \$align,
- -p|--para-off	'para-off' => \$para_off,
+ -f|--features		choose features to use for pangenome construction. Multiple, seperates by a comma, can be defined [default: CDS]
+ -a|--align		use alignment with mafft rather than BLAST for paralog identification [default: off]
+ -p|--para-off	switch off paralog identification [default: on]
 
 
 =head1 Descriptions
@@ -47,6 +47,10 @@ use File::Basename;
 	--nopan			don't run pangenome tool [assumes files are in pangenome_iterations folder]
 	--nucleotide 	create pangenome from nucleotide sequences [incompatible with -R|--Roary] [not instituted]
 	-d|--diamond	use diamond instead of blastp [incompatible with --nucleotide; default = off]
+	-f|--features		choose features to use for pangenome construction. Multiple, seperates by a comma, can be defined [default: CDS]
+	-a|--align		use alignment with mafft rather than BLAST for paralog identification [default: off]
+	-p|--para-off	switch off paralog identification [default: on]
+
 ...
 
 =cut
@@ -160,7 +164,7 @@ if ( $steps eq '' ){
 	}
 }
 
-# Check > 2 thresholds
+# Check > 2 input files
 pod2usage( {-message => "$no_files files with .gff extension in $input_dir", -exitval => 1, -verbose => 1 } ) if scalar(@thresholds)<2; 
 
 # return command line summary
@@ -572,27 +576,38 @@ if ( $para_off == 0 ){
 
 }
 
+# create binary fasta file for fastree
+print " - creating binary tree\n";
+system ("perl $script_path/gene_cluster_to_binary_fasta.pl $pirate_dir/PIRATE.gene_families.tsv $pirate_dir/binary_presence_absence.fasta");
+print " - ERROR: could not create binary presence/absence fasta file.\n" if $?;
+
+# make binary accessory gene tree in fastree
+unless ($?){
+	print " - running fasttree\n";
+	system( "/usr/bin/fasttree -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
+	print " - ERROR: fasttree failed.\n" if $?;
+}
+print "\n-------------------------------\n\n";
+
 # tabular summaries
 #print "Printing summary tables\n";
 #`perl $script_path/RoarySummary.pl $pirate_dir/pangenome_iterations/ $steps $pirate_dir/roary_summary.tab`; # Summarise Roary.
 #die "RoarySummary.pl failed.\n" if $?;
 #`perl $script_path/PerGenomeSummary.pl $pirate_dir/round_genomes.tab $pirate_dir/gene_cluster_summary.tab $pirate_dir/per_genome_summary.tab`; # per genome summary
 #die "PerGenomeSummary.pl failed.\n" if $?;
-#print "\n-------------------------------\n";
 
 # optional summary figures in R
 if ( $r_plots ne '' ){
-	print "\nPrinting summary figures\n";
-	print `Rscript $script_path/PlotSummary.R $pirate_dir $pirate_dir >/dev/null 2>/dev/null`;
-	die "PlotSummary.pl failed - are R dependencies installed?\n" if $?;
+	print " - printing summary figures\n";
+	system( "Rscript $script_path/PlotSummary.R $pirate_dir $pirate_dir " ); #>/dev/null 2>/dev/null
+	die " - ERROR: plotting summary figures failed - are R dependencies installed?\n" if $?;
 	print "\n-------------------------------\n\n";
 	
-	# create R Shiny directory.
-	# TO DO
+	# TO DO - create R Shiny directory.
 }
 
 # End message and joke
-print "\n\nYARR!\n\n";
+print "YARR!\n\n";
 open JOKES, "$script_path/jokes.txt" or print "Out of jokes!\n"; 
 my $n_jokes = @{[<JOKES>]};
 my $r_joke = sprintf( "%ip", int(rand($n_jokes-1)+1) );

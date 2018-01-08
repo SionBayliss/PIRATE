@@ -17,16 +17,16 @@ use Text::Wrap;
 
 	CreatePangenomeAlignment.pl -i /path/to/PIRATE.gene_families.tab -f /path/to/sequence/alignments/
 
-=head1 Descriptions
-	
-	-h|--help 			usage information
-	-m|--man			man page 
-	-q|--quiet			verbose off [default: on]
-	-i|--input			input PIRATE.gene_families.tab file [required]
-	-f|--fasta			fasta file directory [required]
-	-o|--output			output fasta file [default: input file path]	
-	-g|--gff			create gff file for features in alignment [default:off]
-	-t|--threshold		percantage threshold for inclusion in output [default: 0]
+	-h|--help 	usage information
+	-m|--man	man page 
+	-q|--quiet	verbose off [default: on]
+	-i|--input	input PIRATE.gene_families.tab file [required]
+	-f|--fasta	fasta file directory [required]
+	-o|--output	output fasta file [default: input file path]	
+	-g|--gff	create gff file for features in alignment [default:off]
+	-t|--threshold	percentage threshold for inclusion in output [default: 0]
+	-d|--dosage	upper threshold of dosage to exclude from alignment [default: 1]
+	-n|--n-character gap character to use in output alignment [default: N]
 	
 =cut
 
@@ -42,11 +42,13 @@ my $help = 0;
 my $quiet = 0;
 
 my $threshold = 0;
+my $dosage_threshold = 1;
 
 my $input_file = '';
 my $fasta_dir = '';
 my $output_file = '';
 my $gff_file = '';
+my $gap_character = "N";
 
 GetOptions(
 
@@ -58,7 +60,8 @@ GetOptions(
 	'output=s'	=> \$output_file,
 	'gff=s'	=> \$gff_file,
 	'threshold=i'	=> \$threshold,
-	
+	'dosage=f'	=> \$dosage_threshold,
+	'n-character=s'	=> \$gap_character,		
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-verbose => 2) if $man;
@@ -68,14 +71,17 @@ pod2usage( {-message => q{input directory is a required arguement}, -exitval => 
 pod2usage( {-message => q{input directory is a required arguement}, -exitval => 1, -verbose => 1 } ) if $fasta_dir eq ''; 
 
 # expand input and output files/directories
-die "Input file not found.\n" unless -f "$input_file";
 $input_file = abs_path($input_file);
+die "Input file not found.\n" unless -f "$input_file";
 my $input_dir = dirname(abs_path($input_file));
 $output_file = "$input_dir/PangenomeAlignment.fas" if $output_file eq '';
 $output_file = abs_path($output_file);
 
 # chack gff directory exists.
 die "Error: fasta directory not found.\n" unless -d "$fasta_dir";
+
+# make sure gap character is backslashed 
+$gap_character = quotemeta($gap_character);
 
 # Group/Loci variables
 my %loci_group; # group of loci
@@ -102,7 +108,7 @@ while(<GC>){
 		@headers = split (/\t/, $line, -1 );
 		$no_headers = scalar(@headers);
 		
-		@genomes = @headers[18.. ($no_headers-1) ];
+		@genomes = @headers[19.. ($no_headers-1) ];
 		$total_genomes = scalar(@genomes);		
 		
 	}else{
@@ -114,24 +120,26 @@ while(<GC>){
 		
 		# define group values
 		my $group = $l[1];
-		my $no_genomes = $l[5];
+		my $no_genomes = $l[6];	
 		
 		my $per_genomes = ($no_genomes / $total_genomes) * 100;
 		
-		my $product = $l[13];
-		my $gene = $l[11];
+		my $product = $l[2];
+		my $gene = $l[3];
+
+		my $dosage = $l[7]; # average dose (make max)##########
 		
 		my $entry_genome = "";
 	
-		# If >= threshold then store		
-		if ( $per_genomes >= $threshold ){
+		# filter on thresholds
+		if ( ($per_genomes >= $threshold) && ( $dosage <= $dosage_threshold ) ){
 		
 			# product info for gff
 			$loci_gene {$group} = $gene if $gff_file ne '' ;
 			$loci_product {$group} = $product if $gff_file ne '' ;					
 		
 			# Store all loci for group
-			for my $idx ( 18..(scalar(@l)-1) ){
+			for my $idx ( 19..$#l ){
 			
 				my $entry = $l[$idx];
 				$entry_genome = $headers[ $idx ];
@@ -142,9 +150,6 @@ while(<GC>){
 			
 					foreach my $split_entry ( split(/;|:|\//, $entry, -1) ){
 					
-						#print "$group\t$split_entry\t$entry_genome\n"; 
-						die "TW43702_S4_01800 here" if $split_entry =~ "TW43702_S4_01800";
-						
 						$loci_group { $split_entry } = $group;
 						$group_list { $group } { $split_entry } = 1;
 						$loci_genome { $split_entry } = $entry_genome;
@@ -181,7 +186,7 @@ my $inc = int( $no_groups / 20 );
 my $g_count = 0;
 my $alignment_length = 0;
 my @gff_out = ();
-for my $file ( keys %group_list ){
+for my $file ( sort keys %group_list ){
 
 	++$g_count;
 
@@ -198,8 +203,11 @@ for my $file ( keys %group_list ){
 			$header = $1;
 		}elsif(/^([ATCGN-]+)$/){
 		
+			# replace gaps/Ns with asterix (snp-sites)
 			my $temp_seq = $1;
-			$temp_seq =~ s/-/N/g;
+			$temp_seq =~ s/-/$gap_character/g;
+			$temp_seq =~ s/N/$gap_character/g;
+			$temp_seq =~ s/\\//g; # ensure backslashes are removed
 			
 			# Sanity check 
 			if ($l_raw != 0 ){
@@ -208,8 +216,10 @@ for my $file ( keys %group_list ){
 			
 			# Find length of sequence (ignoring gaps)
 			$l_raw = length($temp_seq);
-			my $no_Ns = () = $temp_seq =~ /[N-]/g;
+			my $no_Ns = () = $temp_seq =~ /$gap_character/g;
 			my $len  = $l_raw - $no_Ns;
+			
+			#print $temp_seq if $no_Ns > 0;
 			
 			# Store sequence and length if locus genome information was in gene_families file ###
 			$seq_store{$header} = $temp_seq if $loci_genome{$header};
@@ -247,7 +257,8 @@ for my $file ( keys %group_list ){
 		my $seq = "";
 		
 		if ( !$max_genome{$g} ){
-			$seq = join ( "", ("N" x $l_raw) );	
+			$seq = join ( "", ($gap_character x $l_raw) );	
+			$seq =~ s/\\//g;
 		}else{
 			$seq = $seq_store{$max_genome{$g}};
 		}
