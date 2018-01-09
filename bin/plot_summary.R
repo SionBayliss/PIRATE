@@ -293,7 +293,7 @@ if ( (require('ggtree')) & (require('phangorn')) & (require('ggstance')) ) {
 }
 
 # Prepare output pdf
-pdf(sprintf("%s/PIRATE_Plots.pdf", input_root, width=16, height=8, units="in"))
+pdf(sprintf("%s/PIRATE_plots.pdf", input_root, width=16, height=8, units="in"))
   
   if(file.exists(P.families)){
     print(P.clusterno)

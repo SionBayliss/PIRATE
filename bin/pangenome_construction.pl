@@ -80,7 +80,6 @@ unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){
 	-e|--evalue			e-value used for blast hit filtering [default: 1E-6]
 	-d|--diamond		use diamond instead of BLAST - incompatible with --nucleotide [default: off]
 	--hsp_prop			remove BLAST hsps that are < hsp_prop proportion of query length/query hsp length [default: 0]
-...
 
 =cut
 
@@ -91,7 +90,6 @@ my $script_path = abs_path(dirname($0));
 $| = 1; # turn off buffering for real time feedback.
 
 # command line options
-my $man = 0;
 my $help = 0;
 my $quiet = 0;
 my $retain = 0;
@@ -112,10 +110,11 @@ my $hsp_perc_length = 0;
 
 my $diamond = 0;
 
+my $exit_status = 1; 
+
 GetOptions(
 
 	'help|?' 	=> \$help,
-	'man' 		=> \$man,
 	'input=s' 	=> \$input_file,
 	'output=s'	=> \$output_dir,
 	'threads=i'	=> \$threads,
@@ -132,9 +131,9 @@ GetOptions(
 	'hsp_prop=f' => \$hsp_perc_length,
 	'diamond' => \$diamond
 	
-) or pod2usage(2);
+) or pod2usage(1);
 pod2usage(1) if $help;
-pod2usage(-verbose => 2) if $man;
+#pod2usage(-verbose => 2) if $man;
 
 # expand input and output files/directories
 $input_file = abs_path($input_file);
