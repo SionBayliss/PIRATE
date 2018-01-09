@@ -58,6 +58,23 @@ pod2usage(1) unless $data;
 pod2usage(1) unless $working;
 pod2usage(1) unless $threshold;
 
+# check for cd-hit invocation - two alternatives
+my $cd_hit_bin = "";
+my $cd_hit_est_bin = "";
+my $cdhit_check = 0;
+
+if( (`command -v cdhit;`) && (`command -v cdhit-est;`) ){ 
+	$cd_hit_bin = "cdhit";
+	$cd_hit_est_bin = "cdhit-est";
+	$cdhit_check = 1; 
+}
+if( (`command -v cd-hit;`) && (`command -v cd-hit-est;`) ){ 
+	$cd_hit_bin = "cd-hit";
+	$cd_hit_est_bin = "cd-hit-est";
+	$cdhit_check = 1; 
+}
+die " - ERROR: cd-hit binary not found in system path.\n" if $cdhit_check == 0;
+
 # parse data for isolates.
 my %cluster_loci = ();
 my %cluster_family = (); 
@@ -84,7 +101,25 @@ while (<DATA>){
 	$seq_length{ $loci } = $length;
 }
 
-# Run blast on input fatsa
+# calculate memory for cdhit
+my $m_required = -s "$working/$group.fasta";
+$m_required = int($m_required/1000000); # MB
+$m_required *= 3; # triple
+#$m_required = 2000 if($m_required < 2000); # set lowest
+		
+# run cd-hit on input fasta
+my $cluster_threshold = "0.9";
+my $cdhit_log = "$working/$group.cdhit.log";
+if( $nucleotide == 0 ){
+#	`$cd_hit_bin -i $working/$group.fasta -o $working/$group.cd-hit -c "0.9" -T 1 -g 1 -n 5 -M $m_required -d 256 >> $cdhit_log`;
+	`$cd_hit_bin -i $working/$group.fasta -o $working/$group.cd-hit -c "0.9" -s $cluster_threshold -aL $cluster_threshold -T 1 -g 1 -n 5 -M $m_required -d 256 >> $cdhit_log`;
+}else{
+	`$cd_hit_est_bin -i $working/$group.fasta -o $working/$group.cd_hit -c "0.9" -T 1 -g 1 -n 8 -M $m_required -d 256 -r 0 >> $cdhit_log`;
+}
+
+exit;
+
+# Run blast on input fasta
 print "\n - making BLAST databases for $group\n" if $quiet == 0;
 if ( $nucleotide == 0 ){
 	`makeblastdb -in $working/$group.fasta -dbtype prot`;
