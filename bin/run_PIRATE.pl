@@ -331,7 +331,7 @@ print " - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
 # Extract paralog and erroneous cluster genes and align them.
-print "Identifing paralogous clusters - \n";
+print "Identifing paralogous clusters:\n";
 $time_start = time();
 system( "perl $script_path/aggregate_erroneous_families.pl $pirate_dir $thresholds[0] $script_path $threads" );
 die "- ERROR: aggregate_erroneous_families.pl failed\n" if $?;
@@ -379,14 +379,14 @@ if ( $para_off == 0 ){
 	}else{
 
 		# Classify paralogous clusters using blast
-		print "Classifing paralogous clusters:\n\n";
+		print "\nClassifing paralogous clusters:\n\n";
 		$time_start = time();
 
 		if ( $nucleotide == 0 ){
-			system("perl $script_path/run_classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0]");
+			system("perl $script_path/classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0]");
 			die " - ERROR: identify_paralogs.pl failed.\n" if $?;
 		}else{
-			system("perl $script_path/run_classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --nucleotide");
+			system("perl $script_path/classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --nucleotide");
 			die " - ERROR: identify_paralogs.pl failed.\n" if $?;
 		}
 		print " - completed in: ", time() - $time_start,"s\n";

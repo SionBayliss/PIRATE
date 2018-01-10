@@ -1,5 +1,8 @@
 #!/usr/bin/env perl 
 
+use strict;
+use warnings;
+
 # Check dependencies for PIRATE.
 # Note: no version check.
 
@@ -10,7 +13,7 @@ $cd_hit = 1 if `command -v cd-hit;`;
 print "cd-hit (or alternate invocation cdhit) not found in system path.\n" if $cd_hit == 0;
 
 # blast+
-$blast = 0 ;
+my $blast = 0 ;
 $blast = 1 if `command -v blastn;`;
 print "blast+ not found in system path.\n" if $blast == 0;
 
@@ -24,7 +27,7 @@ if ( ($cd_hit == 0) || ($blast == 0) || ($mcl == 0) ) { die "\n - ERROR: Depende
 
 my $diamond_mkdb = ""; 
 my $diamond_bin = "";
-$diamond_mkdir = "diamond makedb" if `command -v diamond makedb;`;
+$diamond_mkdb = "diamond makedb" if `command -v diamond makedb;`;
 $diamond_bin = "diamond blastp" if `command -v diamond blastp;`;
 
 my $diamond_err = 0;
@@ -35,6 +38,6 @@ print "\n - WARNING: cannot find diamond binaries, cannot use --diamond command.
 # R [optional]
 my $R = 0; 
 $R = 1 if `command -v R;`;
-print " - WARNING: R not found in system path, cannot use -r command.\n" if $roary == 0;
+print " - WARNING: R not found in system path, cannot use -r command.\n" if $R == 0;
 
 exit

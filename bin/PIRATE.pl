@@ -37,19 +37,23 @@ GetOptions(
 	'quiet'		=> \$quiet,
 	'help'		=> \$help,
 	'check'		=> \$test,
-);
+) or system("perl $script_path/run_PIRATE.pl -h");
 
 # help 
 if ($help == 1){
 	system("perl $script_path/run_PIRATE.pl -h");
-	exit;
+	exit(1);
 }
 
 # check for test state
 $input_dir = "$script_path/../test/" if $test == 1;
 
 # check input directory exists
-die " - ERROR: no input (-i) directory specified.\n" if $input_dir eq '';
+if ( $input_dir eq '' ){
+	print " - ERROR: no input (-i) directory specified.\n";
+	system( "perl $script_path/run_PIRATE.pl -h" );
+	exit(1);
+}
 die " - ERROR: input directory not found.\n" unless -d "$input_dir";
 $input_dir = abs_path($input_dir);
 

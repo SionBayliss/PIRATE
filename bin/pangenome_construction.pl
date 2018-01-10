@@ -371,10 +371,53 @@ for my $file( @files ){
 		
 		# run cdhit
 		print " - Passing $no_included loci to cd-hit at $i%  \n" if $quiet == 0;
+		my $n = "";
 		if( $nucleotide == 0 ){
-			`$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n 5 -M $m_required -d 256 >> $cdhit_log`;
+		
+			# select appropriate word size
+			if ( $curr_thresh > 0.7 ){
+				$n = 5;
+			}elsif ( $curr_thresh > 0.6 ){
+				$n = 4;
+			}elsif ( $curr_thresh > 0.5 ){
+				$n = 3;
+			}elsif ( $curr_thresh > 0.4 ){
+				$n = 2;
+			}else{
+				$curr_thresh = 0.4;
+				$n = 2;
+				print " - WARNING: cluster threshold ($curr_thresh) below recommended setting.";
+				print " - Setting cluster threshold (-c) to 0.4 and word size (-n) to 2";
+			}
+
+			# run cd-hit		
+			`$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log`;
+
 		}else{
-			`$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n 8 -M $m_required -d 256 -r 0 >> $cdhit_log`;
+		
+			# select appropriate word size
+			my $n = "";
+			if ( $curr_thresh > 0.90 ){
+				$n = 11;
+			}elsif ( $curr_thresh > 0.90 ){
+				$n = 9;
+			}elsif ( $curr_thresh > 0.88 ){
+				$n = 7;
+			}elsif ( $curr_thresh > 0.85 ){
+				$n = 6;
+			}elsif ( $curr_thresh > 0.80 ){
+				$n = 5;
+			}elsif ( $curr_thresh > 0.75 ){
+				$n = 4;
+			}else{
+				$curr_thresh = 0.75;
+				$n = 4;
+				print " - WARNING: cluster threshold ($curr_thresh) below recommended setting.";
+				print " - Setting cluster threshold (-c) to 0.75 and word size (-n) to 4";
+			}
+		
+			# run cdhit est
+			`$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log`;
 		}
 		die "cdhit failed.\n" if $?;
 		
