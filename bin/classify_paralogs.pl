@@ -8,12 +8,6 @@ use File::Basename;
 use Getopt::Long qw(GetOptions :config no_ignore_case);
 use Pod::Usage;
 
-# Usage info
-
-######
-# in slave program have reference sequence checking and weighting by genomic distance
-######
-
 =head1  SYNOPSIS
 
  run_IdentifyParalogs.pl [required: -p ./* -c ./* -f ./* --threshold * -o ./* ]
@@ -32,6 +26,9 @@ use Pod::Usage;
  -h|--help 		usage information
 
 =cut
+
+# buffering off
+$| = 1;
 
 # option variables
 my $paralog_clusters = "";
@@ -129,7 +126,7 @@ die " - ERROR: number of paralog clusters in $cluster_loci ($cluster_check) does
 
 # feedback
 my $no_para_loci = scalar( keys %loci_info );
-print " - $no_para_loci loci contained in $no_paralog_c clusters which contain paralogs\n" if $quiet == 0;
+print " - $no_para_loci loci contained in $no_paralog_c clusters containing paralogs\n" if $quiet == 0;
 
 # make temp working directory.
 my $working = "$output_dir/paralog_working";
@@ -222,23 +219,41 @@ for my $cluster ( keys %cluster_family ){
 	}close DATA;
 }
 
-# run identify_paralogs in serial.
-#my $test = 0;
-#for my $p ( sort keys %paralogs ){
-#	print `perl /home/sb2145/Desktop/PIRATE/GitHub/IdentifyParalogs_slave.pl $p $working/$p.fasta $working/$p.data $working`;
-#	
-#	last if ++$test == 3;
-#}
+# batch files for parallel
+print " - identifying paralogs\n - 0% complete     " if $quiet == 0;
+my $no_paralogs = scalar(keys(%paralogs));
+my $batch_no = int($no_paralogs/20);
+$batch_no = 1 if $no_paralogs < 20;
 
-# make list of files for parallel
+my $p_count = 0;
+my $p_total = 0;
 open LIST, ">$working/list.txt";
 for my $p ( sort keys %paralogs ){
+	
+	++$p_count;
+	++$p_total;
+	
+	# store in list
 	print LIST "$p\n";
+	
+	# process when batch # reached or all processed. 
+	if( ($p_count == $batch_no) || ($p_total == $no_paralogs) ){
+	
+		# run classify paralogs
+		`parallel -a $working/list.txt -j $threads "perl $script_path/run_classify_paralogs_batch.pl -g {} -f $working/{}.fasta -d $working/{}.data -o $working" -m $n_max --nucleotide $nucleotide --threshold $threshold -k $keep -q $quiet`;
+		
+		# feedback
+		my $perc_complete = int(($p_total/$no_paralogs)*100);
+		print "\r - $perc_complete% complete     ";	
+		
+		# reset file and count
+		close LIST && open LIST, ">$working/list.txt";
+		$p_count = 0;
+		
+	}
+	
 }close LIST;
-
-# run Identify paralogs in parallel.
-print " - identifying paralogs\n" if $quiet == 0;
-`parallel -a $working/list.txt -j $threads "perl $script_path/run_classify_paralogs.pl -g {} -f $working/{}.fasta -d $working/{}.data -o $working" -m $n_max --nucleotide $nucleotide --threshold $threshold -k $keep -q $quiet`;
+print "\n";
 	
 # Concatenate outputs into one output file.
 my @errors = ();

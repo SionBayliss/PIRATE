@@ -370,7 +370,7 @@ if ( $para_off == 0 ){
 		print " - completed in: ", time() - $time_start,"s\n\n";
 
 		# Classify and assign paralog families.
-		print "Classifing paralog loci:\n";
+		print "\nClassifing paralog loci:";
 		$time_start = time();
 		system( "perl $script_path/classify_aligned_paralogs.pl $pirate_dir/cluster_nucleotide_sequences/ $gff_dir $pirate_dir");
 		die " - ERROR: classify_aligned_paralogs.pl failed.\n" if $?;
@@ -379,7 +379,7 @@ if ( $para_off == 0 ){
 	}else{
 
 		# Classify paralogous clusters using blast
-		print "\nClassifing paralogous clusters:\n\n";
+		print "\nClassifing paralogous clusters:\n";
 		$time_start = time();
 
 		if ( $nucleotide == 0 ){

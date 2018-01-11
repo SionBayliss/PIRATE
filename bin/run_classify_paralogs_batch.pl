@@ -204,7 +204,7 @@ for my $k ( values %cluster_numbers ){
 }
 
 # BLAST representative fasta
-print "\n - making BLAST databases for $group\n" if $quiet == 0;
+print " - making BLAST databases for $group\n" if $quiet == 0;
 if ( $nucleotide == 0 ){
 	`makeblastdb -in $working/$group.cdhit.fasta -dbtype prot`;
 }else{
@@ -324,6 +324,7 @@ my $longest_rep = "";
 my $longest_rep_l = "";
 
 # process each genome.
+print " - classifying paralogs\n";
 for my $genome ( sort keys %genome_clusters ){
 	
 	# reset variables 
@@ -418,7 +419,7 @@ for my $genome ( sort keys %genome_clusters ){
 					for my $add ( sort keys %sep ){
 				
 						my $l_cluster_ex = $cluster_numbers {$add};
-						print OUTPUT "$add\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster\n";
+						print OUTPUT "$add\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster_ex\n";
 				
 						# do not reprocess
 						$exclude_list {$add} = 1;
@@ -481,25 +482,31 @@ for my $genome ( sort keys %genome_clusters ){
 			push(@combinations, $combo) if (scalar(split(/\s+/, $combo)) <= $n_max);
 		}
 	
-		#for (@combinations){ print "$_\n" }	
-				
 		# compare all combinations of non-overlapping length groups.
 		my %score = ();
 		for my $combo ( @combinations ){
 
 			my %coverage = ();
 			my $rolling_score = 0;
+			my $prev_position = 0;
 	
-			for my $combo_loci ( split(/\s+/, $combo ) ){
-
+			for my $combo_loci ( sort split(/\s+/, $combo ) ){
+				
 				my $l_cluster_combo = $cluster_numbers {$combo_loci};
-				my $rep_loci_combo = $cluster_representatives {$l_cluster_combo}; 
+				my $rep_loci_combo = $cluster_representatives {$l_cluster_combo};
+				my $length_loci = $seq_length{ $combo_loci };
+				
+				# using loci numbering as proxy for genomic position.
+				my $loci_position = 100;
+				if( $combo_loci =~ /_(\d+)$/ ){
+					$loci_position = $1; 
+				}
 		
 				# Sanity check - redundant 
 				if (!$sstart{$rep_loci_combo}{$longest_rep} ){
 			
 					# Feedback
-					print " - ERROR: could not classify $combo_loci ($rep_loci_combo) - no blast match to reference ($longest_rep)\n"; ##
+					print " - ERROR: could not classify $combo_loci ($rep_loci_combo) - no blast match to reference ($longest_rep)\n";
 			
 					# Print as MC cluster.
 					print OUTPUT "$combo_loci\t$group\t$genome\t1\t0\t0\t$l_cluster_combo\n";
@@ -519,32 +526,50 @@ for my $genome ( sort keys %genome_clusters ){
 					my $new_positions = 0;
 					my %new_coverage = %coverage;
 					for ($start..$end){	
-						if (!$new_coverage {$_}) {
+						if ( !$new_coverage{$_} ) {
 							++$new_positions;
 							$new_coverage {$_} = 1;
 						}
 					}
-
-					# The score for this alignment = 'current score - length of loci' 
-					# - penalising short alignment for long sequences.
-					my $length_loci = $seq_length{ $combo_loci }; 
-					my $current_score = $new_positions - $length_loci;
+					
+					# The score for this alignment = 'current score - length of loci'  
+					my $current_score = "";
+					# penalise short sequences with long alignments 
+					if ( $new_positions > $length_loci ){
+						$current_score = $length_loci - $new_positions;
+					}
+					# penalise long sequences with short alignments.
+					else{
+						$current_score = $new_positions - $length_loci;
+					}
+					
+					# adjust score for adjacent loci (truncations likely to be located adjacent to one another).
+					my $pos_diff = abs($prev_position - $loci_position);
+					if ( $pos_diff <= 2 ){
+						$current_score += ($longest_rep_l * 0.20); # adjust score by 20% of ref length
+					}					
 		
 					# Save rolling score and coverage info.
 					$rolling_score += $current_score;
-					%coverage = %new_coverage;							
+					%coverage = %new_coverage;
+					
+					# store loci position
+					$prev_position = $loci_position;
 
 				}							
 	
 			}
-
-			# Adjust the final score for the number of bases not covered by BLAST hits in the referenece.
-			my $missing_positions = $longest_rep_l - scalar(keys(%coverage));
-			my $final_score = $rolling_score - $missing_positions;
-
-			# Store final score for combination of loci if < threshold
-			$score {$combo} = $final_score if $final_score <= ($longest_rep_l * 0.25);
-
+			
+			# Store rolling score for combination of loci if < threshold
+			if ( $rolling_score >= -($longest_rep_l * 0.25) ){
+				
+				# Adjust the final score for the number of bases not covered by BLAST hits in the referenece.
+				my $missing_positions = $longest_rep_l - scalar(keys(%coverage));
+				my $final_score = $rolling_score - $missing_positions;
+				$score {$combo} = $final_score;
+				
+			}
+			
 		}
 	
 		# store all best scoring combinations and exclude those that contain loci that have already been stored.
@@ -552,7 +577,7 @@ for my $genome ( sort keys %genome_clusters ){
 
 		my %exclude = ();
 		for my $combo (@combo_scores){
-	
+			
 			# check loci have not been previously processed
 			my $inc = 1;
 			for my $c (split(/ /, $combo)){	
@@ -571,30 +596,31 @@ for my $genome ( sort keys %genome_clusters ){
 				++$ff_group;
 
 				# Store all loci and exclude them from further iterations.
-				for my $l ( @l_test ){ 									
+				for my $l_ff ( @l_test ){ 									
 
 					# print to file.
-					my $l_cluster = $cluster_numbers {$l};
-					print "$l\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster\n";
-
-					# exclude
-					$exclude{$l} = 1;
-					$exclude_list{$l} = 1;
+					my $l_cluster_ff = $cluster_numbers{$l_ff};
+					print OUTPUT "$l_ff\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster_ff\n";
+					
+					# exclude		
+					$exclude{$l_ff} = 1;
+					$exclude_list{$l_ff} = 1;
 							
 				}
 			}
 		}
 
 		# store all remaining loci as multicopy.
-		for my $rloci (@all_loci){
-	
-			my $l_cluster_r = $cluster_numbers {$rloci};
+		for my $rloci (@all_loci){	
+			if ( !$exclude_list{$rloci} ){ 
+				my $l_cluster_r = $cluster_numbers {$rloci};
 		
-			# print to file
-			print "$rloci\t$group\t$genome\t1\t0\t0\t$l_cluster_r\n";
-
-			# do not reprocess
-			$exclude_list {$rloci} = 1;
+				# print to file
+				print OUTPUT "$rloci\t$group\t$genome\t1\t0\t0\t$l_cluster_r\n";
+				
+				# exclude
+				$exclude_list{$rloci} = 1;
+			}
 		}
 			
 	
@@ -612,6 +638,7 @@ if( $keep == 0 ) {
 	unlink "$working/$group.blast";
 	unlink "$working/$group.cdhit.fasta";
 	unlink "$working/$group.cdhit.clstr";
+	unlink "$working/$group.cdhit.log";
 
 	if ( $nucleotide == 0 ){
 
