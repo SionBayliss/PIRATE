@@ -204,7 +204,7 @@ for my $k ( values %cluster_numbers ){
 }
 
 # BLAST representative fasta
-print " - making BLAST databases for $group\n" if $quiet == 0;
+print "\n - making BLAST databases for $group\n" if $quiet == 0;
 if ( $nucleotide == 0 ){
 	`makeblastdb -in $working/$group.cdhit.fasta -dbtype prot`;
 }else{
@@ -323,8 +323,7 @@ open OUTPUT, ">$working/$group.output" or die $!;
 my $longest_rep = "";
 my $longest_rep_l = "";
 
-# process each genome.
-print " - classifying paralogs\n";
+# Identify multi-copy and putative fission genes per loci.	
 for my $genome ( sort keys %genome_clusters ){
 	
 	# reset variables 
@@ -335,300 +334,230 @@ for my $genome ( sort keys %genome_clusters ){
 	my @loci_array  = sort keys %{$genome_clusters{$genome}};
 	my $no_loci = @loci_array;
 	my $no_removed = 0;
-	
-	# process singleton multicopy and simple case fission/fusions gene i.e. loci = 2.
-	for my $loci ( sort keys %{$genome_clusters{$genome}} ){
+	while ( $no_loci != $no_removed ){
+	#for my $loci ( sort keys %{$genome_clusters{$genome}} ){
 
-		# Check loci has not previously been processed.	
-		if ( !$exclude_list{$loci} ){
-	
-			# Identify representative isolate per loci.
-			my $l_cluster = $cluster_numbers {$loci};
-			my $rep_loci = $cluster_representatives{$l_cluster};
+		for my $loci ( sort keys %{$genome_clusters{$genome}} ){
+
+			# Check loci has not previously been processed.	
+			if ( !$exclude_list{$loci} ){
 		
-			# Check if loci is in a cluster which is a putative fission/fusion event. 
-			if ( !$no_overlap_c{$rep_loci} ) {
+				# Identify representative isolate per loci.
+				my $l_cluster = $cluster_numbers {$loci};
+				my $rep_loci = $cluster_representatives{$l_cluster};
 			
-				# Print multi-copy genes
-				print OUTPUT "$loci\t$group\t$genome\t1\t0\t0\t$l_cluster\n";
-			
-				# do not reprocess
-				$exclude_list{$loci} = 1;	
-			
-			}else{
-						
-				# identify appropriate reference sequence for loci_1 - longest to shortest representative sequences tested
-				my $ref_idx = 0;
-				for my $c_key (sort {$a<=>$b} keys %cluster_representatives ){
-					my $test_rep = $cluster_representatives{$c_key};
-					if ( !$no_overlap_c{$rep_loci}{$test_rep} ){
-						$ref_idx = $c_key;
-						last;
-					}	
-				}
-			
-				# sanity check
-				die " - ERROR: no matching reference cluster.\n" if $ref_idx == 0;
-						
-				# set ref sequence for loci_1
-				$longest_rep = $cluster_representatives{$ref_idx};
-				$longest_rep_l = $seq_length{$longest_rep};
-		
-				# check for additional non-overlapping sequences.
-				my %sep = ();
-				my $sep_count = 0;
-		
-				for my $test_loci ( sort keys %{$genome_clusters{$genome}} ){
-		
-					# check if loci has already been processed.
-					if ( !$exclude_list{$test_loci} ){
-			
-						# length cluster of comparison sequence.
-						my $l_cluster_test = $cluster_numbers {$test_loci};
-						my $rep_loci_test = $cluster_representatives{$l_cluster_test};
-						
-						# sequence has blast match to current reference
-	  					if ( !$no_overlap_c{ $rep_loci_test }{ $longest_rep } ){
-	  						
-							# loci has no overlaps with current test loci 
-							if( $no_overlap_c{$rep_loci}{$rep_loci_test} ){
-								++$sep_count;
-								$sep{$test_loci} = 1;
-							}							
-						}
-					}
-				}
-			
-				# check for individual loci.
-				if( $sep_count == 0 ){
-			
-					# print to file
+				# Check if loci is in a cluster which is a putative fission/fusion event. 
+				if ( !$no_overlap_c{$rep_loci} ) {
+				
+					# Print multi-copy genes
 					print OUTPUT "$loci\t$group\t$genome\t1\t0\t0\t$l_cluster\n";
 				
 					# do not reprocess
-					$exclude_list {$loci} = 1;
+					$exclude_list{$loci} = 1;	
 				
-				}
-				# check for two truncated loci.
-				elsif( $sep_count == 1 ){
-		
-					++$ff_group;
-			
-					# print additional isolate in cluster to file and exclude from additional processing
-					$sep{$loci} = 1; # add original loci.
-					for my $add ( sort keys %sep ){
-				
-						my $l_cluster_ex = $cluster_numbers {$add};
-						print OUTPUT "$add\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster_ex\n";
-				
-						# do not reprocess
-						$exclude_list {$add} = 1;
-					}	
-				}
-			}
-		} 
-	}
-	
-	# process remaining loci as putative fission events - check all combinations of up to $n_max.
-	my $remaining = 1;
-	while ($remaining == 1){
-	
-		# store all loci that match vs one reference sequence.
-		my %sep = ();
-		my $target_ref = "";
-		my $target_ref_l = "";
-		for my $loci ( sort keys %{$genome_clusters{$genome}} ){
-		
-			if ( !$exclude_list{$loci} ){
-			
-				# store loci
-				$sep{$loci} = 1;
-
-				# identify representative
-				my $l_cluster_test = $cluster_numbers {$loci};
-				my $rep_loci_test = $cluster_representatives{$l_cluster_test};
-
-				# check for blast match vs representative clusters
-				if( $target_ref eq "" ){
+				}else{
+							
+					# identify appropriate reference sequence for loci_1 - longest to shortest representative sequences tested
 					my $ref_idx = 0;
 					for my $c_key (sort {$a<=>$b} keys %cluster_representatives ){
 						my $test_rep = $cluster_representatives{$c_key};
-						if ( !$no_overlap_c{$rep_loci_test}{$test_rep} ){
+						if ( !$no_overlap_c{$rep_loci}{$test_rep} ){
 							$ref_idx = $c_key;
 							last;
-						}
+						}	
 					}
 				
 					# sanity check
-					die " - ERROR: no matching reference cluster.\n" if $ref_idx == 0;
+					die " - ERROR: no matching refernece cluster.\n" if $ref_idx == 0;
+							
+					# set ref sequence for loci_1
+					$longest_rep = $cluster_representatives{$ref_idx};
+					$longest_rep_l = $seq_length{$longest_rep};
 			
-					# set ref sequence for loci
-					$target_ref = $cluster_representatives{$ref_idx};
-					$target_ref_l = $seq_length{$target_ref};
+					# check for additional non-overlapping sequences.
+					my %sep = ();
+					my $sep_count = 0;
 			
-				}elsif( !$no_overlap_c{ $rep_loci_test }{ $target_ref_l } ){
+					for my $test_loci ( sort keys %{$genome_clusters{$genome}} ){
 			
-					$sep{$loci} = 1;		
+						# check if loci has already been processed.
+						if ( !$exclude_list{$test_loci} ){
 				
-				}
-			}
-		}
-		my @all_loci = sort keys (%sep);
-		my @org_combinations = combo(\@all_loci, "");
-
-		# filter out all combinations > $n_max;
-		my @combinations = ();
-		for my $combo ( @org_combinations ){
-			push(@combinations, $combo) if (scalar(split(/\s+/, $combo)) <= $n_max);
-		}
-	
-		# compare all combinations of non-overlapping length groups.
-		my %score = ();
-		for my $combo ( @combinations ){
-
-			my %coverage = ();
-			my $rolling_score = 0;
-			my $prev_position = 0;
-	
-			for my $combo_loci ( sort split(/\s+/, $combo ) ){
-				
-				my $l_cluster_combo = $cluster_numbers {$combo_loci};
-				my $rep_loci_combo = $cluster_representatives {$l_cluster_combo};
-				my $length_loci = $seq_length{ $combo_loci };
-				
-				# using loci numbering as proxy for genomic position.
-				my $loci_position = 100;
-				if( $combo_loci =~ /_(\d+)$/ ){
-					$loci_position = $1; 
-				}
-		
-				# Sanity check - redundant 
-				if (!$sstart{$rep_loci_combo}{$longest_rep} ){
-			
-					# Feedback
-					print " - ERROR: could not classify $combo_loci ($rep_loci_combo) - no blast match to reference ($longest_rep)\n";
-			
-					# Print as MC cluster.
-					print OUTPUT "$combo_loci\t$group\t$genome\t1\t0\t0\t$l_cluster_combo\n";
-
-					# exclude from further analysis.
-					$exclude_list {$combo_loci} = 1;
-			
-				}
-		
-				# identify positions of BLAST alignment to reference sequence.
-				else{
-
-					my $start = $sstart{$rep_loci_combo}{$longest_rep};
-					my $end = $send{$rep_loci_combo}{$longest_rep};
-		
-					# find number of new unique positions in ref covered by BLAST match. 
-					my $new_positions = 0;
-					my %new_coverage = %coverage;
-					for ($start..$end){	
-						if ( !$new_coverage{$_} ) {
-							++$new_positions;
-							$new_coverage {$_} = 1;
+							# length cluster of comparison sequence.
+							my $l_cluster_test = $cluster_numbers {$test_loci};
+							my $rep_loci_test = $cluster_representatives{$l_cluster_test};
+							
+							# sequence has blast match to current reference
+		  					if ( !$no_overlap_c{ $rep_loci_test }{ $longest_rep } ){
+		  						
+								# loci has no overlaps with current test loci 
+								if( $no_overlap_c{$rep_loci}{$rep_loci_test} ){
+									++$sep_count;
+									$sep{$test_loci} = 1;
+								}							
+							}
 						}
 					}
+				
+					# check for individual loci.
+					if( $sep_count == 0 ){
+				
+						# print to file
+						print OUTPUT "$loci\t$group\t$genome\t1\t0\t0\t$l_cluster\n";
 					
-					# The score for this alignment = 'current score - length of loci'  
-					my $current_score = "";
-					# penalise short sequences with long alignments 
-					if ( $new_positions > $length_loci ){
-						$current_score = $length_loci - $new_positions;
+						# do not reprocess
+						$exclude_list {$loci} = 1;
+					
 					}
-					# penalise long sequences with short alignments.
+					# check for two truncated loci.
+					elsif( $sep_count == 1 ){
+			
+						++$ff_group;
+				
+						# print additional isolate in cluster to file and exclude from additional processing
+						$sep{$loci} = 1; # add original loci.
+						for my $add ( sort keys %sep ){
+					
+							my $l_cluster_ex = $cluster_numbers {$add};
+							print OUTPUT "$add\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster\n";
+					
+							# do not reprocess
+							$exclude_list {$add} = 1;
+						}	
+					
+					}
+					# more complicated - check all combinations of up to $n_max.
 					else{
-						$current_score = $new_positions - $length_loci;
-					}
-					
-					# adjust score for adjacent loci (truncations likely to be located adjacent to one another).
-					my $pos_diff = abs($prev_position - $loci_position);
-					if ( $pos_diff <= 2 ){
-						$current_score += ($longest_rep_l * 0.20); # adjust score by 20% of ref length
-					}					
-		
-					# Save rolling score and coverage info.
-					$rolling_score += $current_score;
-					%coverage = %new_coverage;
-					
-					# store loci position
-					$prev_position = $loci_position;
-
-				}							
-	
-			}
-			
-			# Store rolling score for combination of loci if < threshold
-			if ( $rolling_score >= -($longest_rep_l * 0.25) ){
 				
-				# Adjust the final score for the number of bases not covered by BLAST hits in the referenece.
-				my $missing_positions = $longest_rep_l - scalar(keys(%coverage));
-				my $final_score = $rolling_score - $missing_positions;
-				$score {$combo} = $final_score;
-				
-			}
-			
-		}
-	
-		# store all best scoring combinations and exclude those that contain loci that have already been stored.
-		my @combo_scores = sort {$score{$b} <=> $score{$a} } keys %score;
-
-		my %exclude = ();
-		for my $combo (@combo_scores){
-			
-			# check loci have not been previously processed
-			my $inc = 1;
-			for my $c (split(/ /, $combo)){	
-				unless ( !$exclude{$c} ){	
-					$inc = 0 && last;
-				}
-			}
-		
-			# store
-			if ( $inc ==  1){
-		
-				my @l_test = split(/\s+/, $combo);
-				my $n_test = scalar( @l_test );
-
-				# Increment group count for genome
-				++$ff_group;
-
-				# Store all loci and exclude them from further iterations.
-				for my $l_ff ( @l_test ){ 									
-
-					# print to file.
-					my $l_cluster_ff = $cluster_numbers{$l_ff};
-					print OUTPUT "$l_ff\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster_ff\n";
+						# Find all combinations of loci containing original loci
+						$sep{$loci} = 1; # add original loci.
+						my @all_loci = keys (%sep);
+						my @org_combinations = combo(\@all_loci, \$loci);
 					
-					# exclude		
-					$exclude{$l_ff} = 1;
-					$exclude_list{$l_ff} = 1;
+						# filter out all combinations > $n_max;
+						my @combinations = ();
+						for my $combo ( @org_combinations ){
+							push(@combinations, $combo) if (scalar(split(/\s+/, $combo)) <= $n_max);
+						}
+					
+						#for (@combinations){ print "$_\n" }
+					
+						# compare all combinations of non-overlapping length groups.
+						my %score = ();
+						for my $combo ( @combinations ){
+				
+							my %coverage = ();
+							my $rolling_score = 0;
+						
+							for my $combo_loci ( split(/\s+/, $combo ) ){
+				
+								my $l_cluster_combo = $cluster_numbers {$combo_loci};
+								my $rep_loci_combo = $cluster_representatives {$l_cluster_combo}; 
 							
-				}
-			}
-		}
-
-		# store all remaining loci as multicopy.
-		for my $rloci (@all_loci){	
-			if ( !$exclude_list{$rloci} ){ 
-				my $l_cluster_r = $cluster_numbers {$rloci};
-		
-				# print to file
-				print OUTPUT "$rloci\t$group\t$genome\t1\t0\t0\t$l_cluster_r\n";
+								# Sanity check - redundant 
+								if (!$sstart{$rep_loci_combo}{$longest_rep} ){
+								
+									# Feedback
+									print " - ERROR: could not classify $combo_loci ($rep_loci_combo) - no blast match to reference ($longest_rep)\n"; ##
+								
+									# Print as MC cluster.
+									print OUTPUT "$combo_loci\t$group\t$genome\t1\t0\t0\t$l_cluster_combo\n";
+					
+									# exclude from further analysis.
+									$exclude_list {$combo_loci} = 1;
+								
+								}
+							
+								# identify positions of BLAST alignment to reference sequence.
+								else{
 				
-				# exclude
-				$exclude_list{$rloci} = 1;
-			}
-		}
+									my $start = $sstart{$rep_loci_combo}{$longest_rep};
+									my $end = $send{$rep_loci_combo}{$longest_rep};
+							
+									# find number of new unique positions in ref covered by BLAST match. 
+									my $new_positions = 0;
+									my %new_coverage = %coverage;
+									for ($start..$end){	
+										if (!$new_coverage {$_}) {
+											++$new_positions;
+											$new_coverage {$_} = 1;
+										}
+									}
+					
+									# The score for this alignment = 'current score - length of loci' 
+									# - penalising short alignment for long sequences.
+									my $length_loci = $seq_length{ $combo_loci }; 
+									my $current_score = $new_positions - $length_loci;
+							
+									# Save rolling score and coverage info.
+									$rolling_score += $current_score;
+									%coverage = %new_coverage;							
+					
+								}							
+						
+							}
+					
+							# Adjust the final score for the number of bases not covered by BLAST hits in the referenece.
+							my $missing_positions = $longest_rep_l - scalar(keys(%coverage));
+							my $final_score = $rolling_score - $missing_positions;
+					
+							# Store final score for combination of loci.
+							$score {$combo} = $final_score; 
+					
+						}
+					
+						# Identify the best scoring combination of loci. 
+						my @combo_scores = sort {$score{$b} <=> $score{$a} } keys %score;
+						my $best_combo = $combo_scores[0];
+					
+						# if combo passes threshold then store all loci
+						if ( abs($score{$best_combo}) <= ($longest_rep_l * 0.25) ){
+						
+							my @l_test = split(/\s+/, $best_combo);
+							my $n_test = scalar( split(/\s+/, $best_combo) );
+						
+							# Increment group count for genome
+							++$ff_group;
 			
-	
-		# Check all loci have been assigned
-		my $no_processed = scalar(keys(%exclude_list));
-		my $no_org = scalar(keys(%{$genome_clusters{$genome}}));
-		$remaining = 0 if $no_org == $no_processed;
+							# Store all loci and exclude them from further iterations.
+							for my $l ( @l_test ){ 									
+
+								# print to file.
+								my $l_cluster = $cluster_numbers {$l};
+								print OUTPUT "$l\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster\n";
+			
+								# exclude
+								$exclude_list{$l} = 1;
+															
+							}
+						
+						}
+						# otherwise store original loci as multicopy and exclude from further analysis.
+						else{
+							# print to file
+							print OUTPUT "$loci\t$group\t$genome\t1\t0\t0\t$l_cluster\n";
+					
+							# do not reprocess
+							$exclude_list {$loci} = 1;
+						}
+							
+					}
+					# End of processing complicated FF clusters
+				}
+				# End of processed FF clusters
+			}
+		
+			# update no removed
+			$no_removed = scalar(keys(%exclude_list));
+		
+		} 
 	}
+	
+	# Check all loci have been assigned
+	my $no_processed = scalar(keys(%exclude_list));
+	my $no_org = scalar(keys(%{$genome_clusters{$genome}}));
+	die " - ERROR: Number of processed loci ($no_processed) does not match number of original loci($no_org)\n" if ($no_org != $no_processed);
+
 }
 
 # clean up temp files.
@@ -638,7 +567,6 @@ if( $keep == 0 ) {
 	unlink "$working/$group.blast";
 	unlink "$working/$group.cdhit.fasta";
 	unlink "$working/$group.cdhit.clstr";
-	unlink "$working/$group.cdhit.log";
 
 	if ( $nucleotide == 0 ){
 
