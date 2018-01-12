@@ -183,113 +183,102 @@ my $panargs = join(" ", @pargs);
 my $genic = 0;
 $genic = 1 if $features eq "CDS";
 
-# standardise and check input gffs (contain sequence and annotation matches contig nomenclature) 
-print "\n-------------------------------\n\n";
-print "Standardising and checking input files:\n";
-$time_start = time();
-my $gff_dir = "$pirate_dir/modified_gffs";
-unless( -d $gff_dir ){ unless ( mkdir $gff_dir ) { die " - ERROR: could not make PIRATE gff directory in $pirate_dir\n" } }
-`ls $input_dir/*.gff | parallel -j $threads perl $script_path/parse_GFF.pl {} $gff_dir 2>/dev/null`;
-die "\n - ERROR: ExtractSequence failed\n" if $?;
-
-# check number of successfully standardised gff files
-opendir(DIR, $gff_dir);
-@files = grep{/\.gff/} readdir(DIR);
-$no_files = scalar(@files);
-close DIR;
-if ( $no_files < 2 ){
-	die " - ERROR: too few gff files ($no_files) have passed QC to be analysed by PIRATE.\n";
-}else{
-	print " - $no_files gff files passed QC and will be analysed by PIRATE - completed in: ", time() - $time_start,"s\n";
-}
-print "\n-------------------------------\n\n";
-
-# make genome list
-open G_LIST, ">$pirate_dir/genome_list.txt";
-for my $g( @files ){ $g =~ /(.+).gff/; print G_LIST "$1\n"; }
-close G_LIST;
-
-# Identify gene feature co-ordinates.
-print " - creating co-ordinate files";
-$time_start = time();
-my $coords_dir = "$pirate_dir/co-ords";
-unless( -d "$coords_dir" ){ unless ( mkdir "$coords_dir" ) { die "\n - ERROR: could not make PIRATE co-ords directory in $pirate_dir\n" } };
-`cat $pirate_dir/genome_list.txt | parallel -j $threads perl $script_path/feature_coordinate_extracter.pl --input $gff_dir/{}.gff -o $coords_dir/{}.co-ords.tab -f $features`;
-die "\n - ERROR: feature co-ordinate extraction failed\n" if $?;
-print " - completed in: ", time() - $time_start,"s\n";
-
-# Make loci list.
-print " - creating genome loci list:";
-$time_start = time();
+# set important directories/files
 my $genome2loci = "$pirate_dir/genome2loci.tab";
-open GL, ">$genome2loci" or die "\n - ERROR: failed to create genome2loci.tab\n";
-open GLIST, "$pirate_dir/genome_list.txt" or die "\n - ERROR: could not open $pirate_dir/genome_list.txt.\n";
-while (<GLIST>){
-	my $f = $_;
-	chomp $f;
-	open TFILE, "$coords_dir/$f.co-ords.tab" or die "\n - ERROR: could not open $coords_dir/$f.co-ords.tab.\n";
-	while (<TFILE>){
-		my $l = $_;
-		chomp $l;
-		my @line = split (/\t/, $l);
-		if( $line[0] ne "Name" ){
-			print GL "$line[0]\t$f\t$line[1]\t$line[8]\n";
-		}
-	}
-	close TFILE;
-}
-close GL;
-close GLIST;
-print " - completed in: ", time() - $time_start,"s\n";
-print "\n-------------------------------\n\n";
-
-# Collect all gene sequences
-print "Extracting pangenome sequences:\n\n";
-$time_start = time();
-
-mkdir "$pirate_dir/genome_multifastas";
-
-# make argument list for sequence extractor
-my @extract_args = ();
-push (@extract_args, "-n") if $nucleotide == 1;
-push (@extract_args, "-c") if $genic == 0;
-my $e_args = join(" ", @extract_args); 
-
-# extract sequences.
-`cat $pirate_dir/genome_list.txt | parallel -k -j $threads perl $script_path/extract_feature_sequences.pl -s {} -d $pirate_dir -o $pirate_dir/genome_multifastas/{}.fasta $e_args`;
-die " - ERROR: extract_feature_sequences.pl failed\n" if $?;
-
-my $panseq_file = "$pirate_dir/pan_sequences.fasta";
-`cat $pirate_dir/genome_list.txt | xargs -I {} cat $pirate_dir/genome_multifastas/{}.fasta > $pirate_dir/pan_sequences.fasta`;
-	
-print " - completed in: ", time() - $time_start,"s\n";
-print "\n-------------------------------\n\n";
-
-# create pangenome log file
-my $log_file="$pirate_dir/pangenome_log.txt";
-
-# make pangenome iterations directory
 my $it_dir = "$pirate_dir/pangenome_iterations";
-unless( -d $it_dir ){ unless ( mkdir $it_dir ) { die " - ERROR: could not make PIRATE iteration directory in $pirate_dir\n" } }
+my $gff_dir = "$pirate_dir/modified_gffs";
 
-# Create pangenome unless pangenome construction is toggled off
-if ( $pan_off == 1 ){
+# only perform pre-processing if constructing original pangenome.
+if ( $pan_off == 0 ){
 
-	# check for presence of previously generated pangenome files
-	for my $it ( @thresholds ){
-	
-		die "No pangenome iterations present for $it %\n" unless -f "$it_dir/pan_sequences.$it.reclustered.reinflated";		
-		
-	}	
-	print "Using previous pangenome files\n";
+	# standardise and check input gffs (contain sequence and annotation matches contig nomenclature) 
 	print "\n-------------------------------\n\n";
-				
-}
-else{
+	print "Standardising and checking input files:\n";
+	$time_start = time();
+	unless( -d $gff_dir ){ unless ( mkdir $gff_dir ) { die " - ERROR: could not make PIRATE gff directory in $pirate_dir\n" } }
+	`ls $input_dir/*.gff | parallel -j $threads perl $script_path/parse_GFF.pl {} $gff_dir 2>/dev/null`;
+	die "\n - ERROR: ExtractSequence failed\n" if $?;
 
-	# use native tool
+	# check number of successfully standardised gff files
+	opendir(DIR, $gff_dir);
+	@files = grep{/\.gff/} readdir(DIR);
+	$no_files = scalar(@files);
+	close DIR;
+	if ( $no_files < 2 ){
+		die " - ERROR: too few gff files ($no_files) have passed QC to be analysed by PIRATE.\n";
+	}else{
+		print " - $no_files gff files passed QC and will be analysed by PIRATE - completed in: ", time() - $time_start,"s\n";
+	}
+	print "\n-------------------------------\n\n";
+
+	# make genome list
+	open G_LIST, ">$pirate_dir/genome_list.txt";
+	for my $g( @files ){ $g =~ /(.+).gff/; print G_LIST "$1\n"; }
+	close G_LIST;
+
+	# Identify gene feature co-ordinates.
+	print " - creating co-ordinate files";
+	$time_start = time();
+	my $coords_dir = "$pirate_dir/co-ords";
+	unless( -d "$coords_dir" ){ unless ( mkdir "$coords_dir" ) { die "\n - ERROR: could not make PIRATE co-ords directory in $pirate_dir\n" } };
+	`cat $pirate_dir/genome_list.txt | parallel -j $threads perl $script_path/feature_coordinate_extracter.pl --input $gff_dir/{}.gff -o $coords_dir/{}.co-ords.tab -f $features`;
+	die "\n - ERROR: feature co-ordinate extraction failed\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
+
+	# Make loci list.
+	print " - creating genome loci list:";
+	$time_start = time();
+	open GL, ">$genome2loci" or die "\n - ERROR: failed to create genome2loci.tab\n";
+	open GLIST, "$pirate_dir/genome_list.txt" or die "\n - ERROR: could not open $pirate_dir/genome_list.txt.\n";
+	while (<GLIST>){
+		my $f = $_;
+		chomp $f;
+		open TFILE, "$coords_dir/$f.co-ords.tab" or die "\n - ERROR: could not open $coords_dir/$f.co-ords.tab.\n";
+		while (<TFILE>){
+			my $l = $_;
+			chomp $l;
+			my @line = split (/\t/, $l);
+			if( $line[0] ne "Name" ){
+				print GL "$line[0]\t$f\t$line[1]\t$line[8]\n";
+			}
+		}
+		close TFILE;
+	}
+	close GL;
+	close GLIST;
+	print " - completed in: ", time() - $time_start,"s\n";
+	print "\n-------------------------------\n\n";
+
+	# Collect all gene sequences
+	print "Extracting pangenome sequences:\n\n";
 	$time_start = time();
 
+	mkdir "$pirate_dir/genome_multifastas";
+
+	# make argument list for sequence extractor
+	my @extract_args = ();
+	push (@extract_args, "-n") if $nucleotide == 1;
+	push (@extract_args, "-c") if $genic == 0;
+	my $e_args = join(" ", @extract_args); 
+
+	# extract sequences.
+	`cat $pirate_dir/genome_list.txt | parallel -k -j $threads perl $script_path/extract_feature_sequences.pl -s {} -d $pirate_dir -o $pirate_dir/genome_multifastas/{}.fasta $e_args`;
+	die " - ERROR: extract_feature_sequences.pl failed\n" if $?;
+
+	my $panseq_file = "$pirate_dir/pan_sequences.fasta";
+	`cat $pirate_dir/genome_list.txt | xargs -I {} cat $pirate_dir/genome_multifastas/{}.fasta > $pirate_dir/pan_sequences.fasta`;
+	
+	print " - completed in: ", time() - $time_start,"s\n";
+	print "\n-------------------------------\n\n";
+
+	# create pangenome log file
+	my $log_file="$pirate_dir/pangenome_log.txt";
+
+	# make pangenome iteration directory
+	unless( -d $it_dir ){ unless ( mkdir $it_dir ) { die " - ERROR: could not make PIRATE iteration directory in $pirate_dir\n" } }
+	
+	# Create pangenome using native tool
+	$time_start = time();
 	print "Constructing pangenome sequences:\n\n";
 	`echo -n "" > $pirate_dir/fail_test.txt`;
 	system(	"perl $script_path/pangenome_construction.pl -i $pirate_dir/pan_sequences.fasta -o $it_dir -l $genome2loci -t $threads -s $steps $panargs 2>$pirate_dir/fail_test.txt | tee $log_file" );
@@ -300,6 +289,20 @@ else{
 	}
 	print " - completed in: ", time() - $time_start,"s\n";
 	print "\n-------------------------------\n\n";
+	
+}
+# skip pangenome construction and use previous files.
+else{
+
+	# check for presence of previously generated pangenome files
+	for my $it ( @thresholds ){
+	
+		die "No pangenome iterations present for $it %\n" unless -f "$it_dir/pan_sequences.$it.reclustered.reinflated";		
+		
+	}	
+	print "Using previous pangenome files\n";
+	print "\n-------------------------------\n\n";
+				
 
 }
 

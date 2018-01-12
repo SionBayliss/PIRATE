@@ -479,13 +479,13 @@ for my $list_idx (0..$#loci_file){
 	# check number of integers in group name.
 	my $format_no = length(`head -1 $loci_list | awk '{print \$2}'`) - 1;
 	
-	# sort loci list on group.
-	`awk \'{gsub("^g","",\$2); print \$0}\' $loci_list | sort -k2,2n --parallel=$threads | awk -v OFS='\t' '\$2="g"\$2 {print \$0}' > $output_dir/temp_loci.sorted`;
+	# sort loci list on group. (use n option to -k2,2 to speed up sorting. WARNING - does not work with family names ending _\d) 
+	print `awk \'{gsub("^g","",\$2); print \$0}\' $loci_list | LC_ALL=C sort -k2,2 --parallel=$threads | awk -v OFS='\t' '\$2="g"\$2 {print \$0}' > $output_dir/temp_loci.sorted`;
 	
 	# count entries. 
-	my $u_groups = `awk '{ a[\$2]++ } END { for (n in a) print n }' < temp_loci.sorted | wc -l`;
+	my $u_groups = `awk '{ a[\$2]++ } END { for (n in a) print n }' < $output_dir/temp_loci.sorted | wc -l`;
 	$u_groups =~ s/\n//g;
-
+	
 	# parse groups to ignore (if any).
 	my %err_clusters;
 	if ( defined($error_clusters[$list_idx]) ){
@@ -500,7 +500,7 @@ for my $list_idx (0..$#loci_file){
 	# number of erroneous clusters to exclude
 	my $no_erroneous = scalar(keys(%err_clusters));
 	my $max_clusters = $u_groups - $no_erroneous;
-	print " - $no_erroneous clusters to exclude - $max_clusters clusters to process.\n";
+	print " - $no_erroneous clusters to exclude and $max_clusters clusters to process.\n";
 
 	# process all loci in file
 	print " - linking clusters - printed 0 (0.00 %)";

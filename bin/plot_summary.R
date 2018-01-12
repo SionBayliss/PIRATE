@@ -270,7 +270,7 @@ if ( (require('ggtree')) & (require('phangorn')) & (require('ggstance')) ) {
       scale_colour_gradient(low = "#386cb0",  high = "#ef3b2c") +
       ggtitle("test")+
       theme()
-    phan_tree
+    #phan_tree
   
   # create phandonago plot using heatmap
   genotype_file <- system.file("examples/Genotype.txt", package="ggtree")
@@ -287,7 +287,7 @@ if ( (require('ggtree')) & (require('phangorn')) & (require('ggstance')) ) {
            offset = mx_raw*0.4, width = 2, color=NA) +
     theme(legend.position = "none") +
     scale_fill_manual(values = c("blue"))
-  test_heat 
+  #test_heat 
   
   }
 }

@@ -103,11 +103,6 @@ sub print_groups { # print alleles per split group.
     # get thresholds 
     my @thresholds = sort {$a<=>$b} keys %alleles;
 
-	# If there are multiple groups then start group numbering at 1.
-	my $no_core = scalar(keys(%allele_assignment));
-	my $offset = 0;
-	$offset = 1 if ( $no_core > 0 );
-	
 	# Check for how many sig figs to use for allele numbering.
 	my $max = 0;
 	for my $t (sort {$b<=>$a} keys %alleles) { 	# process all thresholds
@@ -127,38 +122,59 @@ sub print_groups { # print alleles per split group.
 		for my $l ( keys %{$alleles{$min_thresh}{$a}} ) { 
 			++$l_count;
 		}
-	}	
+	}
+	
+	# identify group numbering
+	my $no_core = scalar(keys(%allele_assignment));
+	
+	# variable for renaming groups (numbers on allele_assignment maybe non-sequential)
+	my %modified_name = ();
+	my $group_count = 1;
+	
+	# if offset > 0 then split loci
+	my $offset = scalar(keys(%allele_assignment));
 	
 	# process all loci for threshold and print with amended group name
-	for my $t (sort {$b<=>$a} keys %alleles) { 	# process all thresholds
+	for my $t (sort {$a<=>$b} keys %alleles) { 	# process all thresholds
 	
 		# process all alleles for threshold 
 		for my $a ( keys %{$alleles{$t}} ) {
-				
+		
 			# process all loci in allele
-			for my $l ( keys %{$alleles{$t}{$a}} ) { 
+			for my $l ( keys %{$alleles{$t}{$a}} ) { 				
 			
-				# find group number
-				my $g_no = 0 + $offset; # remaining isolates
-				$g_no = $allele_assignment{$l} + $offset if $allele_assignment{$l}; # clustered in paralogous group.
-								
-				# modify group name
 				my $group_out = $group;
-				$group_out = sprintf( "%s\_%i", $group_out, $g_no) if $offset == 1; # novel group
-				$group_out = $group if $l_count == $n_loci_t; # all loci in same group.
+				my $allele_out = $a;
 				
-				# modify allele name (except lowest threshold, initial allele)
-				my $allele_out = $a; 
-				if ( $offset == 1 ){
+				# only rename clusters that have been split
+				if ( ($offset > 0) && ($l_count != $n_loci_t) ){
 				
-					# identify allele number.	
+					# check if loci is in split cluster and set new group name.	
+					unless ( !$allele_assignment{$l} ){
+						
+						# check if allele has been named previously
+						my $g_no = "";
+						if ( $modified_name{$allele_assignment{$l}} ){
+							$g_no = $modified_name{$allele_assignment{$l}};
+						}else{
+							++$group_count;
+							$modified_name{$allele_assignment{$l}} = $group_count;
+							$g_no = $group_count;
+						}
+						
+						$group_out = sprintf( "%s\_%i", $group_out, $g_no );
+					}
+					else{
+						$group_out = sprintf( "%s\_%i", $group_out, "1" );
+					}				
+				
+					# modify allele name (except lowest threshold, initial allele)
 					if ( $a =~ /\_(\d+)$/ ){
 						$allele_out = sprintf( "%s\_%*d", $group_out, $no_sigfigs, $1 );
 						$allele_out =~ tr/ /0/;
 					}else{
 						$allele_out = $group_out;
 					}
-	
 				}
 				
 				# identify genome
@@ -166,15 +182,10 @@ sub print_groups { # print alleles per split group.
 				
 				# print locus info
 				print $oloci "$l\t$group_out\t$t\t$allele_out\t$genome\n";
-				
-			}				
-			
-		}
-	
-	}
-		
-	#exit if $offset == 1;
 
+			}		
+		}
+	}
 }
 
 
