@@ -53,7 +53,8 @@ my $script_path = abs_path(dirname($0));
 $| = 1; # turn off buffering for real time feedback.
 
 # start time
-my $time_start = time();
+my $PIRATE_start = time();
+my $time_start = "";
 
 # command line options
 my $input_dir = '';
@@ -463,6 +464,7 @@ if ( $align == 1 ){
 }
 
 # End message and joke
+print "PIRATE completed in ",  time() - $PIRATE_start,"s\n\n";
 open JOKES, "$script_path/jokes.txt" or print "Out of jokes!\n"; 
 my $n_jokes = @{[<JOKES>]};
 my $r_joke = sprintf( "%ip", int(rand($n_jokes-1)+1) );
