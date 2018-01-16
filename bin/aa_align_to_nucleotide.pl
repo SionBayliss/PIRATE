@@ -175,6 +175,4 @@ for my $seq(@aa_seqs){
 }
 
 
-exit;
-
-
+exit

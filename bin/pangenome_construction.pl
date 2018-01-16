@@ -68,13 +68,13 @@ unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){
 	-i|--input			input fasta file [nucleotide/aa]
 	-o|--output			output directory [default: input directory]
 	-t|--threads		number of threads/cores used to use [default: 2]
-	-p|--perc			% identity threshold to use for pangenome construction [default: 95]
+	-p|--perc			% identity threshold to use for pangenome construction [default: 98]
 	-s|--steps			% identity thresholds to use for pangenome construction [default: 50,60,70,80,90,95,98]
 	-l|--loci			file containing loci and genome as seperate columns [required for core extraction during cdhit]
 	-q|--quiet			switch off verbose
 	-cdl|--cdlow		cdhit lowest percentage id [default: 98]
 	-cds|--cdstep		cdhit step size [default: 0.5]
-	-f|--flat			mcl inflation value [default: 2]
+	-f|--flat			mcl inflation value [default: 1.5]
 	-r|--retain			do not delete temp files
 	-n|--nucleotide		create pangenome on nucleotide sequence [default: amino acid]
 	-e|--evalue			e-value used for blast hit filtering [default: 1E-6]
@@ -100,7 +100,7 @@ my $input_file = '';
 my $output_dir = '';
 my $loci_list = '';
 
-my $perc = 95;
+my $perc = 98;
 my $steps = '';
 my $cd_low = 98;
 my $cd_step = 0.5;

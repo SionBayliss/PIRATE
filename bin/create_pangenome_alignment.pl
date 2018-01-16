@@ -51,7 +51,6 @@ my $gff_file = '';
 my $gap_character = "N";
 
 GetOptions(
-
 	'help|?' 	=> \$help,
 	'man' 		=> \$man,
 	'quiet' 	=> \$quiet,
@@ -279,8 +278,6 @@ for my $file ( sort keys %group_list ){
 		my $perc_comp = int(($g_count/$no_groups)*100); 
 		print "\r - ", $perc_comp ," % clusters added to output" unless $quiet == 1;
 	}
-	
-	#last if($g_count > 10);####
 	
 }
 

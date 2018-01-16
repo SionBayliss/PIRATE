@@ -40,7 +40,7 @@ die "Dependencies missing.\n" if $dep_err == 1;
 	-p|--processes		no threads/parallel processes to use [default: 2]
 	-t|--threshold		percentage threshold below which clusters are excluded [default: 0]
 	-d|--dosage			upper threshold of dosage to exclude from alignment [default: 1]
-...
+	-n|--nucleotide 	align nucleotide sequence [default: off]
 
 =cut
 
@@ -54,7 +54,8 @@ $| = 1; # turn off buffering for real time feedback.
 my $man = 0;
 my $help = 0;
 my $quiet = 0;
-my $threads = 2; 
+my $threads = 2;
+my $nucleotide = 0;
 
 my $threshold = 0;
 my $dosage_threshold = 1;
@@ -74,6 +75,7 @@ GetOptions(
 	'processes=i'	=> \$threads,
 	'threshold=i'	=> \$threshold,
 	'dosage=f'	=> \$dosage_threshold,
+	'nucleotide' => \$nucleotide,
 	
 ) or pod2usage(2);
 pod2usage(1) if $help;
@@ -141,7 +143,7 @@ while(<GC>){
 		# define group values
 		my $group = $l[1];
 		my $no_genomes = $l[6];	
-		my $dosage = $l[7]; # average dose (make max)##########
+		my $dosage = $l[9]; # max dosage
 		my $per_genomes = ($no_genomes / $total_genomes) * 100;
 		
 		# filter on thresholds
@@ -278,8 +280,8 @@ for my $genome ( @genomes ){
 
 		if( $line !~ /^##/ ){
 			if( $line_array[2] eq "gene"){
-			}elsif($line_array[2] eq "CDS"){
-
+			}else{
+			
 				# Set variables 
 				$contig = $line_array[0];
 				$sta = $line_array[3];
@@ -307,11 +309,8 @@ for my $genome ( @genomes ){
 					}
 				}
 				
-				# Sanity check id per feature.
-				die "No ID for feature in $line\n" if $id eq "";
-						
 				# Print to file if it matches group loci id.
-				if( $loci_group{$id} ){
+				if( $loci_group{$id} && ( $id ne "" )){
 					
 					# Get sequence from contig store.
 					my $seq = substr( $seq_store{$contig}, $sta-1, $len );
@@ -360,7 +359,7 @@ for my $l_check ( keys %loci_group ){
 	die " - ERROR: No sequence found for $l_check.\n" unless $stored_loci {$l_check};
 }
 
-# Align aa/nucleotide sequence using mafft/PRANK in parallel - back-translate if amino acid sequence.
+# Align aa/nucleotide sequence using mafft in parallel - back-translate if amino acid sequence.
 print " - aligning group sequences using MAFFT\n" if $quiet == 0;
 
 # Create temp files for parallel.
@@ -384,16 +383,28 @@ for my $cluster( keys %group_list ){
 	++$arg_count;
 	
 	# Print to temp file.
-	print TEMP "$output_dir/$cluster.fasta\t$output_dir\n"; ## MAFFT
-
+	if ($nucleotide == 0){
+			print TEMP "$output_dir/$cluster.fasta\t$output_dir\n"; ## MAFFT
+	}
+	else{
+			print TEMP "$output_dir/$cluster.fasta\t$output_dir/$cluster.nucleotide.fasta\n";
+	}
 	# When processed = increment or all samples are processed then align the files stored in temp files. 
 	if( ($arg_count == $increment ) || ( $processed == $no_groups ) ){ 
 	
 		close TEMP;
-
-		# MAFFT
-		`parallel -a $temp --jobs $threads --colsep '\t' perl $script_path/aa_align_to_nucleotide.pl {1} {2}`; # >/dev/null 2>/dev/null
-
+	
+		# align amino acid sequence and reverse translate to nucleotide sequence. 
+		if ($nucleotide == 0){
+			`parallel -a $temp --jobs $threads --colsep '\t' perl $script_path/aa_align_to_nucleotide.pl {1} {2}`; # >/dev/null 2>/dev/null
+			print " - ERROR: aa_align_to_nucleotide.pl threw an error after $processed samples\n" if $?;
+		}
+		# align nucleotide sequence. 		
+		else{
+			`parallel -a $temp --jobs $threads --colsep '\t' perl $script_path/align_nucleotide_sequences.pl {1} {2}`; # >/dev/null 2>/dev/null
+			print " - ERROR: align_nucleotide_sequences.pl threw an error after $processed samples\n" if $?; 
+		}
+		
 		# Clear temp files.
 		open TEMP, ">$temp" or die $!;
 	
@@ -412,7 +423,7 @@ close TEMP;
 print "\r - 100 % aligned\n" if $quiet == 0;
 unlink $temp;
 for my $cluster( keys %group_list ){
-	unlink "$output_dir/$cluster.fasta";
+	#unlink "$output_dir/$cluster.fasta";
 }
 
 exit

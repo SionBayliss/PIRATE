@@ -160,6 +160,13 @@ if( $quiet == 0 ){
 	print " - PIRATE will be run on $steps amino acid % identity thresholds.\n";
 }
 
+
+# check features are CDS (amino acid or nucleotide) or alternative features (nucleotide only).
+my $genic = 0;
+$genic = 1 if $features eq "CDS";
+$nucleotide = 1 if $genic == 0; 
+print " - PIRATE will be run on feature annotated as $features\n";
+
 # set pangenome construction options
 my @pargs = ();
 if ( $pan_options ne ""){
@@ -179,10 +186,6 @@ if ( $pan_options ne ""){
 }
 push(@pargs, "--nucleotide") if $nucleotide == 1; 
 my $panargs = join(" ", @pargs);
-
-# check features are CDS or alternative features.
-my $genic = 0;
-$genic = 1 if $features eq "CDS";
 
 # set important directories/files
 my $genome2loci = "$pirate_dir/genome2loci.tab";
@@ -452,12 +455,16 @@ if ( $align == 1 ){
 	
 	print "Aligning all feature sequences:\n";
 	
-	system( "perl $script_path/align_feature_sequences.pl -i $pirate_dir/PIRATE.gene_families.tsv -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads");
-	print " - ERROR: aligning pangenome sequences failed - is mafft installed?\n" if $?;
+	if( $nucleotide == 0 ){
+		system( "perl $script_path/align_feature_sequences.pl -i $pirate_dir/PIRATE.gene_families.tsv -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads");
+	}else{
+		system( "perl $script_path/align_feature_sequences.pl -n -i $pirate_dir/PIRATE.gene_families.tsv -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads");	
+	}
+	print "\n - ERROR: aligning pangenome sequences failed - is mafft installed?\n" if $?;
 	
 	unless($?){
 		system("perl $script_path/create_pangenome_alignment.pl -i $pirate_dir/PIRATE.gene_families.tsv -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
-		print " - ERROR: creating pangenome concatenate failed\n" if $?;
+		print "\n - ERROR: creating pangenome concatenate failed\n" if $?;
 	}
 	
 	print "\n-------------------------------\n\n";
