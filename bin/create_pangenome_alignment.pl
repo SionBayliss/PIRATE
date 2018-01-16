@@ -123,8 +123,8 @@ while(<GC>){
 		
 		my $per_genomes = ($no_genomes / $total_genomes) * 100;
 		
-		my $product = $l[2];
-		my $gene = $l[3];
+		my $product = $l[3];
+		my $gene = $l[2];
 
 		my $dosage = $l[7]; # average dose (make max)##########
 		
@@ -245,7 +245,7 @@ for my $file ( sort keys %group_list ){
 	}
 	
 	# optionally store gff info
-	my $gff_line =	sprintf( "Pangenome\tNA\tCDS\t%s\t%s\t\.\t\+\t0\tID=%s;gene=%s;product=%s" , $alignment_length+1 , $alignment_length+$l_raw , $file, $loci_gene {$file}, $loci_product {$file} ); # product= gene=
+	my $gff_line =	sprintf( "Pangenome\tNA\tCDS\t%s\t%s\t\.\t\+\t0\tID=%s;gene=%s;product=%s" , $alignment_length+1 , $alignment_length+$l_raw , $file, $loci_gene {$file}, $loci_product {$file} );
 	push (@gff_out, $gff_line) if $gff_file ne ''; 
 	
 	# Increment alignment length

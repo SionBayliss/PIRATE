@@ -432,7 +432,7 @@ print " - ERROR: could not create binary presence/absence fasta file.\n" if $?;
 # make binary accessory gene tree in fastree
 unless ($?){
 	print " - running fasttree\n";
-	system( "/usr/bin/fasttree -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
+	system( "fasttree -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
 	print " - ERROR: fasttree failed.\n" if $?;
 }
 print "\n-------------------------------\n\n";
