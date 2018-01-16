@@ -126,7 +126,7 @@ while(<GC>){
 		my $product = $l[3];
 		my $gene = $l[2];
 
-		my $dosage = $l[7]; # average dose (make max)##########
+		my $dosage = $l[7]; # average dose 
 		
 		my $entry_genome = "";
 	

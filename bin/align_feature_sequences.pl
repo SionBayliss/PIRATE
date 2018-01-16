@@ -143,7 +143,7 @@ while(<GC>){
 		# define group values
 		my $group = $l[1];
 		my $no_genomes = $l[6];	
-		my $dosage = $l[9]; # max dosage
+		my $dosage = $l[7]; # max dosage
 		my $per_genomes = ($no_genomes / $total_genomes) * 100;
 		
 		# filter on thresholds
