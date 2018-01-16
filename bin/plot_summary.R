@@ -187,7 +187,7 @@ if( file.exists(P.unique) ){
 }
 
 # [optional] tree based plots
-if ( (require('ggtree')) & (require('phangorn')) & (require('ggstance')) ) {
+if ( (require('ggtree')) & (require('phangorn')) ) {
   
   # check for optional tree file
   tree_file <- sprintf("%s/binary_presence_absence.nwk", input_root)
@@ -236,12 +236,12 @@ if ( (require('ggtree')) & (require('phangorn')) & (require('ggstance')) ) {
     count_plots <- rbind(count_plot_1, count_plot_2)
 
     # using geom_segment
-    #tree_bar <- facet_plot(tree.plot+xlim_tree(mx), panel='Genome Size', data=count_plot, geom=geom_segment, aes(x=0, xend=values, y=y, yend=y), size=3, color='steelblue') + theme_tree2()
-    #tree_bar
+    tree_bar <- facet_plot(tree.plot+xlim_tree(mx), panel='Genome Size', data=count_plot, geom=geom_segment, aes(x=0, xend=values, y=y, yend=y), size=3, color='steelblue') + theme_tree2()
+    tree_bar
     
     # using barh from ggstance
-    tree_bar <- facet_plot(tree.plot+xlim_tree(mx), panel='Genome Size', data=count_plots, geom=geom_barh, mapping = aes(x=values, fill=pangenome), stat="identity") + theme_tree2()    
-    tree_bar
+    #tree_bar <- facet_plot(tree.plot+xlim_tree(mx), panel='Genome Size', data=count_plots, geom=geom_barh, mapping = aes(x=values, fill=pangenome), stat="identity") + theme_tree2()    
+    #tree_bar
     
     # pangenome coloured on no_alleles at max threshold using geom_segment  
     tpos <- family_data %>% 
