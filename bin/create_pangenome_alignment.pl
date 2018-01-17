@@ -11,11 +11,9 @@ use Text::Wrap;
 
 # Create pangenome alignment from collection of aligned sequence files.
 
-# Version
-
 =head1  SYNOPSIS
 
-	CreatePangenomeAlignment.pl -i /path/to/PIRATE.gene_families.tab -f /path/to/sequence/alignments/
+	create_pangenome_alignment.pl -i /path/to/PIRATE.gene_families.tab -f /path/to/sequence/alignments/
 
 	-h|--help 	usage information
 	-m|--man	man page 

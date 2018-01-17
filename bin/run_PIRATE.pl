@@ -303,10 +303,11 @@ else{
 	
 		die "No pangenome iterations present for $it %\n" unless -f "$it_dir/pan_sequences.$it.reclustered.reinflated";		
 		
-	}	
+	}
+	
+	print "\n\n-------------------------------\n\n";	
 	print "Using previous pangenome files\n";
 	print "\n-------------------------------\n\n";
-				
 
 }
 
@@ -388,7 +389,7 @@ if ( $para_off == 0 ){
 		# Classify paralogous clusters using blast
 		print "\nClassifing paralogous clusters:\n";
 		$time_start = time();
-
+		
 		if ( $nucleotide == 0 ){
 			system("perl $script_path/classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0]");
 			die " - ERROR: identify_paralogs.pl failed.\n" if $?;

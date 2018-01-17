@@ -23,11 +23,11 @@ foreach( $mafft_bin, $parallel_bin ){
 }
 die "Dependencies missing.\n" if $dep_err == 1;
 
-# Version
+# Usage:
 
 =head1  SYNOPSIS
 
-	AlignGeneSequences.pl -i /path/to/PIRATE.gene_families.tab -g /path/to/gff/files/
+	align_feature_sequence.pl -i /path/to/PIRATE.gene_families.tab -g /path/to/gff/files/
 
 =head1 Descriptions
 	
