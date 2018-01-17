@@ -305,7 +305,7 @@ else{
 		
 	}
 	
-	print "\n\n-------------------------------\n\n";	
+	print "\n-------------------------------\n\n";	
 	print "Using previous pangenome files\n";
 	print "\n-------------------------------\n\n";
 

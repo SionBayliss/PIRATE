@@ -162,7 +162,7 @@ if( $nucleotide == 0 ){
 	}
 	
 	# run cd-hit
-	`$cd_hit_est_bin -i $working/$group.fasta -o $working/$group.cdhit -c $cluster_threshold -s $length_threshold  -T 1 -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log`;
+	`$cd_hit_est_bin -i $working/$group.fasta -o $working/$group.cdhit -c $cluster_threshold -s $length_threshold  -T 1 -g 1 -n $n -d 256 -r 0 >> $cdhit_log`; # -M $m_required
 	`mv $working/$group.cdhit $working/$group.cdhit.fasta`;
 }
 
