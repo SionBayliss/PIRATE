@@ -222,7 +222,7 @@ for my $cluster ( keys %cluster_family ){
 # batch files for parallel
 print " - identifying paralogs\n - 0% complete     " if $quiet == 0;
 my $no_paralogs = scalar(keys(%paralogs));
-my $batch_no = int($no_paralogs/20);
+my $batch_no = int($threads*4); # 4 x #threads
 $batch_no = 1 if $no_paralogs < 20;
 
 my $p_count = 0;
