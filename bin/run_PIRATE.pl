@@ -391,10 +391,10 @@ if ( $para_off == 0 ){
 		$time_start = time();
 		
 		if ( $nucleotide == 0 ){
-			system("perl $script_path/classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0]");
+			system("perl $script_path/classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --threads $threads");
 			die " - ERROR: identify_paralogs.pl failed.\n" if $?;
 		}else{
-			system("perl $script_path/classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --nucleotide");
+			system("perl $script_path/classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --threads $threads --nucleotide");
 			die " - ERROR: identify_paralogs.pl failed.\n" if $?;
 		}
 		print " - completed in: ", time() - $time_start,"s\n";
