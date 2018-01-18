@@ -429,205 +429,213 @@ for my $genome ( sort keys %genome_clusters ){
 		} 
 	}
 	
-	# process remaining loci as putative fission events - check all combinations of up to $n_max.
-	my $remaining = 1;
-	while ($remaining == 1){
+	# check if any loci remain to be classified
+	my $processed_check = scalar(keys(%exclude_list));
+	my $no_org_check = scalar(keys(%{$genome_clusters{$genome}}));
+		if ($no_org_check != $processed_check){
 	
-		# store all loci that match vs one reference sequence.
-		my %sep = ();
-		my $target_ref = "";
-		my $target_ref_l = "";
-		for my $loci ( sort keys %{$genome_clusters{$genome}} ){
+		# process remaining loci as putative fission events - check all combinations of up to $n_max.
+		my $remaining = 1;
+		while ($remaining == 1){
+	
+			# store all loci that match vs one reference sequence.
+			my %sep = ();
+			my $target_ref = "";
+			my $target_ref_l = "";
+			for my $loci ( sort keys %{$genome_clusters{$genome}} ){
 		
-			if ( !$exclude_list{$loci} ){
+				if ( !$exclude_list{$loci} ){
 			
-				# store loci
-				$sep{$loci} = 1;
+					# store loci
+					$sep{$loci} = 1;
 
-				# identify representative
-				my $l_cluster_test = $cluster_numbers {$loci};
-				my $rep_loci_test = $cluster_representatives{$l_cluster_test};
+					# identify representative
+					my $l_cluster_test = $cluster_numbers {$loci};
+					my $rep_loci_test = $cluster_representatives{$l_cluster_test};
 
-				# check for blast match vs representative clusters
-				if( $target_ref eq "" ){
-					my $ref_idx = 0;
-					for my $c_key (sort {$a<=>$b} keys %cluster_representatives ){
-						my $test_rep = $cluster_representatives{$c_key};
-						if ( !$no_overlap_c{$rep_loci_test}{$test_rep} ){
-							$ref_idx = $c_key;
-							last;
+					# check for blast match vs representative clusters
+					if( $target_ref eq "" ){
+						my $ref_idx = 0;
+						for my $c_key (sort {$a<=>$b} keys %cluster_representatives ){
+							my $test_rep = $cluster_representatives{$c_key};
+							if ( !$no_overlap_c{$rep_loci_test}{$test_rep} ){
+								$ref_idx = $c_key;
+								last;
+							}
 						}
+				
+						# sanity check
+						die " - ERROR: no matching reference cluster.\n" if $ref_idx == 0;
+			
+						# set ref sequence for loci
+						$target_ref = $cluster_representatives{$ref_idx};
+						$target_ref_l = $seq_length{$target_ref};
+			
+					}elsif( !$no_overlap_c{ $rep_loci_test }{ $target_ref_l } ){
+			
+						$sep{$loci} = 1;		
+				
 					}
-				
-					# sanity check
-					die " - ERROR: no matching reference cluster.\n" if $ref_idx == 0;
-			
-					# set ref sequence for loci
-					$target_ref = $cluster_representatives{$ref_idx};
-					$target_ref_l = $seq_length{$target_ref};
-			
-				}elsif( !$no_overlap_c{ $rep_loci_test }{ $target_ref_l } ){
-			
-					$sep{$loci} = 1;		
-				
 				}
 			}
-		}
-		my @all_loci = sort keys (%sep);
-		my @org_combinations = combo(\@all_loci, "");
+			my @all_loci = sort keys (%sep);
+			my @org_combinations = combo(\@all_loci, "");
 
-		# filter out all combinations > $n_max;
-		my @combinations = ();
-		for my $combo ( @org_combinations ){
-			push(@combinations, $combo) if (scalar(split(/\s+/, $combo)) <= $n_max);
-		}
+			# filter out all combinations > $n_max;
+			my @combinations = ();
+			for my $combo ( @org_combinations ){
+				push(@combinations, $combo) if (scalar(split(/\s+/, $combo)) <= $n_max);
+			}
 	
-		# compare all combinations of non-overlapping length groups.
-		my %score = ();
-		for my $combo ( @combinations ){
+			# compare all combinations of non-overlapping length groups.
+			my %score = ();
+			for my $combo ( @combinations ){
 
-			my %coverage = ();
-			my $rolling_score = 0;
-			my $prev_position = 0;
+				my %coverage = ();
+				my $rolling_score = 0;
+				my $prev_position = 0;
 	
-			for my $combo_loci ( sort split(/\s+/, $combo ) ){
+				for my $combo_loci ( sort split(/\s+/, $combo ) ){
 				
-				my $l_cluster_combo = $cluster_numbers {$combo_loci};
-				my $rep_loci_combo = $cluster_representatives {$l_cluster_combo};
-				my $length_loci = $seq_length{ $combo_loci };
+					my $l_cluster_combo = $cluster_numbers {$combo_loci};
+					my $rep_loci_combo = $cluster_representatives {$l_cluster_combo};
+					my $length_loci = $seq_length{ $combo_loci };
 				
-				# using loci numbering as proxy for genomic position.
-				my $loci_position = 100;
-				if( $combo_loci =~ /_(\d+)$/ ){
-					$loci_position = $1; 
-				}
-		
-				# Sanity check - redundant 
-				if (!$sstart{$rep_loci_combo}{$longest_rep} ){
-			
-					# Feedback
-					print " - ERROR: could not classify $combo_loci ($rep_loci_combo) - no blast match to reference ($longest_rep)\n";
-			
-					# Print as MC cluster.
-					print OUTPUT "$combo_loci\t$group\t$genome\t1\t0\t0\t$l_cluster_combo\n";
-
-					# exclude from further analysis.
-					$exclude_list {$combo_loci} = 1;
-			
-				}
-		
-				# identify positions of BLAST alignment to reference sequence.
-				else{
-
-					my $start = $sstart{$rep_loci_combo}{$longest_rep};
-					my $end = $send{$rep_loci_combo}{$longest_rep};
-		
-					# find number of new unique positions in ref covered by BLAST match. 
-					my $new_positions = 0;
-					my %new_coverage = %coverage;
-					for ($start..$end){	
-						if ( !$new_coverage{$_} ) {
-							++$new_positions;
-							$new_coverage {$_} = 1;
-						}
+					# using loci numbering as proxy for genomic position.
+					my $loci_position = 100;
+					if( $combo_loci =~ /_(\d+)$/ ){
+						$loci_position = $1; 
 					}
-					
-					# The score for this alignment = 'current score - length of loci'  
-					my $current_score = "";
-					# penalise short sequences with long alignments 
-					if ( $new_positions > $length_loci ){
-						$current_score = $length_loci - $new_positions;
+		
+					# Sanity check - redundant 
+					if (!$sstart{$rep_loci_combo}{$longest_rep} ){
+			
+						# Feedback
+						print " - ERROR: could not classify $combo_loci ($rep_loci_combo) - no blast match to reference ($longest_rep)\n";
+			
+						# Print as MC cluster.
+						print OUTPUT "$combo_loci\t$group\t$genome\t1\t0\t0\t$l_cluster_combo\n";
+
+						# exclude from further analysis.
+						$exclude_list {$combo_loci} = 1;
+			
 					}
-					# penalise long sequences with short alignments.
+		
+					# identify positions of BLAST alignment to reference sequence.
 					else{
-						$current_score = $new_positions - $length_loci;
+
+						my $start = $sstart{$rep_loci_combo}{$longest_rep};
+						my $end = $send{$rep_loci_combo}{$longest_rep};
+		
+						# find number of new unique positions in ref covered by BLAST match. 
+						my $new_positions = 0;
+						my %new_coverage = %coverage;
+						for ($start..$end){	
+							if ( !$new_coverage{$_} ) {
+								++$new_positions;
+								$new_coverage {$_} = 1;
+							}
+						}
+					
+						# The score for this alignment = 'current score - length of loci'  
+						my $current_score = "";
+						
+						# penalise short sequences with long alignments 
+						if ( $new_positions > $length_loci ){
+							$current_score = $length_loci - $new_positions;
+						}
+						# penalise long sequences with short alignments.
+						else{
+							$current_score = $new_positions - $length_loci;
+						}
+					
+						# adjust score for adjacent loci (truncations likely to be located adjacent to one another).
+						my $pos_diff = abs($prev_position - $loci_position);
+						if ( $pos_diff <= 2 ){
+							$current_score += ($longest_rep_l * 0.20); # adjust score by 20% of ref length
+						}					
+		
+						# Save rolling score and coverage info.
+						$rolling_score += $current_score;
+						%coverage = %new_coverage;
+					
+						# store loci position
+						$prev_position = $loci_position;
+
+					}							
+	
+				}
+			
+				# Store rolling score for combination of loci if < threshold
+				if ( $rolling_score >= -($longest_rep_l * 0.25) ){
+				
+					# Adjust the final score for the number of bases not covered by BLAST hits in the referenece.
+					my $missing_positions = $longest_rep_l - scalar(keys(%coverage));
+					my $final_score = $rolling_score - $missing_positions;
+					$score {$combo} = $final_score;
+				
+				}
+			
+			}
+	
+			# store all best scoring combinations and exclude those that contain loci that have already been stored.
+			my @combo_scores = sort {$score{$b} <=> $score{$a} } keys %score;
+
+			my %exclude = ();
+			for my $combo (@combo_scores){
+			
+				# check loci have not been previously processed
+				my $inc = 1;
+				for my $c (split(/ /, $combo)){	
+					unless ( !$exclude{$c} ){	
+						$inc = 0 && last;
 					}
-					
-					# adjust score for adjacent loci (truncations likely to be located adjacent to one another).
-					my $pos_diff = abs($prev_position - $loci_position);
-					if ( $pos_diff <= 2 ){
-						$current_score += ($longest_rep_l * 0.20); # adjust score by 20% of ref length
-					}					
-		
-					# Save rolling score and coverage info.
-					$rolling_score += $current_score;
-					%coverage = %new_coverage;
-					
-					# store loci position
-					$prev_position = $loci_position;
-
-				}							
-	
-			}
-			
-			# Store rolling score for combination of loci if < threshold
-			if ( $rolling_score >= -($longest_rep_l * 0.25) ){
-				
-				# Adjust the final score for the number of bases not covered by BLAST hits in the referenece.
-				my $missing_positions = $longest_rep_l - scalar(keys(%coverage));
-				my $final_score = $rolling_score - $missing_positions;
-				$score {$combo} = $final_score;
-				
-			}
-			
-		}
-	
-		# store all best scoring combinations and exclude those that contain loci that have already been stored.
-		my @combo_scores = sort {$score{$b} <=> $score{$a} } keys %score;
-
-		my %exclude = ();
-		for my $combo (@combo_scores){
-			
-			# check loci have not been previously processed
-			my $inc = 1;
-			for my $c (split(/ /, $combo)){	
-				unless ( !$exclude{$c} ){	
-					$inc = 0 && last;
 				}
-			}
 		
-			# store
-			if ( $inc ==  1){
+				# store
+				if ( $inc ==  1){
 		
-				my @l_test = split(/\s+/, $combo);
-				my $n_test = scalar( @l_test );
+					my @l_test = split(/\s+/, $combo);
+					my $n_test = scalar( @l_test );
 
-				# Increment group count for genome
-				++$ff_group;
+					# Increment group count for genome
+					++$ff_group;
 
-				# Store all loci and exclude them from further iterations.
-				for my $l_ff ( @l_test ){ 									
+					# Store all loci and exclude them from further iterations.
+					for my $l_ff ( sort @l_test ){ 									
 
-					# print to file.
-					my $l_cluster_ff = $cluster_numbers{$l_ff};
-					print OUTPUT "$l_ff\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster_ff\n";
-					
-					# exclude		
-					$exclude{$l_ff} = 1;
-					$exclude_list{$l_ff} = 1;
+						# print to file.
+						my $l_cluster_ff = $cluster_numbers{$l_ff};
+						print OUTPUT "$l_ff\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster_ff\n";
+						
+						# exclude		
+						$exclude{$l_ff} = 1;
+						$exclude_list{$l_ff} = 1;
 							
+					}
 				}
 			}
-		}
 
-		# store all remaining loci as multicopy.
-		for my $rloci (@all_loci){	
-			if ( !$exclude_list{$rloci} ){ 
-				my $l_cluster_r = $cluster_numbers {$rloci};
+			# store all remaining loci as multicopy.
+			for my $rloci (@all_loci){	
+				if ( !$exclude_list{$rloci} ){ 
+					my $l_cluster_r = $cluster_numbers {$rloci};
 		
-				# print to file
-				print OUTPUT "$rloci\t$group\t$genome\t1\t0\t0\t$l_cluster_r\n";
+					# print to file
+					print OUTPUT "$rloci\t$group\t$genome\t1\t0\t0\t$l_cluster_r\n";
 				
-				# exclude
-				$exclude_list{$rloci} = 1;
+					# exclude
+					$exclude_list{$rloci} = 1;
+				}
 			}
-		}
 			
 	
-		# Check all loci have been assigned
-		my $no_processed = scalar(keys(%exclude_list));
-		my $no_org = scalar(keys(%{$genome_clusters{$genome}}));
-		$remaining = 0 if $no_org == $no_processed;
+			# Check all loci have been assigned
+			my $no_processed = scalar(keys(%exclude_list));
+			my $no_org = scalar(keys(%{$genome_clusters{$genome}}));
+			$remaining = 0 if $no_org == $no_processed;
+		}
+	
 	}
 }
 
@@ -660,34 +668,88 @@ if( $keep == 0 ) {
 }
 
 # Sub-functions
+
+# all combination of array excluding singletons
+#sub combo {
+
+#   my ($list) = $_[0];
+#   my $ref = $_[1];
+#   my (@print, $str, $i, $j);
+
+#   my $size = @{$list};
+   
+#   my @output_array = ();
+
+#   for ($i = 0; $i < 2**$size; $i++) {
+#  	  $str = sprintf("%*.*b", $size, $size, $i);
+#	  @print = ();
+#  	  my $include = 0;
+#	  for ($j = 0; $j < $size; $j++) {
+#		if (substr($str, $j, 1)) { 
+#			push (@print, $list->[$j]); 
+#			$include++ if $list->[$j]; ## only include combos with ref
+#		}
+#	  }  
+#  	  
+#  	  # exclude singletons
+#  	  if( scalar(@print) > 1 ){
+#		  my $temp = join (' ', @print);
+#		  push( @output_array, $temp ) if $temp ne "";
+#	  }
+#   }					   
+#   return (@output_array);
+#}
+
+
+# find only combinations of 2..$n_max. exclude same-same comparisons.
 sub combo {
 
-   my ($list) = $_[0];
-   my $ref = $_[1];
-   my (@print, $str, $i, $j);
+	my @list = sort(@{$_[0]});
 
-   my $size = @{$list};
-   
-   my @output_array = ();
+    my $length = @list;
 
-   for ($i = 0; $i < 2**$size; $i++) {
-	  $str = sprintf("%*.*b", $size, $size, $i);
-	  @print = ();
-  	  my $include = 0;
-	  for ($j = 0; $j < $size; $j++) {
-		if (substr($str, $j, 1)) { 
-			push (@print, $list->[$j]); 
-			$include++ if $list->[$j]; ## only include combos with ref
+  	# store original loci
+  	my %combo_hash = ();
+	for my $t (1..$length) {
+		$combo_hash{"1"} {$t} {$list[$t-1]} = 1;
+	}
+	
+	# find all combinations of 2..$n_max loci
+	my @output_array = ();
+	for my $idx (2..$n_max){
+		
+		my $new_count = 0;
+		
+		my $pidx = $idx-1;
+		my @pkeys = keys( %{$combo_hash{$pidx}} ); 
+
+		# add all loci to all cobinations at previous iteration. 
+		for my $i (@pkeys){ # all previous combinations
+			
+			for my $j(@list){ # all original loci
+				
+				# exclude same-same
+				if(!$combo_hash{$pidx}{$i}{$j}){
+				
+					++$new_count;
+					
+					# create new combo
+					my @p_combo = keys(%{$combo_hash{$pidx}{$i}});
+					my @n_combo = (@p_combo, $j);
+					
+					# store for output
+					push( @output_array, join(" ", @n_combo) );
+					
+					# store for next iteration
+					for my $k (@n_combo){ 
+						$combo_hash{$idx}{$new_count}{$k} = 1;
+					}
+				} 
+			}
 		}
-	  }  
-  	  
-  	  # exclude singletons
-  	  if( scalar(@print) > 1 ){
-		  my $temp = join (' ', @print);
-		  push( @output_array, $temp ) if $temp ne "";
-	  }
-   }					   
-   return (@output_array);
+	}	
+	
+	return (@output_array);
 }
 
 exit

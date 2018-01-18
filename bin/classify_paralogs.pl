@@ -222,8 +222,7 @@ for my $cluster ( keys %cluster_family ){
 # batch files for parallel
 print " - identifying paralogs\n - 0% complete     " if $quiet == 0;
 my $no_paralogs = scalar(keys(%paralogs));
-my $batch_no = int($threads*4); # 4 x #threads
-$batch_no = 1 if $no_paralogs < 20;
+my $batch_no = int($threads*5); # 5 x #threads
 
 my $p_count = 0;
 my $p_total = 0;
@@ -240,7 +239,7 @@ for my $p ( sort keys %paralogs ){
 	if( ($p_count == $batch_no) || ($p_total == $no_paralogs) ){
 	
 		# run classify paralogs
-		`parallel -a $working/list.txt -j $threads "perl $script_path/run_classify_paralogs_batch.pl -g {} -f $working/{}.fasta -d $working/{}.data -o $working" -m $n_max --nucleotide $nucleotide --threshold $threshold -k $keep -q $quiet`;
+		`parallel -a $working/list.txt -j $threads "perl $script_path/run_classify_paralogs_batch.pl -g {} -f $working/{}.fasta -d $working/{}.data -o $working -m $n_max --nucleotide $nucleotide --threshold $threshold -k $keep -q $quiet"`;
 		
 		# feedback
 		my $perc_complete = int(($p_total/$no_paralogs)*100);
