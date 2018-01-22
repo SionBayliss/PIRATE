@@ -223,7 +223,7 @@ my $no_paralog_families = scalar(keys(%family_info));
 print " - $no_paralog_families families to split.\n";
 
 # sort loci list on group.
-print " - sorting loci list.\n";
+print " - sorting loci list\n";
 `awk \'{gsub("^g","",\$2); print \$0}\' $loci_list | sort -k2,2n --parallel=$threads | awk -v OFS='\t' '\$2="g"\$2 {print \$0}' > $output_dir/paralog_loci.sorted`;
 #`sort --parallel=$threads -k2,2 < $loci_list > $output_dir/paralog_loci.sorted`;
 
@@ -240,6 +240,7 @@ my $split_total = 0;
 open my $oloci, ">$output_dir/split_paralog_loci.tab" or die "$output_dir/split_paralog_loci.tab";
 
 open LOCI, "$output_dir/paralog_loci.sorted" or die "$output_dir/paralog_loci.sorted does not exist\n";
+print " - identifying and seperating core clusters\n";
 while ( <LOCI> ){
 	
 	my $line = $_;
