@@ -41,6 +41,8 @@ use File::Basename;
  Usage:
  -t|--threads	number of threads/cores used by PIRATE [default: 2]
  -q|--quiet	switch off verbose
+ -z		retain intermediate files [0 = none, 1 = retain pangenome 
+ 		files (default and PIRATE can be re-run), 2 = all]  
  -c|--check	check installation and run on example files
  -h|--help 	usage information
  
@@ -74,6 +76,7 @@ my $align = 0;
 my $pan_off = 0;
 my $threads = 2; 
 my $quiet = 0;
+my $retain = 1;
 my $help = 0;
 
 pod2usage(1) if scalar(@ARGV) == 0;
@@ -92,9 +95,10 @@ GetOptions(
 	
 	'align' => \$align,
 	'rplot'		=> \$r_plots,
-
 	'pan-off'		=> \$pan_off,
+	
 	'threads=i'	=> \$threads,
+	'z=i' => \$retain,
 	'quiet'		=> \$quiet,	
 	'help|?' 	=> \$help,
 
@@ -390,13 +394,14 @@ if ( $para_off == 0 ){
 		print "\nClassifing paralogous clusters:\n";
 		$time_start = time();
 		
-		if ( $nucleotide == 0 ){
-			system("perl $script_path/classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --threads $threads");
-			die " - ERROR: identify_paralogs.pl failed.\n" if $?;
-		}else{
-			system("perl $script_path/classify_paralogs.pl -k -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --threads $threads --nucleotide");
-			die " - ERROR: identify_paralogs.pl failed.\n" if $?;
-		}
+		my @para_args = ();
+		push(@para_args, "--nucleotide") if $nucleotide == 1;
+		push(@para_args, "-k") if $retain == 2;
+		my $para_args_cmd = join("", @para_args);
+		
+		system("perl $script_path/classify_paralogs.pl -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --threads $threads $para_args_cmd");
+		die " - ERROR: identify_paralogs.pl failed.\n" if $?;
+		
 		print " - completed in: ", time() - $time_start,"s\n";
 		print "\n-------------------------------\n\n";
 	
@@ -470,6 +475,43 @@ if ( $align == 1 ){
 	
 	print "\n-------------------------------\n\n";
 }
+
+# tidy up unwanted files
+if ($retain < 2){
+	
+	unlink "$pirate_dir/paralog_loci.sorted";
+	unlink "$pirate_dir/split_paralog_loci.tab";
+	unlink "$pirate_dir/error_links_summary.tab";
+	unlink "$pirate_dir/paralog_clusters.tab";
+	unlink "$pirate_dir/loci_paralog_catagories.tab";
+	unlink "$pirate_dir/cluster_alleles.tab";
+	
+	unlink glob "$pirate_dir/paralog_working/*";
+	rmdir "$pirate_dir/paralog_working/";
+	
+	unlink glob "$pirate_dir/genome_multifastas/*.fasta";
+	rmdir "$pirate_dir/genome_multifastas/";
+	
+	if ( $retain < 1 ){
+		unlink "$pirate_dir/genome2loci.tab";
+		unlink "$pirate_dir/genome_list.txt";
+		unlink "$pirate_dir/loci_list.tab";
+		unlink "$pirate_dir/pan_sequences.fasta";
+		unlink "$pirate_dir/pangenome_log.txt";
+	
+		unlink glob "$pirate_dir/co-ords/*.co-ords.tab";
+		rmdir "$pirate_dir/co-ords/";
+	
+		unlink glob "$pirate_dir/pangenome_iterations/*";
+		rmdir "$pirate_dir/pangenome_iterations/";
+		
+		if ( -e "$pirate_dir/feature_sequences/" ){		
+			unlink glob "$pirate_dir/feature_sequences/*.fasta";
+			rmdir "$pirate_dir/feature_sequences/";
+		}
+	}
+
+} 
 
 # End message and joke
 print "PIRATE completed in ",  time() - $PIRATE_start,"s\n\n";

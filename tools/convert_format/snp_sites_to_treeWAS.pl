@@ -147,7 +147,7 @@ my $no_alleles = scalar(@allele_list);
 my $no_included = scalar(keys(%include));
 my $no_incl_sites = scalar(keys(%included_sites));
 print " - ", scalar(@samples), " samples.\n";
-print " - $no_sites sites included $no_alleles alleles.\n";
+print " - $no_sites sites contain $no_alleles alleles.\n";
 print " - $no_included alleles in $no_incl_sites sites were within threshold frequency ($l_threshold - $h_threshold).\n";
 
 # print to file

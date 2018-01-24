@@ -132,8 +132,8 @@ while(<GC>){
 		if ( ($per_genomes >= $threshold) && ( $dosage <= $dosage_threshold ) ){
 		
 			# product info for gff
-			$loci_gene {$group} = $gene if $gff_file ne '' ;
-			$loci_product {$group} = $product if $gff_file ne '' ;					
+			$loci_gene {$group} = $gene;
+			$loci_product {$group} = $product;					
 		
 			# Store all loci for group
 			for my $idx ( 19..$#l ){
