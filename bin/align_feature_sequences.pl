@@ -423,7 +423,7 @@ close TEMP;
 print "\r - 100 % aligned\n" if $quiet == 0;
 unlink $temp;
 for my $cluster( keys %group_list ){
-	#unlink "$output_dir/$cluster.fasta";
+	unlink "$output_dir/$cluster.fasta";
 }
 
 exit

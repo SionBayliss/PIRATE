@@ -476,6 +476,12 @@ if ( $align == 1 ){
 	print "\n-------------------------------\n\n";
 }
 
+# print summary of gene families
+print "Summary of pangneome clusters:\n\n";
+system( "perl $script_path/table_summary.pl -i $pirate_dir/PIRATE.gene_families.tsv | tee $pirate_dir/PIRATE.pangenome_summary.txt" );
+print " - ERROR: could not create PIRATE.pangenome_summary.txt\n" if $?;
+print "\n-------------------------------\n\n";
+
 # tidy up unwanted files
 if ($retain < 2){
 	

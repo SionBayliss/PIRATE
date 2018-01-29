@@ -45,8 +45,6 @@ scale_colour_custom <- function(...){
 args = commandArgs(trailingOnly=TRUE)
 input_root <- args[1]
 
-#input_root <- "~/Desktop/Ben_Campy/IBS/PIRATE/"
-  
 ## Identify appropriate files in input directory
 
 # PIRATE gene family summary file 
@@ -207,7 +205,10 @@ if ( (require('ggtree')) & (require('phangorn')) ) {
     tree$edge.length <- abs(tree$edge.length)
     
     # midpoint root
-    tree <- midpoint(tree)
+    test_tree <- midpoint(tree)
+    if(is.binary.phylo(tree)){
+      tree <- midpoint(tree)
+    }
     
     # prepare tree plot 
     raw.tree.plot <- ggtree(tree)
@@ -218,7 +219,7 @@ if ( (require('ggtree')) & (require('phangorn')) ) {
     mx <- mx_raw + (max(raw.tree.plot$data$x)*0.3)
     
     # replot tree with limits
-    tree.plot <- ggtree(tree) + geom_tiplab(align=T, linesize = 0.75, size=1.75)
+    tree.plot <- ggtree(tree) + geom_tiplab(align=T, linesize = 0.5, size=1.75)
     tree.plot
     
     # prepare count of presence absence per sample
@@ -231,12 +232,15 @@ if ( (require('ggtree')) & (require('phangorn')) ) {
     core <- sum(apply(all_samples, 1, function(x)sum(x == "")) == 0)
     
     # size of pangenome vs tree
-    count_plot_1 <- data.frame(id = rownames(cluster_counts), values = cluster_counts-core, pangenome = "accessory")
-    count_plot_2 <- data.frame(id = rownames(cluster_counts), values = core, pangenome = "core")
-    count_plots <- rbind(count_plot_1, count_plot_2)
-
+    count_plot_core <- data.frame(id = rownames(cluster_counts), x = 0, xend = core, pangenome = "core")
+    count_plot_accessory <- data.frame(id = rownames(cluster_counts), x = core, xend = core+cluster_counts, pangenome = "accessory")
+    count_plots <- rbind(count_plot_core, count_plot_accessory)
+    
     # using geom_segment
-    tree_bar <- facet_plot(tree.plot+xlim_tree(mx), panel='Genome Size', data=count_plot, geom=geom_segment, aes(x=0, xend=values, y=y, yend=y), size=3, color='steelblue') + theme_tree2()
+    tree_bar <- facet_plot(tree.plot+xlim_tree(mx), panel='#Clusters', data=count_plots, geom=geom_segment, aes(x=x, xend=xend, y=y, yend=y, colour=pangenome), size=3) + theme_tree2() +
+      scale_colour_manual(name="", values=c("#386cb0","#ef3b2c"))+
+      ggtitle("Number of gene families per sample") +
+      plot_theme
     tree_bar
     
     # using barh from ggstance
@@ -244,50 +248,57 @@ if ( (require('ggtree')) & (require('phangorn')) ) {
     #tree_bar
     
     # pangenome coloured on no_alleles at max threshold using geom_segment  
-    tpos <- family_data %>% 
-      mutate(x = row_number()-1, xend = row_number(), fill =alleles_at_maximum_threshold) %>%
-      select(x, xend, fill)
-    tsub <- family_data[,20:length(family_data[1,])]
+    #tpos <- family_data %>% 
+    #  mutate(x = row_number()-1, xend = row_number(), fill = alleles_at_maximum_threshold) %>%
+    #  select(x, xend, fill)
+
     
-    # make annotation data - REWRITE
-    count <- 0
-    annotation_data <- data.frame(id = NULL, x = NULL, xend = NULL, fill=NULL)
-    for(i in 1:length(tsub[1,])){
-      header <- colnames(tsub)[i]
-      for (j in 1:length(tsub[,i])){
-        if(tsub[j,i] != ""){
-         count <- count + 1
-         temp <- data.frame(id = header, x = tpos$x[j], xend = tpos$xend[j], fill=tpos$fill[j])
-         annotation_data<- rbind(annotation_data, temp)
-        }
-      }
-    }
+    #tsub <- family_data[,20:length(family_data[1,])]
+    #tsub[] <- lapply(tsub, function(x) levels(x)[x])
+    #w <- which(tsub != "", arr.ind = TRUE)
+    #tsub[w] <- names(tsub)[w[,"col"]]
     
+    #tall <- cbind(tpos, tsub)
+    
+    # melt and reshape
+    #library(reshape2)
+    #annotation_data <- melt(tall, id=c("x","xend", "fill")) %>%
+    #  mutate(id = value) %>%
+    #  select(id, x, xend, fill) %>%
+    #  filter(id > "")
+
     # make phandango-like plot
-    phan_tree <- facet_plot(tree.plot+xlim_tree(mx), panel='Pangenome', data=annotation_data, 
-                       geom=geom_segment, aes(x=x, xend=xend, y=y, yend=y, colour=fill), size = 1, lineend = "square") +
-      theme_tree2() +
-      scale_colour_gradient(low = "#386cb0",  high = "#ef3b2c") +
-      ggtitle("test")+
-      theme()
-    #phan_tree
+  #  phan_tree <- facet_plot(tree.plot+xlim_tree(mx), panel='Pangenome', data=annotation_data,
+  #                     geom=geom_segment, aes(x=x, xend=xend, y=y, yend=y, colour=fill), size = 0.5, lineend = "square") #+
+  #    theme_tree2() +
+  #    scale_colour_gradient(low = "#386cb0",  high = "#ef3b2c") +
+  #    ggtitle("test")+
+  #    plot_theme()
+  #  phan_tree
   
   # create phandonago plot using heatmap
-  genotype_file <- system.file("examples/Genotype.txt", package="ggtree")
-  genotype <- read.table(genotype_file, sep="\t", stringsAsFactor=F)
+    
+  # make binary matrix (presence-absence)
+  hpos <- data.matrix(family_data[20:length(family_data[1,])]) 
+  hpos[hpos==1] <- NA
+  hpos[hpos > 1] <- 1
   
-  hpos <- family_data[20:length(family_data[1,])] %>%
-    t()
-  hpos[hpos!=""] <- 1
-  hpos[hpos==""] <- NA
-  hpos_plot <- as.data.frame(hpos, stringsAsFactors=F)
+  # replace binary with no_alleles
+  hpos2 <- matrix(data = rep(family_data$alleles_at_maximum_threshold, length(hpos[1,])),  ncol = length(hpos[1,]))
+  hpos_final <- hpos*hpos2
+  hpos_max <- as.integer(4*sd(family_data$alleles_at_maximum_threshold))
+  hpos_final[hpos_final >  hpos_max] <-   hpos_max
+  
+  # transpose
+  hpos_plot <- as.data.frame(t(hpos_final), stringsAsFactors=F)
 
   # make phandango plot
-  test_heat <- gheatmap(tree.plot, hpos_plot, low="blue", high="blue", colnames = F, 
-           offset = mx_raw*0.4, width = 2, color=NA) +
-    theme(legend.position = "none") +
-    scale_fill_manual(values = c("blue"))
-  #test_heat 
+  phandango_allele <- gheatmap(tree.plot, hpos_plot, low="blue", high="red", colnames = F, 
+           offset = mx_raw*0.5, width = 3, color=NA) +
+    theme(legend.position = "bottom") +
+    ggtitle("Pangenome coloured by number of alleles at maximum threshold") +
+    theme(plot.title = element_text(face = "bold", hjust = 0.5))
+  #phandango_allele 
   
   }
 }
@@ -310,8 +321,7 @@ pdf(sprintf("%s/PIRATE_plots.pdf", input_root, width=16, height=8, units="in"))
   }
   if ( (require('ggtree')) & (require('phangorn'))) {
     print(tree_bar)
-    #print(phan_tree)
-    print(test_heat)
+    print(phandango_allele)
   }
 
 dev.off()
