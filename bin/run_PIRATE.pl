@@ -461,12 +461,12 @@ if ( $align == 1 ){
 	
 	print "Aligning all feature sequences:\n";
 	
-	if( $nucleotide == 0 ){
-		system( "perl $script_path/align_feature_sequences.pl -i $pirate_dir/PIRATE.gene_families.tsv -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads");
-	}else{
-		system( "perl $script_path/align_feature_sequences.pl -n -i $pirate_dir/PIRATE.gene_families.tsv -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads");	
-	}
-	print "\n - ERROR: aligning pangenome sequences failed - is mafft installed?\n" if $?;
+	my @align_args = ();
+	push(@align_args, "-n") if $nucleotide == 1;
+	my $align_args_in = join(" ", @align_args);
+	
+	system( "perl $script_path/align_feature_sequences.pl -i $pirate_dir/PIRATE.gene_families.tsv -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads $align_args_in");
+	print "\n - ERROR: aligning pangenome sequences failed - is mafft in PATH?\n" if $?;
 	
 	unless($?){
 		system("perl $script_path/create_pangenome_alignment.pl -i $pirate_dir/PIRATE.gene_families.tsv -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
@@ -477,7 +477,7 @@ if ( $align == 1 ){
 }
 
 # print summary of gene families
-print "Summary of pangneome clusters:\n\n";
+print "Summary of pangenome clusters:\n\n";
 system( "perl $script_path/table_summary.pl -i $pirate_dir/PIRATE.gene_families.tsv | tee $pirate_dir/PIRATE.pangenome_summary.txt" );
 print " - ERROR: could not create PIRATE.pangenome_summary.txt\n" if $?;
 print "\n-------------------------------\n\n";

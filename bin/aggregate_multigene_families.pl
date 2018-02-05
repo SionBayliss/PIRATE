@@ -86,7 +86,7 @@ if( $no_groups ne $clusters_found ){
 	print " - $clusters_found paralog/erroneous clusters identified from ", scalar( keys %group_list ), " groups.\n";
 }
 
-# Parse all co-ordinate files for position in sequence of feature and extract sequence.
+# Parse all gff files for position of the feature and extract sequence.
 
 # Create directory for sequences
 unless ( -e  "$pirate_dir/cluster_nucleotide_sequences" ){ `mkdir $pirate_dir/cluster_nucleotide_sequences/`; }
