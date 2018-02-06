@@ -104,10 +104,10 @@ GetOptions(
 
 ) or die pod2usage(1);
 pod2usage(1) if $help;
-#pod2usage(-verbose => 2) if $man;
 
 # check dependencies
-system( "perl $script_path/check_dependencies.pl" ) && die if $?;
+system( "perl $script_path/check_dependencies.pl" );
+die " - ERROR: dependencies missing - see above\n" if $?;
 
 # variables 
 my $no_files = 0;
@@ -163,7 +163,6 @@ if( $quiet == 0 ){
 	print " - $no_files files in input directory.\n";
 	print " - PIRATE will be run on $steps amino acid % identity thresholds.\n";
 }
-
 
 # check features are CDS (amino acid or nucleotide) or alternative features (nucleotide only).
 my $genic = 0;

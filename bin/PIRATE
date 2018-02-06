@@ -75,7 +75,7 @@ my $commands = join(" ", @ARGV);
 # run PIRATE with verbose on/off or run test
 if( $test == 1 ){
 	
-	# check depndencies
+	# check dependencies
 	system( "perl $script_path/check_dependencies.pl" );
 	die " - ERROR: dependencies missing" if $?;
 	

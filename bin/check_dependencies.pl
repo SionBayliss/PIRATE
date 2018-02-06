@@ -28,7 +28,7 @@ $mcl = 1 if `command -v mcl;`;
 print " - ERROR: mcl not found in system path.\n" if $mcl == 0;
 
 # die if dependencies are not available.
-if ( ($cd_hit == 0) || ($blast == 0) || ($mcl == 0) || ($parallel == 0) ) { die "\n - ERROR: Dependencies not correctly installed.\n" };
+if ( ($cd_hit == 0) || ($blast == 0) || ($mcl == 0) || ($parallel == 0) ) { die "" };
 
 # check optional dependencies
 
@@ -39,9 +39,9 @@ $diamond_mkdb = "diamond makedb" if `command -v diamond makedb;`;
 $diamond_bin = "diamond blastp" if `command -v diamond blastp;`;
 
 my $diamond_err = 0;
-$diamond_err = 1 if $diamond_mkdb eq "";
-$diamond_err = 1 if $diamond_bin eq "";
-print "\n - WARNING: cannot find diamond binaries, cannot use --diamond command.\n" if $diamond_err == 1;
+$diamond_err++ if $diamond_mkdb eq "";
+$diamond_err++ if $diamond_bin eq "";
+print "\n - WARNING: cannot find diamond binaries, cannot use --diamond command.\n" if $diamond_err == 2;
 
 # R
 my $R = 0; 
