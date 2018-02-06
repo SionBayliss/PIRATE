@@ -63,8 +63,8 @@ GetOptions(
 pod2usage(1) if $help;
 
 # check for mandatory input arguments
-pod2usage( {-message => q{input directory is a required arguement}, -exitval => 1, -verbose => 1 } ) if $input_file eq ''; 
-pod2usage( {-message => q{input directory is a required arguement}, -exitval => 1, -verbose => 1 } ) if $fasta_dir eq ''; 
+pod2usage( {-message => q{input PIRATE.*.tsv is a required arguement}, -exitval => 1, -verbose => 1 } ) if $input_file eq ''; 
+pod2usage( {-message => q{fasta directory is a required arguement}, -exitval => 1, -verbose => 1 } ) if $fasta_dir eq ''; 
 
 # expand input and output files/directories
 $input_file = abs_path($input_file);

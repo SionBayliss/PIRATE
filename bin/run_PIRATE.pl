@@ -431,15 +431,21 @@ if ( $para_off == 0 ){
 print "\n-------------------------------\n\n";
 
 # create binary fasta file for fastree
-print "Creating binary tree\n";
-system ("perl $script_path/gene_cluster_to_binary_fasta.pl $pirate_dir/PIRATE.gene_families.tsv $pirate_dir/binary_presence_absence.fasta");
-print " - ERROR: could not create binary presence/absence fasta file.\n" if $?;
+if (`command -v fasttree;`){
 
-# make binary accessory gene tree in fastree
-unless ($?){
-	print " - running fasttree\n";
-	system( "fasttree -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
-	print " - ERROR: fasttree failed.\n" if $?;
+	print "Creating binary tree\n";
+	system ("perl $script_path/gene_cluster_to_binary_fasta.pl $pirate_dir/PIRATE.gene_families.tsv $pirate_dir/binary_presence_absence.fasta");
+	print " - ERROR: could not create binary presence/absence fasta file.\n" if $?;
+
+	# make binary accessory gene tree in fastree
+	unless ($?){
+		print " - running fasttree\n";
+		system( "fasttree -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
+		print " - ERROR: fasttree failed.\n" if $?;
+	}
+	
+}else{
+	print " - WARNING: fasttree is not in path - cannot create binary tree\n";
 }
 print "\n-------------------------------\n\n";
 
@@ -452,8 +458,7 @@ if ( $r_plots ne '' ){
 	print " - ERROR: plotting summary figures failed - are R dependencies installed?\n" if $?;
 	print " - completed in: ", time() - $time_start,"s\n";
 	print "\n-------------------------------\n\n";
-	
-	# [TO DO] - create R Shiny directory.
+
 }
 
 # [optional] align all gene sequences and produce alignment
