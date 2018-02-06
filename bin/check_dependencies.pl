@@ -28,7 +28,7 @@ $mcl = 1 if `command -v mcl;`;
 print " - ERROR: mcl not found in system path.\n" if $mcl == 0;
 
 # die if dependencies are not available.
-if ( ($cd_hit == 0) || ($blast == 0) || ($mcl == 0) || ($parallel == 0) ) { die "" };
+if ( ($cd_hit == 0) || ($blast == 0) || ($mcl == 0) || ($parallel == 0) ) { exit(2) };
 
 # check optional dependencies
 
