@@ -15,8 +15,9 @@ use Pod::Usage;
  -p|--paralogs		paralog cluster file [required] 
  -c|--clusters		cluster loci file [required] 
  -f|--fasta		multi-fasta file containing all sequences for analysis [required] 
- --threshold		threshold to use for identifying the seed cluster [required] 
+ --threshold		threshold to use for identifying the seed cluster [required]
  -o|--output		output directory [required] 
+ -l|--length		minimum length match for cdhit clustering [default: 0.8] 
  -m|--max		maximum number sequences that can be in one fission/fusion cluster per isolate [default: 3]
  -k|--keep 		keep all temporary files [default: off]
  -n|--nucleotide	use blastn [default: blastp]
@@ -36,7 +37,9 @@ my $cluster_loci = "";
 my $input_fasta = "";
 my $output_dir = "";
 my $threshold = "";
+my $length = 0.8;
 
+my $n = "";
 my $n_max = 3;
 my $threads = 2;
 my $nucleotide = 0;
@@ -57,6 +60,7 @@ GetOptions(
 	'quiet'		=> \$quiet,	
 	'nucleotide' => \$nucleotide,
 	'keep' => \$keep,
+	'word-size=i' => \$n,
 ) or pod2usage(1);
 
 # Check for inputs.
@@ -66,7 +70,9 @@ pod2usage(1) unless $paralog_clusters;
 pod2usage(1) unless $cluster_loci;
 pod2usage(1) unless $threshold;
 pod2usage(1) unless $input_fasta;
-pod2usage(1) unless $threshold;
+
+# make threshold a proportion
+$threshold = $threshold/100 if $threshold > 1; 
 
 # check output directory exists.
 die "- ERROR: $output_dir is not a directory\n" unless -d $output_dir;
@@ -219,6 +225,50 @@ for my $cluster ( keys %cluster_family ){
 	}close DATA;
 }
 
+# select appropriate word size for cdhit cluster threshold
+if ($n eq ""){
+
+	if( $nucleotide == 0 ){
+
+		# select appropriate word size
+		if ( $threshold > 0.7 ){
+			$n = 5;
+		}elsif ( $threshold > 0.6 ){
+			$n = 4;
+		}elsif ( $threshold > 0.5 ){
+			$n = 3;
+		}elsif ( $threshold > 0.4 ){
+			$n = 2;
+		}else{
+			$threshold = 0.4;
+			$n = 2;
+			print " - WARNING: cluster threshold below recommended setting.\n";
+			print " - Setting cluster threshold to 0.4 and n to 2";
+		}
+	
+	}else{
+
+		# select appropriate word size
+		if ( $threshold > 0.90 ){
+			$n = 11;
+		}elsif ( $threshold > 0.90 ){
+			$n = 9;
+		}elsif ( $threshold > 0.88 ){
+			$n = 7;
+		}elsif ( $threshold > 0.85 ){
+			$n = 6;
+		}elsif ( $threshold > 0.80 ){
+			$n = 5;
+		}else{
+			$threshold = 0.8;
+			$n = 4;
+			print " - WARNING: cluster threshold below recommended setting.\n";
+			print " - Setting cluster threshold to 0.8 and n to 4";
+		}
+	
+	}
+}
+
 # batch files for parallel
 print " - identifying paralogs\n - 0% complete     " if $quiet == 0;
 my $no_paralogs = scalar(keys(%paralogs));
@@ -239,7 +289,7 @@ for my $p ( sort keys %paralogs ){
 	if( ($p_count == $batch_no) || ($p_total == $no_paralogs) ){
 	
 		# run classify paralogs
-		`parallel -a $working/list.txt -j $threads "perl $script_path/run_classify_paralogs_batch.pl -g {} -f $working/{}.fasta -d $working/{}.data -o $working -m $n_max --nucleotide $nucleotide --threshold $threshold -k $keep -q $quiet"`;
+		`parallel -a $working/list.txt -j $threads "perl $script_path/run_classify_paralogs_batch.pl -g {} -f $working/{}.fasta -d $working/{}.data -o $working -m $n_max --nucleotide $nucleotide --threshold $threshold --word-size $n -k $keep -l $length -q $quiet"`; 
 		
 		# feedback
 		my $perc_complete = int(($p_total/$no_paralogs)*100);

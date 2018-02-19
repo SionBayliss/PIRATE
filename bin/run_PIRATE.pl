@@ -406,7 +406,7 @@ if ( $para_off == 0 ){
 	
 	}
 
-	# Seperate paralogous clusters if dosage == 1 per genome at any threshold.
+	# Separate paralogous clusters if dosage == 1 per genome at any threshold.
 	print "Split paralogous clusters:\n\n";
 	$time_start = time();
 	system( "perl $script_path/split_paralogs.pl $pirate_dir/loci_paralog_catagories.tab $pirate_dir/loci_list.tab $pirate_dir/ $threads");

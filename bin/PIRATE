@@ -18,6 +18,7 @@ my $output_dir = '';
 my $quiet = 0;
 my $help = 0;
 my $test = 0;
+my $test_n = 0;
 
 # preprocess ARGV to allow for commented options.
 my @temp_args = ();
@@ -37,6 +38,7 @@ GetOptions(
 	'quiet'		=> \$quiet,
 	'help'		=> \$help,
 	'check'		=> \$test,
+	'check-n'		=> \$test_n,
 ) or system("perl $script_path/run_PIRATE.pl -h");
 
 # help 
@@ -47,6 +49,7 @@ if ($help == 1){
 
 # check for test state
 $input_dir = "$script_path/../test/" if $test == 1;
+$input_dir = "$script_path/../test/" if $test_n == 1;
 
 # check input directory exists
 if ( $input_dir eq '' ){
@@ -73,7 +76,7 @@ push(@ARGV, "-h") if $help == 1;
 my $commands = join(" ", @ARGV);
 
 # run PIRATE with verbose on/off or run test
-if( $test == 1 ){
+if( ($test == 1) || ($test_n == 1) ){
 	
 	# check dependencies
 	system( "perl $script_path/check_dependencies.pl" );
@@ -90,7 +93,9 @@ if( $test == 1 ){
 
 	# run on test files
 	print "\nRunning PIRATE on test files:\n";
-	system("perl $script_path/run_PIRATE.pl -i $input_dir -o $output_dir -s \"50,75,98\" -r > $output_dir/PIRATE.log");
+	my $opt_args = "";
+	$opt_args = "--nucl" if $test_n == 1;
+	system("perl $script_path/run_PIRATE.pl -i $input_dir -o $output_dir -s \"50,75,98\" -r $opt_args > $output_dir/PIRATE.log");
 	
 	# check for clean run
 	if( $? ){

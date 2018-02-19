@@ -15,6 +15,7 @@ use Cwd 'abs_path';
  -d|--data		data file, contains name of loci, group and length of sequence [required] 
  -f|--fasta		fasta file containing all sequences for analysis [required] 
  -t|--threshold		threshold to use for identifying the seed cluster [required] 
+ -w|--word-size		word size for cd-hit [required] 
  -o|--output		output directory [required] 
  -m|--max		maximum number sequences that can be in one fission/fusion cluster per isolate [default: 3]
  -k|--keep 		keep all temporary files [default: off]
@@ -30,7 +31,9 @@ my $fasta = "";
 my $data = "";
 my $working = "";
 my $threshold = "";
+my $length_threshold = "0.8";
 
+my $n = "";
 my $n_max = 3;
 my $nucleotide = 0;
 
@@ -42,8 +45,10 @@ GetOptions(
 	'help|?' 	=> \$help,
 	'group=s' 	=> \$group,
 	'fasta=s'	=> \$fasta,
-	'threshold=i' => \$threshold,
+	'threshold=f' => \$threshold,
+	'length=f' => \$length_threshold,
 	'data=s' => \$data,
+	'word-size=i' => \$n,
 	'output=s' => \$working,
 	'max=i' => \$n_max,
 	'quiet=i'		=> \$quiet,	
@@ -58,6 +63,7 @@ pod2usage(1) unless $fasta;
 pod2usage(1) unless $data;
 pod2usage(1) unless $working;
 pod2usage(1) unless $threshold;
+pod2usage(1) unless $n;
 
 # check file locations
 $working = abs_path($working);
@@ -112,57 +118,15 @@ while (<DATA>){
 #$m_required = 2000 if($m_required < 2000); # set lowest
 		
 # run cd-hit on input fasta
-my $cluster_threshold = "0.5";
-my $length_threshold = "0.8";
 my $cdhit_log = "$working/$group.cdhit.log";
 if( $nucleotide == 0 ){
 
-	# select appropriate word size
-	my $n = "";
-	if ( $cluster_threshold > 0.7 ){
-		$n = 5;
-	}elsif ( $cluster_threshold > 0.6 ){
-		$n = 4;
-	}elsif ( $cluster_threshold > 0.5 ){
-		$n = 3;
-	}elsif ( $cluster_threshold > 0.4 ){
-		$n = 2;
-	}else{
-		$cluster_threshold = 0.4;
-		$n = 2;
-		die " - WARNING: cluster threshold below recommended setting.";
-		die " - Setting cluster threshold to 0.4 and n to 2";
-	}
-
-	# run cd-hit	
-	`$cd_hit_bin -i $working/$group.fasta -o $working/$group.cdhit -c $cluster_threshold -s $length_threshold -T 1 -g 1 -n $n -d 256 >> $cdhit_log`; # -M $m_required
+	`$cd_hit_bin -i $working/$group.fasta -o $working/$group.cdhit -c $threshold -s $length_threshold -T 1 -g 1 -n $n -d 256 >> $cdhit_log`; # -M $m_required
 	`mv $working/$group.cdhit $working/$group.cdhit.fasta`;
 	
 }else{
 
-	# select appropriate word size
-	my $n = "";
-	if ( $cluster_threshold > 0.90 ){
-		$n = 11;
-	}elsif ( $cluster_threshold > 0.90 ){
-		$n = 9;
-	}elsif ( $cluster_threshold > 0.88 ){
-		$n = 7;
-	}elsif ( $cluster_threshold > 0.85 ){
-		$n = 6;
-	}elsif ( $cluster_threshold > 0.80 ){
-		$n = 5;
-	}elsif ( $cluster_threshold > 0.75 ){
-		$n = 4;
-	}else{
-		$cluster_threshold = 0.75;
-		$n = 4;
-		die " - WARNING: cluster threshold below recommended setting.";
-		die " - Setting cluster threshold to 0.75 and n to 4";
-	}
-	
-	# run cd-hit
-	`$cd_hit_est_bin -i $working/$group.fasta -o $working/$group.cdhit -c $cluster_threshold -s $length_threshold  -T 1 -g 1 -n $n -d 256 -r 0 >> $cdhit_log`; # -M $m_required
+	`$cd_hit_est_bin -i $working/$group.fasta -o $working/$group.cdhit -c $threshold -s $length_threshold  -T 1 -g 1 -n $n -d 256 -r 0 >> $cdhit_log`; # -M $m_required
 	`mv $working/$group.cdhit $working/$group.cdhit.fasta`;
 }
 
