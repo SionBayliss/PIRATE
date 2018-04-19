@@ -1,0 +1,36 @@
+Creating pangenome on amino acid % identity.
+Input directory:	/home/sb2145/Desktop/PIRATE/GitHub/test/PIRATE
+Output directory:	/home/sb2145/Desktop/PIRATE/GitHub/test/PIRATE/pangenome_iterations
+Number of input files: 1
+Threshold(s): 50 75 98
+MCL inflation value: 1.5
+Homology test cutoff: 1E-6
+Loci file contains 15 loci from 4 genomes.
+
+ - Opening pan_sequences
+ - /home/sb2145/Desktop/PIRATE/GitHub/test/PIRATE/pan_sequences.fasta contains 15 sequences.
+ - Passing 15 loci to cd-hit at 100%  
+ - Passing 11 loci to cd-hit at 99.5%  
+ - Passing 11 loci to cd-hit at 99%  
+ - Passing 11 loci to cd-hit at 98.5%  
+ - Passing 11 loci to cd-hit at 98%  
+ - completed in 1 secs
+
+ - 4 core loci (26.6666666666667%)
+ - 11 non-core loci (73.3333333333333%)
+
+ - 6 representative loci passed to blast.
+
+ - running all-vs-all blastp on pan_sequences
+ - completed in 0 secs
+
+ - running mcl on pan_sequences at 50    
+ - 4 clusters at 50 % - completed in 0 secs
+ - running mcl on pan_sequences at 75    
+ - 4 clusters at 75 % - completed in 0 secs
+ - running mcl on pan_sequences at 98    
+ - 6 clusters at 98 % - completed in 1 secs
+
+ - reinflating clusters for pan_sequences
+ - Finished
+

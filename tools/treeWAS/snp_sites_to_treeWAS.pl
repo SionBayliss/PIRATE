@@ -2,16 +2,46 @@
 
 use strict;
 use warnings;
+use Getopt::Long qw(GetOptions);
+use Pod::Usage;
 
 # Convert snp-sites vcf output to input matrix for treeWAS.
 
-# input/output
-my $vcf = $ARGV[0];
-my $output_file = $ARGV[1];
+=head1  SYNOPSIS
 
-# frequency threshold
-my $l_threshold = 0.1;
-my $h_threshold = 0.90;
+ snp_sites_to_treeWAS.pl -i /path/to/vcf_file -o /path/to/output_file
+
+ -i|--input		input PIRATE.*.tsv file [required]
+ -o|--output		output treeWAS input file [required]
+ --low		min snp frequency to include in output 
+			[default: 0.05]
+ --high		max snp frequency to include in output 
+			[default: 0.95]
+ -h|--help		usage information
+ 
+=cut
+
+# variables
+my $vcf = "";
+my $output_file = "";
+
+my $l_threshold = 0.05;
+my $h_threshold = 0.95;
+
+my $help = 0; 
+
+GetOptions(
+
+	'help|?' 	=> \$help,
+	'input=s' 	=> \$vcf,
+	'output=s'	=> \$output_file,
+	'low=f' => \$l_threshold,
+	'high=f' => \$h_threshold,
+	
+) or pod2usage(1);
+pod2usage(1) if $help;
+pod2usage( {-message => q{input pirate file is a required arguement}, -exitval => 1, -verbose => 1 } ) if $vcf eq ''; 
+pod2usage( {-message => q{output file is a required arguement}, -exitval => 1, -verbose => 1 } ) if $output_file eq ''; 
 
 # parse vcf file.
 my $no_sites = 0;

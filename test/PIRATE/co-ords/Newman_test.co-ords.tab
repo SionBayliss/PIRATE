@@ -1,0 +1,4 @@
+Name	Gene	Start	End	Length	Type	Strand	Contig	Product
+Newman_test_00001	tetA_1	83564	84736	1173	CDS	Forward	Newman	Tetracycline resistance protein%2C class B
+Newman_test_00002	trpD2	1412367	1413365	999	CDS	Forward	Newman	Anthranilate phosphoribosyltransferase 2
+Newman_test_00003	mnhF1	905311	905604	294	CDS	Reverse	Newman	Na(+)/H(+) antiporter subunit F1

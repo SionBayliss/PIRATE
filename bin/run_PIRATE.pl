@@ -129,8 +129,8 @@ pod2usage( {-message => " - ERROR: input directory: $input_dir is not a director
 
 # Check for > 1 gff files in input directory.
 opendir(DIR, $input_dir);
-@files=grep{/\.gff/} readdir(DIR);
-$no_files=scalar(@files);
+@files = grep{/\.gff/} readdir(DIR);
+$no_files = scalar(@files);
 close DIR;
 pod2usage( {-message => " - ERROR: $no_files files with .gff extension in $input_dir", -exitval => 1, -verbose => 1 } ) unless $no_files>1; 
 

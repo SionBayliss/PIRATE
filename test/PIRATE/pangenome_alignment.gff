@@ -1,0 +1,6 @@
+##gff-version 3
+##sequence-region Pangenome 1 4425
+Pangenome	NA	CDS	1	294	.	+	0	ID=g01;gene=mnhF1;product=Na(+)/H(+) antiporter subunit F1
+Pangenome	NA	CDS	295	1293	.	+	0	ID=g02;gene=trpD2;product=Anthranilate phosphoribosyltransferase 2
+Pangenome	NA	CDS	1294	3030	.	+	0	ID=g03;gene=iucA;product=N(2)-citryl-N(6)-acetyl-N(6)-hydroxylysine synthase
+Pangenome	NA	CDS	3031	4425	.	+	0	ID=g04;gene=NA;product=hypothetical protein
