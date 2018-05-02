@@ -24,7 +24,7 @@ use Pod::Usage;
  			in output [default: 100]
  -d|--dosage		upper threshold of dosage to exclude from alignment 
  			[default: 0]
- --include_family		include family cluster when processing files 
+ --include_family	include family cluster when processing files 
 			containing multiple alleles over multiple thresholds  
  -h|--help		usage information
  
@@ -98,7 +98,7 @@ while(<INPUT>){
 		++$gene_count;
 	
 		# sanity check 
-		die " - ERROR: header not found in file" if @headers == 0; 
+		die " - ERROR: header not found in file" if scalar(@headers) == 0; 
 			
 		# variables		
 		my $a_name = $line[0];
