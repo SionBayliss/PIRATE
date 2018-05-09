@@ -40,7 +40,7 @@ my $output_file = '';
 my $l_threshold = 0.05;
 my $h_threshold = 0.95;
 
-my $dosage_threshold = "";
+my $dosage_threshold = 0;
 my $family_freq_l = 0;
 my $family_freq_h = 1;
 

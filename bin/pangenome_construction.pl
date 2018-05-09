@@ -101,7 +101,7 @@ my $output_dir = '';
 my $loci_list = '';
 
 my $perc = 98;
-my $steps = '';
+my $steps = "50,60,70,80,90,95,98";
 my $cd_low = 98;
 my $cd_step = 0.5;
 my $evalue = "1E-6";
@@ -372,6 +372,7 @@ for my $file( @files ){
 		# run cdhit
 		print " - Passing $no_included loci to cd-hit at $i%  \n" if $quiet == 0;
 		my $n = "";
+		my $cd_hit_out = "";
 		if( $nucleotide == 0 ){
 		
 			# select appropriate word size
@@ -390,8 +391,11 @@ for my $file( @files ){
 				print " - Setting cluster threshold (-c) to 0.4 and word size (-n) to 2";
 			}
 
-			# run cd-hit		
-			`$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log`;
+			# run cd-hit
+			my $cd_hit_command = "$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log";
+			print " - command: \"$cd_hit_command\"\n";
+			$cd_hit_out = `$cd_hit_command`;
+			
 
 		}else{
 		
@@ -417,9 +421,11 @@ for my $file( @files ){
 			}
 		
 			# run cdhit est
-			`$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log`;
+			my $cd_hit_command = "$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log";
+			print " - command: \"$cd_hit_command\"\n";
+			$cd_hit_out = `$cd_hit_command`;
 		}
-		die "cdhit failed.\n" if $?;
+		die " - ERROR: cdhit failed - $cd_hit_out.\n" if $?;
 		
 		# variables
 		my $c_name = "";
@@ -640,14 +646,15 @@ for my $file( @files ){
 	
 		# identify same-same lines
 		if( $line[0] eq $line[1] ){
-			$rep { $line[0] } = 2;
+		
+			$rep { $line[0] } = 2; # do not print placeholder line
 			
 			$av_bit = $line[11] if $av_bit eq "";
 			$av_bit = ($av_bit + $line[11]) / 2;
 			
 			print BLAST_TEMP "$line";
 		}
-		# [optional] filter on hsp percentage length - > hsp_perc_length removed.
+		# [optional] filter on hsp percentage length < hsp_perc_length removed.
 		elsif( $hsp_perc_length > 0 ){
 		
 			my $q_len = $line[3];
@@ -663,8 +670,8 @@ for my $file( @files ){
 			# print if both are > hsp_perc_length
 			if ( ( $hspVSq > $hsp_perc_length ) && ( $hspVShsp > $hsp_perc_length) ){
 				print BLAST_TEMP "$line";
-			}		
-		
+			}
+					
 		}
 		# otherwise print
 		else{
@@ -731,7 +738,8 @@ for my $file( @files ){
 			# run mcl on each subcluster independently.
 			my $cluster_no = 0;
 			my %l_hash = ();
-			open CLUSTERS, "$output_dir/$sample.mcl_$thresholds[$c-1].clusters" or die $!;
+			my $ct_file = "$output_dir/$sample.mcl_$thresholds[$c-1].clusters";
+			open CLUSTERS, "$ct_file" or die $!;
 			while (<CLUSTERS>){
 			
 				$cluster_no++;
@@ -743,6 +751,9 @@ for my $file( @files ){
 				foreach( @loci ){ $l_hash{$_} = $cluster_no };
 				
 			}close CLUSTERS;
+			
+			# check for clusters fom previous iteration
+			die " - ERROR: no clusters in $ct_file\n" if $cluster_no == 0;
 			
 			# make empty file for filtered blast results.
 			foreach(1..$cluster_no){ 
@@ -767,7 +778,7 @@ for my $file( @files ){
 				
 			}close BLAST;
 			
-			# make file containing blast file loctaion and output file parallel mcl.
+			# make file containing blast file location and output file parallel mcl.
 			open TEMP, ">$output_dir/mcl_sub/list.txt" or die $!;
 			foreach(1..$cluster_no){ 
 				print TEMP "$output_dir/mcl_sub/cluster_$_.blast\t$output_dir/mcl_sub/$sample.mcl_$_.clusters\n" or die $!;
@@ -775,13 +786,13 @@ for my $file( @files ){
 			
 			# run mcl in parallel. 
 			`parallel -a $output_dir/mcl_sub/list.txt --jobs $threads --colsep '\t' \"mcxdeblast --line-mode=abc --m9 --score=r {1} 2>/dev/null | mcl - --abc -te 1 -I $inflation_value -o {2} 2>/dev/null \"`;
-			die "mcl failed at $threshold\n" if $?;
+			die " - ERROR: mcl failed at $threshold\n" if $?;
 			
 			# compile clusters into one file for next iteration and remove original mcl cluster file.
 			open MCL_CONCAT, ">$output_dir/$sample.mcl_$threshold.clusters" or die $!;
 			for my $j (1..$cluster_no){ 
 			
-				open MCL_CLUSTER, "$output_dir/mcl_sub/$sample.mcl_$j.clusters" or die "No MCL cluster file for $sample - $j at $threshold\n";
+				open MCL_CLUSTER, "$output_dir/mcl_sub/$sample.mcl_$j.clusters" or die " - ERROR: no MCL cluster file for $sample - $j at $threshold\n";
 				while (<MCL_CLUSTER>){
 					print MCL_CONCAT $_;
 				}close MCL_CLUSTER;
