@@ -7,20 +7,24 @@ use warnings;
 use Getopt::Long qw(GetOptions :config no_ignore_case);
 use Pod::Usage;
 
-
 =head1  SYNOPSIS
 
  pangenome_graph.pl -i /path/to/PIRATE.gene_families.tsv -g /path/to/gff_directory/ -o /path/to/output_file 
-	
+
+ Input-Output:	
  -i|--input		input PIRATE.gene_families.tsv file [required]
  -g|--gffs		path to gff directory [required]
  -o|--output	path to output file [required]
- -h|--help 		usage information
- -c|--cluster   path to .cluster file containing clusterings based upon the pangnome graph [optional]
+ -c|--cluster   	path to .cluster file containing clusterings based upon the pangenome graph [optional]
  -fa|--fastg	path to fastg file of pangenome graph [optional]
- -fe|--features features to include in graph [default: CDS]
+ 
+ # filtering
  -d|--dosage 	exclude features with a dosage greater than this value [default: off]
- -a|--ascending sort .cluster file in ascending order of number of edges [default: descending]
+ -a|--ascending 	sort .cluster file in ascending order of number of edges [default: descending]
+ -fe|--features 	features to include in graph [default: CDS]
+ 
+ General:
+ -h|--help 		usage information
  
 =cut
 
@@ -34,7 +38,7 @@ my $fastg = "";
 my $features = "CDS";
 my $dosage_threshold = 0;
 my $ascending = 0;
-
+my $max_links = "10000000";
 my $help = 0;
 
 GetOptions(
@@ -47,8 +51,10 @@ GetOptions(
 	'features=s' => \$features,
 	'dosage=s' => \$dosage_threshold,
 	'ascending' => \$ascending,
+	'max-links=i' => \$max_links,
 ) or pod2usage(1);
-
+pod2usage(1) if $help == 1;
+ 
 # file check
 die " - ERROR: no input file specified" if $input eq "";
 die " - ERROR: no input file specified" if $output eq "";
@@ -63,6 +69,7 @@ my $regex = sprintf("\(%s\)", join("|", split(/,/, $features) ) );
 # variables
 my %cluster_loci = ();
 my %cluster_number = ();
+my %filtered_number = ();
 my %genome_loci = ();
 my @headers = ();
 my @filtered_clusters = ();
@@ -117,7 +124,8 @@ while(<IN>){
 			}	
 		}
 		# store removed
-		else{		
+		else{	
+			$filtered_number {$family} = $no_samples;
 			push( @filtered_clusters, $family);
 		}
 	}
@@ -370,9 +378,12 @@ while( $continue == 1 ){
 				# get cluster output number
 				my ($s_no, $c_no) = cluster_no($sn);
 				
+				# number of genomes in cluster
+				my $g_number = $cluster_number{$sn};
+							
 				# print connected nodes
 				my $order = 0;
-				for (@output_nodes) { print C_OUT "$_\t$s_no\t$c_no\t",++$order,"\n" }
+				for (@output_nodes) { print C_OUT "$_\t$s_no\t$c_no\t",++$order,"\t$g_number\n" }
 				
 				# final node
 				my $final_node = $output_nodes[$#output_nodes];
@@ -397,10 +408,21 @@ while( $continue == 1 ){
 					# sort on number of connecting edges descending order of no. samples.
 					my @sorted_counts = sort{ $edge_counts{$b}<=>$edge_counts{$a} } keys %edge_counts;
 					@sorted_counts = (sort{ $edge_counts{$a}<=>$edge_counts{$b} } keys %edge_counts) if $ascending == 1 ;
+					
+					# reduce number of connected nodes if > $max_links
+					if ($max_links > 0){
+						@sorted_counts = @sorted_counts[0..($max_links-1)] if ( @sorted_counts > $max_links );
+					}else{
+						@sorted_counts = ();
+					}
+				
 					for my $cn ( @sorted_counts ){
 					
 						if (!$processed{$cn}){
-					
+							
+							# number of genomes in cluster
+							my $g_number = $cluster_number{$cn};
+							
 							# output cluster number
 							my ($s_no, $c_no) = cluster_no($cn);
 			
@@ -411,7 +433,7 @@ while( $continue == 1 ){
 					
 							# print connected nodes
 							my $order = 0;
-							for my $j (@output_nodes) { print C_OUT "$j\t$s_no\t$c_no\t",++$order,"\n" }	
+							for my $j (@output_nodes) { print C_OUT "$j\t$s_no\t$c_no\t",++$order,"\t$g_number\n" }	
 					
 							# final node
 							my $final_node = $output_nodes[$#output_nodes];
@@ -454,7 +476,7 @@ while( $continue == 1 ){
 			$remaining_nodes{$process_node}{$sn} = 1; 
 
 			# process all connected nodes until none remain
-			while ( keys(%remaining_nodes) > 0 ){
+			while ( (keys(%remaining_nodes) > 0) && (keys(%remaining_nodes) <= $max_links) ){
 		
 				my %remain = ();
 				
@@ -467,12 +489,23 @@ while( $continue == 1 ){
 				}
 				
 				# process connecting nodes in descending order of no. samples/genomes.
-				my @sorted_counts =	sort { $edge_counts{$b}<=>$edge_counts{$a} } keys %edge_counts;
+				my @sorted_counts = sort { $edge_counts{$b}<=>$edge_counts{$a} } keys %edge_counts;
 				@sorted_counts = (sort{ $edge_counts{$a}<=>$edge_counts{$b} } keys %edge_counts) if $ascending == 1 ;
+				
+				# reduce number of connected nodes if > $max_links
+				if ($max_links > 0){
+					@sorted_counts = @sorted_counts[0..($max_links-1)] if ( @sorted_counts > $max_links );
+				}else{
+					@sorted_counts = ();
+				}
+				
 				for my $cn ( @sorted_counts ){
 					
 					if (!$processed{$cn}){
 					
+						# number of genomes in cluster
+						my $g_number = $cluster_number{$sn};
+				
 						# output cluster number
 						my ($s_no, $c_no) = cluster_no($cn);
 			
@@ -483,7 +516,7 @@ while( $continue == 1 ){
 				
 						# print connected nodes
 						my $order = 0;
-						for my $j (@output_nodes) { print C_OUT "$j\t$s_no\t$c_no\t",++$order,"\n" }	
+						for my $j (@output_nodes) { print C_OUT "$j\t$s_no\t$c_no\t",++$order,"\t$g_number\n" }	
 					
 						# final node
 						my $final_node = $output_nodes[$#output_nodes];
@@ -520,12 +553,15 @@ while( $continue == 1 ){
 			if ( $e_no == 0 ){
 			
 				++$graph_count;
+				
+				# number of genomes in cluster
+				my $g_number = $cluster_number{$n};
 			
 				# output cluster number
 				my ($s_no, $c_no) = cluster_no($n);
 				
 				# store 
-				print C_OUT "$n\t$s_no\t$c_no\t1\n";
+				print C_OUT "$n\t$s_no\t$c_no\t1\t$g_number\n";
 				$processed{$n} = 1;
 				
 			}			
@@ -542,7 +578,11 @@ while( $continue == 1 ){
 # add in filtered clusters
 for my $fc (@filtered_clusters){
 	++$graph_count;
-	print C_OUT "$fc\t$graph_count\t1\t1\n";				
+	
+	# number of genomes in cluster
+	my $g_number = $filtered_number{$fc};
+	
+	print C_OUT "$fc\t$graph_count\t1\t1\t$g_number\n";				
 }
 
 # sub-functions
