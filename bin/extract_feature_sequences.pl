@@ -131,78 +131,92 @@ while(<COORDS>){
 	
 		# Find sequence, revcomp if necessary.			
 		my $start = $line[2];
+		my $end = $line[3];
 		my $len = $line[4];				
 		my $strand = $line[6];
 		my $contig = $line[7];			
-	
-		# Prepare for output
-		my $seq = substr($contig_hash{$contig}, $start-1, $len); # account for zero indexing
 		
-		# revcomp if necessary.
-		if( $strand eq "Reverse" ){
-			$seq = reverse_complement($seq)->seq();
-		}
-		
-		# check for errors
-		if( $seq eq "" ){
-			print "Warning: no sequence for $locus_tag\n";
-		}
-		
-		# length of sequence 
-		my $l = length($seq);
-		
-		# exclude sequences if they do not match a number or criteria.
-		my $include = 1;
-		
-		# must be divisible by 3 
-		if( ($l % 3) != 0 ){
-			$include = 0;
-		}
-		
-		# have consensus stop codon.
-		if ( ! $stop_codons{substr($seq, -3)} ){
-			$include = 0;
-		}
-		
-		# have consensus start codon.
-		if ( ! $start_codons{substr($seq, 0, 3)} ){
-			$include = 0;
-		}
-		
-		# have <5% Ns
-		my $ns = () = $seq =~ /N/;
-		if( ($ns/$l) > "0.05" ){
-			$include = 0;
-		}
-		
-		# exclude sequences < length_threshold
-		if ( $l <= $length_threshold ){
-			$include = 0;
-		}
-		
-		if ( ($include == 1) || ( $check == 1 ) ){
-		
-			# optionally translate to amino acid sequence.
-			if( $nuc == 0 ){
+		# check feature matches contig and base psition exists
+		my $present = 1; 
+		if ( $contig_hash{$contig} ){
 			
-				$seq = translate($seq)->seq();
+			my $c_l = length($contig_hash{$contig});
+			$present = 0 if $end > $c_l;
+			
+		}else{
+			$present = 0;
+		}
+		
+		# process if present
+		if ( $present == 1 ){	
+			# Prepare for output
+			my $seq = substr($contig_hash{$contig}, $start-1, $len); # account for zero indexing
+		
+			# revcomp if necessary.
+			if( $strand eq "Reverse" ){
+				$seq = reverse_complement($seq)->seq();
+			}
+		
+			# check for errors
+			if( $seq eq "" ){
+				print "Warning: no sequence for $locus_tag\n";
+			}
+		
+			# length of sequence 
+			my $l = length($seq);
+		
+			# exclude sequences if they do not match a number or criteria.
+			my $include = 1;
+		
+			# must be divisible by 3 
+			if( ($l % 3) != 0 ){
+				$include = 0;
+			}
+		
+			# have consensus stop codon.
+			if ( ! $stop_codons{substr($seq, -3)} ){
+				$include = 0;
+			}
+		
+			# have consensus start codon.
+			if ( ! $start_codons{substr($seq, 0, 3)} ){
+				$include = 0;
+			}
+		
+			# have <5% Ns
+			my $ns = () = $seq =~ /N/;
+			if( ($ns/$l) > "0.05" ){
+				$include = 0;
+			}
+		
+			# exclude sequences < length_threshold
+			if ( $l <= $length_threshold ){
+				$include = 0;
+			}
+		
+			if ( ($include == 1) || ( $check == 1 ) ){
+		
+				# optionally translate to amino acid sequence.
+				if( $nuc == 0 ){
+			
+					$seq = translate($seq)->seq();
 				
-				# check for stop codons in middle of sequence
-				my $stop_count  = () = $seq =~ /\*/g; 
+					# check for stop codons in middle of sequence
+					my $stop_count  = () = $seq =~ /\*/g;
 				
-				# Print to file if only one stop codon in sequence
-				if( $stop_count == 1 ){				
+					# Print to file if only one stop codon in sequence
+					if( $stop_count == 1 ){				
+						print OUTFILE ">$locus_tag\n$seq\n";
+					}
+				
+				}else{
+			
 					print OUTFILE ">$locus_tag\n$seq\n";
-				}
 				
-			}else{
+				}		
 			
-				print OUTFILE ">$locus_tag\n$seq\n";
-				
-			}		
-			
+			}
 		}
-	
 	}
 	
 }close COORDS;

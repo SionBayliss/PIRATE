@@ -204,7 +204,7 @@ if ( $pan_off == 0 ){
 	$time_start = time();
 	unless( -d $gff_dir ){ unless ( mkdir $gff_dir ) { die " - ERROR: could not make PIRATE gff directory in $pirate_dir\n" } }
 	`ls $input_dir/*.gff | parallel -j $threads perl $script_path/parse_GFF.pl {} $gff_dir 2>/dev/null`;
-	die "\n - ERROR: ExtractSequence failed\n" if $?;
+	die "\n - ERROR: parse_GFF failed\n" if $?;
 
 	# check number of successfully standardised gff files
 	opendir(DIR, $gff_dir);
