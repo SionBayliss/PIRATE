@@ -184,11 +184,22 @@ while(<COORDS>){
 		
 			# optionally translate to amino acid sequence.
 			if( $nuc == 0 ){
+			
 				$seq = translate($seq)->seq();
-			}	
-		
-			# Print to file.				
-			print OUTFILE ">$locus_tag\n$seq\n";
+				
+				# check for stop codons in middle of sequence
+				my $stop_count  = () = $seq =~ /\*/g; 
+				
+				# Print to file if only one stop codon in sequence
+				if( $stop_count == 1 ){				
+					print OUTFILE ">$locus_tag\n$seq\n";
+				}
+				
+			}else{
+			
+				print OUTFILE ">$locus_tag\n$seq\n";
+				
+			}		
 			
 		}
 	

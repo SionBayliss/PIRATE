@@ -265,12 +265,13 @@ for my $file( @files ){
 				
 		if(/^>/){
 		
-			$seq_count++; 
+			#$seq_count++; 
 						
 			unless( scalar(@seq) == 0 ){
 				$temp_seq = join( "" , @seq );
 				push ( @seq_out, join("\n" , $header , $temp_seq) );
 				push ( @g_lengths, length($temp_seq) );
+				$seq_count++;
 			}	
 
 			$header = $line;	
@@ -288,9 +289,12 @@ for my $file( @files ){
 	print " - $file contains $seq_count sequences.\n";
 	
 	# store final sample
-	$temp_seq = join("" , @seq);
-	push ( @seq_out, join("\n" , $header , $temp_seq) );
-	push ( @g_lengths, length( $temp_seq ));
+	unless( scalar(@seq) == 0 ){
+		$temp_seq = join( "" , @seq );
+		push ( @seq_out, join("\n" , $header , $temp_seq) );
+		push ( @g_lengths, length($temp_seq) );
+		$seq_count++;
+	}	
 	
 	# sort file on length.
 	my @idx = sort { $g_lengths[$b] <=> $g_lengths[$a] } 0 .. $#g_lengths;
@@ -395,7 +399,7 @@ for my $file( @files ){
 
 			# run cd-hit
 			my $cd_hit_command = "$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log";
-			print " - command: \"$cd_hit_command\"\n";
+			#print " - command: \"$cd_hit_command\"\n";
 			$cd_hit_out = `$cd_hit_command`;
 			
 
@@ -422,7 +426,7 @@ for my $file( @files ){
 		
 			# run cdhit est
 			my $cd_hit_command = "$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log";
-			print " - command: \"$cd_hit_command\"\n";
+			#print " - command: \"$cd_hit_command\"\n";
 			$cd_hit_out = `$cd_hit_command`;
 		}
 		die " - ERROR: cdhit failed - $cd_hit_out.\n" if $?;
