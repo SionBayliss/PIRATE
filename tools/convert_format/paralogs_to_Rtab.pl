@@ -13,8 +13,9 @@ use Pod::Usage;
 
  Input/Output:
  -i|--input		input PIRATE file [required]
- -o|--output	output file [required]
- -t|--type		type of variant (ff - fssion/fusion, d - duplication) [required]		
+ -o|--output		output file [required]
+ -t|--type		type of variant (ff - fission/fusion, 
+ 			d - duplication) [required]		
  
  Filtering options:
  --fl|freq-low		min snp frequency to include in output 
@@ -23,7 +24,8 @@ use Pod::Usage;
 			[default: 1.00]
 			
  Output options:		
- -b|--binary		binary present/absent insetad of count [default: count]
+ -b|--binary		binary present/absent insetad of count 
+ 			[default: count]
 			
  General:
  -h|--help		usage information

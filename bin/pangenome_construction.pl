@@ -407,13 +407,11 @@ for my $file( @files ){
 				$n = 6;
 			}elsif ( $curr_thresh > 0.80 ){
 				$n = 5;
-			}elsif ( $curr_thresh > 0.75 ){
-				$n = 4;
 			}else{
-				$curr_thresh = 0.75;
+				$curr_thresh = 0.8;
 				$n = 4;
 				print " - WARNING: cluster threshold ($curr_thresh) below recommended setting.";
-				print " - Setting cluster threshold (-c) to 0.75 and word size (-n) to 4";
+				print " - Setting cluster threshold (-c) to 0.8 and word size (-n) to 4";
 			}
 		
 			# run cdhit est

@@ -121,6 +121,13 @@ while(<INPUT>){
 			}elsif( $line_array[8] =~ /product=(.+)*/ ){
 				$product = $1;
 			}
+			
+			# RAST gffs
+			if( $line_array[8] =~ /Name=([^;]+);/  ){
+				$product = $1;
+			}elsif( $line_array[8] =~ /Name=(.+)*/ ){
+				$product = $1;
+			}
 		
 			# store feature co-ordinates.
 			my @tmp_array=("$id", "$gene", "$sta", "$end", "$len", "$type", "$strand", "$contig");

@@ -130,8 +130,8 @@ if( $nucleotide == 0 ){
 	}else{
 		$cluster_threshold = 0.4;
 		$n = 2;
-		die " - WARNING: cluster threshold below recommended setting.";
-		die " - Setting cluster threshold to 0.4 and n to 2";
+		print " - WARNING: cluster threshold below recommended setting.";
+		print " - Setting cluster threshold to 0.4 and n to 2";
 	}
 
 	# run cd-hit	
@@ -152,13 +152,11 @@ if( $nucleotide == 0 ){
 		$n = 6;
 	}elsif ( $cluster_threshold > 0.80 ){
 		$n = 5;
-	}elsif ( $cluster_threshold > 0.75 ){
-		$n = 4;
 	}else{
-		$cluster_threshold = 0.75;
+		$cluster_threshold = 0.8;
 		$n = 4;
-		die " - WARNING: cluster threshold below recommended setting.";
-		die " - Setting cluster threshold to 0.75 and n to 4";
+		print " - WARNING: cluster threshold below recommended setting.";
+		print " - Setting cluster threshold to 0.8 and n to 4";
 	}
 	
 	# run cd-hit
