@@ -63,23 +63,23 @@ unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){
 
 	pangenome_construction.pl -i /path/to/fasta -o /path/to/output/
 
-	-h|--help 			usage information
-	-m|--man			man page 
-	-i|--input			input fasta file [nucleotide/aa]
-	-o|--output			output directory [default: input directory]
+	-h|--help 		usage information
+	-m|--man		man page 
+	-i|--input		input fasta file [nucleotide/aa]
+	-o|--output		output directory [default: input directory]
 	-t|--threads		number of threads/cores used to use [default: 2]
-	-p|--perc			% identity threshold to use for pangenome construction [default: 98]
-	-s|--steps			% identity thresholds to use for pangenome construction [default: 50,60,70,80,90,95,98]
-	-l|--loci			file containing loci and genome as seperate columns [required for core extraction during cdhit]
-	-q|--quiet			switch off verbose
+	-p|--perc		% identity threshold to use for pangenome construction [default: 98]
+	-s|--steps		% identity thresholds to use for pangenome construction [default: 50,60,70,80,90,95,98]
+	-l|--loci		file containing loci and genome as seperate columns [required for core extraction during cdhit]
+	-q|--quiet		switch off verbose
 	-cdl|--cdlow		cdhit lowest percentage id [default: 98]
 	-cds|--cdstep		cdhit step size [default: 0.5]
-	-f|--flat			mcl inflation value [default: 1.5]
-	-r|--retain			do not delete temp files
+	-f|--flat		mcl inflation value [default: 1.5]
+	-r|--retain		do not delete temp files
 	-n|--nucleotide		create pangenome on nucleotide sequence [default: amino acid]
-	-e|--evalue			e-value used for blast hit filtering [default: 1E-6]
+	-e|--evalue		e-value used for blast hit filtering [default: 1E-6]
 	-d|--diamond		use diamond instead of BLAST - incompatible with --nucleotide [default: off]
-	--hsp_prop			remove BLAST hsps that are < hsp_prop proportion of query length/query hsp length [default: 0]
+	--hsp_prop		remove BLAST hsps that are < hsp_prop proportion of query length/query hsp length [default: 0]
 
 =cut
 
@@ -101,12 +101,12 @@ my $output_dir = '';
 my $loci_list = '';
 
 my $perc = 98;
-my $steps = '';
+my $steps = "50,60,70,80,90,95,98";
 my $cd_low = 98;
 my $cd_step = 0.5;
 my $evalue = "1E-6";
 my $inflation_value = 1.5;
-my $hsp_perc_length = 0;
+my $hsp_prop_length = 0;
 
 my $diamond = 0;
 
@@ -128,7 +128,7 @@ GetOptions(
 	'retain' => \$retain,
 	'nucleotide' => \$nucleotide,
 	'evalue=f' => \$evalue,
-	'hsp_prop=f' => \$hsp_perc_length,
+	'hsp_prop=f' => \$hsp_prop_length,
 	'diamond' => \$diamond
 	
 ) or pod2usage(1);
@@ -151,7 +151,6 @@ pod2usage( {-message => q{input directory is a required arguement}, -exitval => 
 
 # check for presence of input/output directories.
 pod2usage( {-message => "input directory:$input_dir is not a directory", -exitval => 1, -verbose => 1 } ) unless -d $input_dir; 
-#pod2usage( {-message => "output directory:$output_dir is not a directory", -exitval => 1, -verbose => 1 } ) unless -d $output_dir; 
 pod2usage( {-message => "ERROR: diamond can only be applied to protein alignments", -exitval => 1, -verbose => 1 } ) if ( ($diamond == 1) && ($nucleotide == 1) );
 pod2usage( {-message => "ERROR: diamond binaries not found", -exitval => 1, -verbose => 1 } ) if ( ($diamond == 1) && ($diamond_err == 1) );
 
@@ -170,6 +169,9 @@ else{
 	@thresholds = sort  {$a <=> $b} @thresholds;
 }
 for (@thresholds) { if ( $_ !~ /^\d+$/ ) { die "Threshold value $_ is not numeric.\n" } }
+
+# check prop is not > 1
+die " - ERROR: hsp_prop is a proportion and must be < 1.\n" if $hsp_prop_length > 1; 
 
 # check files exist and have correct suffix.
 my @suffix_list = (".aa.fasta" , ".fasta" , ".fa" , ".fas");
@@ -372,6 +374,7 @@ for my $file( @files ){
 		# run cdhit
 		print " - Passing $no_included loci to cd-hit at $i%  \n" if $quiet == 0;
 		my $n = "";
+		my $cd_hit_out = "";
 		if( $nucleotide == 0 ){
 		
 			# select appropriate word size
@@ -390,8 +393,11 @@ for my $file( @files ){
 				print " - Setting cluster threshold (-c) to 0.4 and word size (-n) to 2";
 			}
 
-			# run cd-hit		
-			`$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log`;
+			# run cd-hit
+			my $cd_hit_command = "$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log";
+			print " - command: \"$cd_hit_command\"\n";
+			$cd_hit_out = `$cd_hit_command`;
+			
 
 		}else{
 		
@@ -415,9 +421,11 @@ for my $file( @files ){
 			}
 		
 			# run cdhit est
-			`$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log`;
+			my $cd_hit_command = "$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log";
+			print " - command: \"$cd_hit_command\"\n";
+			$cd_hit_out = `$cd_hit_command`;
 		}
-		die "cdhit failed.\n" if $?;
+		die " - ERROR: cdhit failed - $cd_hit_out.\n" if $?;
 		
 		# variables
 		my $c_name = "";
@@ -638,15 +646,16 @@ for my $file( @files ){
 	
 		# identify same-same lines
 		if( $line[0] eq $line[1] ){
-			$rep { $line[0] } = 2;
+		
+			$rep { $line[0] } = 2; # do not print placeholder line
 			
 			$av_bit = $line[11] if $av_bit eq "";
 			$av_bit = ($av_bit + $line[11]) / 2;
 			
 			print BLAST_TEMP "$line";
 		}
-		# [optional] filter on hsp percentage length - > hsp_perc_length removed.
-		elsif( $hsp_perc_length > 0 ){
+		# [optional] filter on hsp percentage length < hsp_prop_length removed.
+		elsif( $hsp_prop_length > 0 ){
 		
 			my $q_len = $line[3];
 			my $q_hsp_len = ($line[7] - $line[6]) + 1;
@@ -658,11 +667,11 @@ for my $file( @files ){
 			my $hspVShsp = $q_hsp_len / $s_hsp_len;
 			$hspVShsp = 1 - ($hspVShsp - 1) if $hspVShsp > 1; 
 			
-			# print if both are > hsp_perc_length
-			if ( ( $hspVSq > $hsp_perc_length ) && ( $hspVShsp > $hsp_perc_length) ){
+			# print if both are > hsp_prop_length
+			if ( ( $hspVSq > $hsp_prop_length ) && ( $hspVShsp > $hsp_prop_length) ){
 				print BLAST_TEMP "$line";
-			}		
-		
+			}
+					
 		}
 		# otherwise print
 		else{
@@ -729,7 +738,8 @@ for my $file( @files ){
 			# run mcl on each subcluster independently.
 			my $cluster_no = 0;
 			my %l_hash = ();
-			open CLUSTERS, "$output_dir/$sample.mcl_$thresholds[$c-1].clusters" or die $!;
+			my $ct_file = "$output_dir/$sample.mcl_$thresholds[$c-1].clusters";
+			open CLUSTERS, "$ct_file" or die $!;
 			while (<CLUSTERS>){
 			
 				$cluster_no++;
@@ -741,6 +751,9 @@ for my $file( @files ){
 				foreach( @loci ){ $l_hash{$_} = $cluster_no };
 				
 			}close CLUSTERS;
+			
+			# check for clusters fom previous iteration
+			die " - ERROR: no clusters in $ct_file\n" if $cluster_no == 0;
 			
 			# make empty file for filtered blast results.
 			foreach(1..$cluster_no){ 
@@ -765,7 +778,7 @@ for my $file( @files ){
 				
 			}close BLAST;
 			
-			# make file containing blast file loctaion and output file parallel mcl.
+			# make file containing blast file location and output file parallel mcl.
 			open TEMP, ">$output_dir/mcl_sub/list.txt" or die $!;
 			foreach(1..$cluster_no){ 
 				print TEMP "$output_dir/mcl_sub/cluster_$_.blast\t$output_dir/mcl_sub/$sample.mcl_$_.clusters\n" or die $!;
@@ -773,13 +786,13 @@ for my $file( @files ){
 			
 			# run mcl in parallel. 
 			`parallel -a $output_dir/mcl_sub/list.txt --jobs $threads --colsep '\t' \"mcxdeblast --line-mode=abc --m9 --score=r {1} 2>/dev/null | mcl - --abc -te 1 -I $inflation_value -o {2} 2>/dev/null \"`;
-			die "mcl failed at $threshold\n" if $?;
+			die " - ERROR: mcl failed at $threshold\n" if $?;
 			
 			# compile clusters into one file for next iteration and remove original mcl cluster file.
 			open MCL_CONCAT, ">$output_dir/$sample.mcl_$threshold.clusters" or die $!;
 			for my $j (1..$cluster_no){ 
 			
-				open MCL_CLUSTER, "$output_dir/mcl_sub/$sample.mcl_$j.clusters" or die "No MCL cluster file for $sample - $j at $threshold\n";
+				open MCL_CLUSTER, "$output_dir/mcl_sub/$sample.mcl_$j.clusters" or die " - ERROR: no MCL cluster file for $sample - $j at $threshold\n";
 				while (<MCL_CLUSTER>){
 					print MCL_CONCAT $_;
 				}close MCL_CLUSTER;

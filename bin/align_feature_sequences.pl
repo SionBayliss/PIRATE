@@ -27,20 +27,19 @@ die "Dependencies missing.\n" if $dep_err == 1;
 
 =head1  SYNOPSIS
 
-	align_feature_sequence.pl -i /path/to/PIRATE.gene_families.tab -g /path/to/gff/files/
+ align_feature_sequence.pl -i /path/to/PIRATE.gene_families.tab -g /path/to/gff/files/
 
-=head1 Descriptions
-	
-	-h|--help 			usage information
-	-m|--man			man page 
-	-q|--quiet			verbose off [default: on]
-	-i|--input			input PIRATE.gene_families.tab file [required]
-	-g|--gff			gff file directory [required]
-	-o|--output			output directory [default: input file path]	
-	-p|--processes		no threads/parallel processes to use [default: 2]
-	-t|--threshold		percentage threshold below which clusters are excluded [default: 0]
-	-d|--dosage			upper threshold of dosage to exclude from alignment [default: 1]
-	-n|--nucleotide 	align nucleotide sequence [default: off]
+ -i|--input		input PIRATE.gene_families.tab file [required]
+ -g|--gff		gff file directory [required]
+ -o|--output		output directory [default: input file path]	
+ -p|--processes		no threads/parallel processes to use [default: 2]
+ -t|--threshold		% threshold below which clusters are excluded
+ 			[default: off]
+ -d|--dosage		upper threshold of dosage to exclude from alignment 
+ 			[default: off]
+ -n|--nucleotide 	align nucleotide sequence [default: off]
+ -q|--quiet		verbose off [default: on]
+ -h|--help		usage information
 
 =cut
 
@@ -51,14 +50,13 @@ my $script_path = abs_path(dirname($0));
 $| = 1; # turn off buffering for real time feedback.
 
 # command line options
-my $man = 0;
 my $help = 0;
 my $quiet = 0;
 my $threads = 2;
 my $nucleotide = 0;
 
 my $threshold = 0;
-my $dosage_threshold = 1;
+my $dosage_threshold = 0;
 
 my $input_file = '';
 my $gff_dir = '';
@@ -67,7 +65,6 @@ my $output_dir = '';
 GetOptions(
 
 	'help|?' 	=> \$help,
-	'man' 		=> \$man,
 	'quiet' 	=> \$quiet,
 	'input=s' 	=> \$input_file,
 	'gff=s' 	=> \$gff_dir,
@@ -77,9 +74,8 @@ GetOptions(
 	'dosage=f'	=> \$dosage_threshold,
 	'nucleotide' => \$nucleotide,
 	
-) or pod2usage(2);
+) or pod2usage(1);
 pod2usage(1) if $help;
-pod2usage(-verbose => 2) if $man;
 
 # make paths absolute
 $input_file = abs_path($input_file);
@@ -147,29 +143,33 @@ while(<GC>){
 		my $per_genomes = ($no_genomes / $total_genomes) * 100;
 		
 		# filter on thresholds
-		#print "$per_genomes >= $threshold) && ($dosage < $dosage_threshold)\n";
-		if ( ($per_genomes >= $threshold) && ($dosage <= $dosage_threshold) ){
+		if ( $per_genomes >= $threshold ){
 		
-			# Store all loci for group
-			for my $idx ( 19..$#l ){
+			# [optional] filter on dosage 
+			if ( ($dosage_threshold == 0) || ($dosage <= $dosage_threshold) ){
 			
-				my $entry = $l[$idx];
-				my $entry_genome = $headers[ $idx ];
-				
-				unless( $entry eq "" ){
-				
-					$entry =~ s/\(|\)//g;
+				# Store all loci for group
+				for my $idx ( 19..$#l ){
 			
-					foreach my $split_entry ( split(/;|:|\//, $entry, -1) ){
+					my $entry = $l[$idx];
+					my $entry_genome = $headers[ $idx ];
 				
-						$loci_group { $split_entry } = $group;
-						$group_list { $group } { $split_entry } = 1;
-						$loci_genome { $split_entry } = $entry_genome;
+					unless( $entry eq "" ){
+				
+						$entry =~ s/\(|\)//g;
+			
+						foreach my $split_entry ( split(/;|:|\//, $entry, -1) ){
+				
+							$loci_group { $split_entry } = $group;
+							$group_list { $group } { $split_entry } = 1;
+							$loci_genome { $split_entry } = $entry_genome;
 					
-					}								
+						}								
 				
-				}
+					}
 		
+				}
+				
 			}
 		
 		}
@@ -424,6 +424,7 @@ print "\r - 100 % aligned\n" if $quiet == 0;
 unlink $temp;
 for my $cluster( keys %group_list ){
 	unlink "$output_dir/$cluster.fasta";
+	unlink "$output_dir/$cluster.nucleotide.fasta.temp" if $nucleotide == 1;
 }
 
 exit

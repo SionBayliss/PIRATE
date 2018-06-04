@@ -20,8 +20,8 @@ chomp $out_dir if $out_dir =~ /\/*/;
 my $file_name = fileparse($in_file,(".gff"));
 
 # remove commas, periods and whitespace
-$file_name =~ s/\.|\,|\s+/_/g;
-$file_name =~ s/_+/_/g;
+$file_name =~ s/\.|\,|\s+|\+|\-/_/g;
+$file_name =~ s/\_+/\_/g;
 
 # set full path to output file
 my $out_file = sprintf( "%s/%s.gff" , $out_dir , $file_name );
@@ -91,8 +91,8 @@ while(<INPUT>){
 		$output_type = "$feature_type\_" if $feature_type ne "CDS";
 		
 		# Increase annotation type number.
-		$annotation_no{$feature_type}++ unless $line =~ /^\S+\s+\S+\s+gene\t/; # increment count for all but gene annotation (gene annotation is redundant)
-	
+		$annotation_no{$feature_type}++;
+		
 		# variable that checks if there is a fasta header matching each line of annotation.  
 		$annotation_check{ $split_line[0] } = 1;
 		
@@ -100,7 +100,7 @@ while(<INPUT>){
 		my $prev_locus = "";
 		my $prev_ID = "";
 		my $prev_gene = "";
-		
+				
 		# check each tag for ID or locus_tag
 		my @add_out = ();
 		@add_data = split( ";" , $split_line[8] );

@@ -13,19 +13,21 @@ use Text::Wrap;
 
 =head1  SYNOPSIS
 
-	create_pangenome_alignment.pl -i /path/to/PIRATE.gene_families.tab -f /path/to/sequence/alignments/
+ create_pangenome_alignment.pl -i /path/to/PIRATE.gene_families.tab -f /path/to/sequence/alignments/
 
-	-h|--help 	usage information
-	-m|--man	man page 
-	-q|--quiet	verbose off [default: on]
-	-i|--input	input PIRATE.gene_families.tab file [required]
-	-f|--fasta	fasta file directory [required]
-	-o|--output	output fasta file [default: input file path]	
-	-g|--gff	create gff file for features in alignment [default:off]
-	-t|--threshold	percentage threshold for inclusion in output [default: 0]
-	-d|--dosage	upper threshold of dosage to exclude from alignment [default: 1]
-	-n|--n-character gap character to use in output alignment [default: N]
-	
+ -i|--input		input PIRATE.gene_families.tab file [required]
+ -f|--fasta		fasta file directory [required]
+ -o|--output		output fasta file [default: input file path]	
+ -g|--gff		create gff file for features in alignment 
+ 			[default:off]
+ -t|--threshold		% threshold for inclusion in output [default: 0]
+ -d|--dosage		upper threshold of dosage to exclude from alignment 
+ 			[default: 1]
+ -n|--n-character	gap character to use in output alignment 
+ 			[default: N]
+ -h|--help		usage information
+ -q|--quiet		verbose off
+ 
 =cut
 
 # switch off buffering
@@ -35,7 +37,6 @@ $|++;
 my $script_path = abs_path(dirname($0));
 
 # command line options
-my $man = 0;
 my $help = 0;
 my $quiet = 0;
 
@@ -50,7 +51,6 @@ my $gap_character = "N";
 
 GetOptions(
 	'help|?' 	=> \$help,
-	'man' 		=> \$man,
 	'quiet' 	=> \$quiet,
 	'input=s' 	=> \$input_file,
 	'fasta=s' 	=> \$fasta_dir,
@@ -59,13 +59,12 @@ GetOptions(
 	'threshold=i'	=> \$threshold,
 	'dosage=f'	=> \$dosage_threshold,
 	'n-character=s'	=> \$gap_character,		
-) or pod2usage(2);
+) or pod2usage(1);
 pod2usage(1) if $help;
-pod2usage(-verbose => 2) if $man;
 
 # check for mandatory input arguments
-pod2usage( {-message => q{input directory is a required arguement}, -exitval => 1, -verbose => 1 } ) if $input_file eq ''; 
-pod2usage( {-message => q{input directory is a required arguement}, -exitval => 1, -verbose => 1 } ) if $fasta_dir eq ''; 
+pod2usage( {-message => q{input PIRATE.*.tsv is a required arguement}, -exitval => 1, -verbose => 1 } ) if $input_file eq ''; 
+pod2usage( {-message => q{fasta directory is a required arguement}, -exitval => 1, -verbose => 1 } ) if $fasta_dir eq ''; 
 
 # expand input and output files/directories
 $input_file = abs_path($input_file);

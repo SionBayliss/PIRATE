@@ -138,7 +138,7 @@ for my $w (0..$no_cutoffs){
 	
 	if ($w == 0){
 		$upper = $cutoffs[$w];
-		$lower = 0;  
+		$lower = 0;
 	}
 	elsif( $w == $no_cutoffs ){
 		$upper = 100;
@@ -150,16 +150,16 @@ for my $w (0..$no_cutoffs){
 	}
 	
 	my $outval = "0";
-	$outval = $count_vals[$w] if defined($count_vals[$w]);
+	$outval = $count_vals[$w] if length($count_vals[$w]);
 	
 	my $ffval = "0";
-	$ffval = $ff_vals[$w] if defined($ff_vals[$w]);
+	$ffval = $ff_vals[$w] if length($ff_vals[$w]);
 	
 	my $mcval = "0";
-	$mcval = $mc_vals[$w] if defined($mc_vals[$w]);
+	$mcval = $mc_vals[$w] if length($mc_vals[$w]);
 	
 	my $aval = "0";
-	$aval = $a_vals[$w] if defined($a_vals[$w]);	
+	$aval = $a_vals[$w] if length($a_vals[$w]);	
 	
 	# print
 	print "$lower-$upper%\t$outval\t$aval\t$ffval\t$mcval\n";

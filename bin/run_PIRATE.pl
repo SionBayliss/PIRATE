@@ -104,10 +104,10 @@ GetOptions(
 
 ) or die pod2usage(1);
 pod2usage(1) if $help;
-#pod2usage(-verbose => 2) if $man;
 
 # check dependencies
-system( "perl $script_path/check_dependencies.pl" ) && die if $?;
+system( "perl $script_path/check_dependencies.pl" );
+die " - ERROR: dependencies missing - see above\n" if $?;
 
 # variables 
 my $no_files = 0;
@@ -129,8 +129,8 @@ pod2usage( {-message => " - ERROR: input directory: $input_dir is not a director
 
 # Check for > 1 gff files in input directory.
 opendir(DIR, $input_dir);
-@files=grep{/\.gff/} readdir(DIR);
-$no_files=scalar(@files);
+@files = grep{/\.gff/} readdir(DIR);
+$no_files = scalar(@files);
 close DIR;
 pod2usage( {-message => " - ERROR: $no_files files with .gff extension in $input_dir", -exitval => 1, -verbose => 1 } ) unless $no_files>1; 
 
@@ -163,7 +163,6 @@ if( $quiet == 0 ){
 	print " - $no_files files in input directory.\n";
 	print " - PIRATE will be run on $steps amino acid % identity thresholds.\n";
 }
-
 
 # check features are CDS (amino acid or nucleotide) or alternative features (nucleotide only).
 my $genic = 0;
@@ -407,7 +406,7 @@ if ( $para_off == 0 ){
 	
 	}
 
-	# Seperate paralogous clusters if dosage == 1 per genome at any threshold.
+	# Separate paralogous clusters if dosage == 1 per genome at any threshold.
 	print "Split paralogous clusters:\n\n";
 	$time_start = time();
 	system( "perl $script_path/split_paralogs.pl $pirate_dir/loci_paralog_catagories.tab $pirate_dir/loci_list.tab $pirate_dir/ $threads");
@@ -431,15 +430,21 @@ if ( $para_off == 0 ){
 print "\n-------------------------------\n\n";
 
 # create binary fasta file for fastree
-print "Creating binary tree\n";
-system ("perl $script_path/gene_cluster_to_binary_fasta.pl $pirate_dir/PIRATE.gene_families.tsv $pirate_dir/binary_presence_absence.fasta");
-print " - ERROR: could not create binary presence/absence fasta file.\n" if $?;
+if (`command -v fasttree;`){
 
-# make binary accessory gene tree in fastree
-unless ($?){
-	print " - running fasttree\n";
-	system( "fasttree -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
-	print " - ERROR: fasttree failed.\n" if $?;
+	print "Creating binary tree\n";
+	system ("perl $script_path/gene_cluster_to_binary_fasta.pl $pirate_dir/PIRATE.gene_families.tsv $pirate_dir/binary_presence_absence.fasta");
+	print " - ERROR: could not create binary presence/absence fasta file.\n" if $?;
+
+	# make binary accessory gene tree in fastree
+	unless ($?){
+		print " - running fasttree\n";
+		system( "fasttree -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
+		print " - ERROR: fasttree failed.\n" if $?;
+	}
+	
+}else{
+	print " - WARNING: fasttree is not in path - cannot create binary tree\n";
 }
 print "\n-------------------------------\n\n";
 
@@ -452,8 +457,7 @@ if ( $r_plots ne '' ){
 	print " - ERROR: plotting summary figures failed - are R dependencies installed?\n" if $?;
 	print " - completed in: ", time() - $time_start,"s\n";
 	print "\n-------------------------------\n\n";
-	
-	# [TO DO] - create R Shiny directory.
+
 }
 
 # [optional] align all gene sequences and produce alignment
@@ -461,12 +465,12 @@ if ( $align == 1 ){
 	
 	print "Aligning all feature sequences:\n";
 	
-	if( $nucleotide == 0 ){
-		system( "perl $script_path/align_feature_sequences.pl -i $pirate_dir/PIRATE.gene_families.tsv -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads");
-	}else{
-		system( "perl $script_path/align_feature_sequences.pl -n -i $pirate_dir/PIRATE.gene_families.tsv -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads");	
-	}
-	print "\n - ERROR: aligning pangenome sequences failed - is mafft installed?\n" if $?;
+	my @align_args = ();
+	push(@align_args, "-n") if $nucleotide == 1;
+	my $align_args_in = join(" ", @align_args);
+	
+	system( "perl $script_path/align_feature_sequences.pl -i $pirate_dir/PIRATE.gene_families.tsv -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads $align_args_in");
+	print "\n - ERROR: aligning pangenome sequences failed - is mafft in PATH?\n" if $?;
 	
 	unless($?){
 		system("perl $script_path/create_pangenome_alignment.pl -i $pirate_dir/PIRATE.gene_families.tsv -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
@@ -477,7 +481,7 @@ if ( $align == 1 ){
 }
 
 # print summary of gene families
-print "Summary of pangneome clusters:\n\n";
+print "Summary of pangenome clusters:\n\n";
 system( "perl $script_path/table_summary.pl -i $pirate_dir/PIRATE.gene_families.tsv | tee $pirate_dir/PIRATE.pangenome_summary.txt" );
 print " - ERROR: could not create PIRATE.pangenome_summary.txt\n" if $?;
 print "\n-------------------------------\n\n";

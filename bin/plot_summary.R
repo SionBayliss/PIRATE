@@ -276,7 +276,7 @@ if ( (require('ggtree')) & (require('phangorn')) ) {
   #    plot_theme()
   #  phan_tree
   
-  # create phandonago plot using heatmap
+  # create phandango plot using heatmap
     
   # make binary matrix (presence-absence)
   hpos <- data.matrix(family_data[20:length(family_data[1,])]) 
@@ -284,19 +284,19 @@ if ( (require('ggtree')) & (require('phangorn')) ) {
   hpos[hpos > 1] <- 1
   
   # replace binary with no_alleles
-  hpos2 <- matrix(data = rep(family_data$alleles_at_maximum_threshold, length(hpos[1,])),  ncol = length(hpos[1,]))
+  hpos2 <- matrix(data = rep(family_data$threshold, length(hpos[1,])),  ncol = length(hpos[1,]))
   hpos_final <- hpos*hpos2
-  hpos_max <- as.integer(4*sd(family_data$alleles_at_maximum_threshold))
+  hpos_max <- as.integer(4*sd(family_data$threshold))
   hpos_final[hpos_final >  hpos_max] <-   hpos_max
   
   # transpose
   hpos_plot <- as.data.frame(t(hpos_final), stringsAsFactors=F)
 
   # make phandango plot
-  phandango_allele <- gheatmap(tree.plot, hpos_plot, low="blue", high="red", colnames = F, 
+  phandango_allele <- gheatmap(tree.plot, hpos_plot, low="red", high="blue", colnames = F, 
            offset = mx_raw*0.5, width = 3, color=NA) +
     theme(legend.position = "bottom") +
-    ggtitle("Pangenome coloured by number of alleles at maximum threshold") +
+    ggtitle("Pangenome coloured by minimum clustering threshold") +
     theme(plot.title = element_text(face = "bold", hjust = 0.5))
   #phandango_allele 
   

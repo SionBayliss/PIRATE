@@ -108,8 +108,12 @@ while(<INPUT>){
 			
 			if($line_array[8] =~ /ID=(${isolate}_[^;]+);/){
 				$id = $1;
+				#print "$id\n";
+				die "$input_file" if $id eq "";
 			}elsif( $line_array[8] =~ /ID=(${isolate}_.+)*/ ){
 				$id = $1;
+				#print "$id\n";
+				die "$input_file" if $id eq "";
 			}
 			
 			if($line_array[8] =~ /gene=([^;]+);/){
