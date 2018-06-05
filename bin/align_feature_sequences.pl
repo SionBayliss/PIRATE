@@ -253,7 +253,21 @@ for my $genome ( @genomes ){
 				push(@c_seq, $seq);
 		
 			}else{
-				print "Warning: unexpected characters in line (below) for sample $genome\n$line\n";
+				
+				# replace characters that are not known bases with Ns.
+				my $rep_chars = $line;
+				$rep_chars =~ s/[ATGCNatcgn-]+//g;
+
+				for my $i ( split(//, $rep_chars ) ){
+					$line =~ s/$i/N/g;
+				} 
+				
+				# feedback
+				print "Warning: replacing unexpected characters ($rep_chars) with Ns for genome $genome\n";
+				
+				# store sequence
+				push(@c_seq, $line);
+				
 			}
 		}
 	
@@ -304,9 +318,16 @@ for my $genome ( @genomes ){
 				# Split info line.
 				my @info = split (/;/, $line_array[8]);
 				foreach( @info ){
+				
+					# Prokka
 					if ($_ =~ /^locus_tag=(.+)/){
 						$id = $1;
 					}
+					# RAST
+					if ($_ =~ /^ID=(.+)/){
+						$id = $1;
+					}
+					
 				}
 				
 				# Print to file if it matches group loci id.
@@ -355,7 +376,7 @@ for my $genome ( @genomes ){
 }
 
 # Check all sequenced have been extracted.
-for my $l_check ( keys %loci_group ){
+for my $l_check ( sort keys %loci_group ){
 	die " - ERROR: No sequence found for $l_check.\n" unless $stored_loci {$l_check};
 }
 
