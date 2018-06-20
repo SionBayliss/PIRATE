@@ -18,7 +18,7 @@ use Pod::Usage;
  -c|--cluster   	path to .cluster file containing clusterings based upon the pangenome graph [optional]
  -fa|--fastg	path to fastg file of pangenome graph [optional]
  
- # filtering
+ Filtering options:
  -d|--dosage 	exclude features with a dosage greater than this value [default: off]
  -a|--ascending 	sort .cluster file in ascending order of number of edges [default: descending]
  -fe|--features 	features to include in graph [default: CDS]
