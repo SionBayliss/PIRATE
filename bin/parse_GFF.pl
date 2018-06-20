@@ -38,6 +38,7 @@ my $fasta_line_count = 0;
 my %annotation_check;
 my %contig_check;
 my $fail_match=0;
+my $header = "";
 
 # Parse input 
 open INPUT, "$in_file" or die $!;
@@ -52,11 +53,11 @@ while(<INPUT>){
 		push(@output_array, $line);
 
 	}elsif ( $line =~ /^>(.+)/ ){ # store previous sequence in output array.
-	
 		
+		$header = $1;
+	
 		# store sequence and print to file unless first entry.
-		$fasta_out = join("", @fasta_line);
-		push(@output_array, $fasta_out) unless $fasta_line_count == 0;			
+		push(@output_array, @fasta_line) unless $fasta_line_count == 0;			
 		@fasta_line=();
 		
 		# add header
@@ -68,12 +69,13 @@ while(<INPUT>){
 		# increment count of fasta lines;
 		$fasta_line_count++
 		
-	}elsif( $store == 1 ){ # all lines after FASTA should be DNA sequence. 
+	}elsif( ($store == 1) && (/\S+/) ){ # all lines after FASTA should be DNA sequence. 
 		
 		# check all characters are as expected.
 		$line=uc($line);
+
 		if($line !~ /[ATCGN]+/){
-			die "***** contains non-ATCGN characters";
+			die " - WARNING: $in_file - contig $header contains non-ATCGN characters\n";
 		}else{
 			push(@fasta_line, "$line");
 		}
@@ -142,23 +144,24 @@ while(<INPUT>){
 		
 		# add to output array
 		push( @output_array, join("\t", @split_line[0..7], join(";", @add_out) ) );
-		#print join("\t", @split_line[0..7], join(";", @add_out) ), "\n";
 		
 	}elsif(/^#/){
+	
 		push(@output_array, $line);
-	}else{
+		
+	}elsif( /\S+/ ){
 	
 		# check contig info is present for all annotation (inc. unmodified annotation)
 		@split_line = split( "\t" , $line ); 
 		$annotation_check{$split_line[0]} = 1;
 		push(@output_array, $line);
+		
 	}
 }close INPUT;
 
 # add final sequence to output.
 if ( scalar(@fasta_line) > 0 ){
-	$fasta_out = join("", @fasta_line);
-	push(@output_array, $fasta_out);			
+	push(@output_array, @fasta_line);		
 }
 
 # check contigs names match annotation
@@ -170,9 +173,9 @@ foreach( keys %annotation_check ){
 
 # check for errors and then print to file 
 if( $fasta_line_count == 0 ){
-	die "$file_name did not contain any sequences - GFF should contain sequences after annotation\n";
+	die " - WARNING: $file_name  - did not contain any sequences - GFF should contain sequences after annotation\n";
 }elsif( $fail_match == 1 ){
-	die "$file_name - annotation did not match contig names\n";
+	die " - WARNING: $file_name - annotation did not match contig names\n";
 }else{
 	open OUTPUT, ">$out_file" or die $!;
 	foreach(@output_array){

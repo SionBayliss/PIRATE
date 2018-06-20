@@ -201,16 +201,23 @@ if ( $pan_off == 0 ){
 	# standardise and check input gffs (contain sequence and annotation matches contig nomenclature) 
 	print "\n-------------------------------\n\n";
 	print "Standardising and checking input files:\n";
+	
 	$time_start = time();
+	
+	# make directory
 	unless( -d $gff_dir ){ unless ( mkdir $gff_dir ) { die " - ERROR: could not make PIRATE gff directory in $pirate_dir\n" } }
-	`ls $input_dir/*.gff | parallel -j $threads perl $script_path/parse_GFF.pl {} $gff_dir 2>/dev/null`;
-	die "\n - ERROR: parse_GFF failed\n" if $?;
+	
+	# clear existing gffs
+	unlink glob "$gff_dir/*.gff";
+	`echo -n "" > $pirate_dir/gff_parser_log.txt`;
+	`ls $input_dir/*.gff | parallel -j $threads perl $script_path/parse_GFF.pl {} $gff_dir | tee $pirate_dir/gff_parser_log.txt`;
 
 	# check number of successfully standardised gff files
 	opendir(DIR, $gff_dir);
 	@files = grep{/\.gff/} readdir(DIR);
 	$no_files = scalar(@files);
 	close DIR;
+	
 	if ( $no_files < 2 ){
 		die " - ERROR: too few gff files ($no_files) have passed QC to be analysed by PIRATE.\n";
 	}else{
