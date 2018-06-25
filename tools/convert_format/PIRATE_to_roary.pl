@@ -76,7 +76,7 @@ while(<CLUSTERS>){
 		}
 		
 		# print appropriate variables
-		my @out_vars = ( $vars[1], $vars[2], $vars[3], $vars[6], "0", $vars[7], "$count", "$count", "0", "", "", $vars[16], $vars[17], $vars[18]);
+		my @out_vars = ( "$vars[0]--$vars[1]", $vars[2], $vars[3], $vars[6], "0", $vars[7], "$count", "$count", "0", "", "", $vars[16], $vars[17], $vars[18]);
 		
 		# join and print outputs
 		print OUTPUT "\"", join("\",\"", @out_vars, @vars[19..$#vars])."\"\n";
@@ -88,6 +88,6 @@ close CLUSTERS;
 close OUTPUT;
 
 # feedback
-print " - $count clusters added to output file\n";
+print " - $count entries added to output file\n";
 
 exit
