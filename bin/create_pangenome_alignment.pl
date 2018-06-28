@@ -15,16 +15,23 @@ use Text::Wrap;
 
  create_pangenome_alignment.pl -i /path/to/PIRATE.gene_families.tab -f /path/to/sequence/alignments/
 
+ Input/Output:
  -i|--input		input PIRATE.gene_families.tab file [required]
  -f|--fasta		fasta file directory [required]
  -o|--output		output fasta file [default: input file path]	
  -g|--gff		create gff file for features in alignment 
  			[default:off]
+ 
+ Filtering Options:
+ -l|--list		list of samples to include in outputs [default: off]
  -t|--threshold		% threshold for inclusion in output [default: 0]
  -d|--dosage		upper threshold of dosage to exclude from alignment 
  			[default: 1]
  -n|--n-character	gap character to use in output alignment 
  			[default: N]
+ 
+ General Options:
+ -c|--column	index column for start of isolate headers [default: 19]	
  -h|--help		usage information
  -q|--quiet		verbose off
  
@@ -43,13 +50,17 @@ my $quiet = 0;
 my $threshold = 0;
 my $dosage_threshold = 1;
 
+my $list = "";
+
 my $input_file = '';
 my $fasta_dir = '';
 my $output_file = '';
 my $gff_file = '';
 my $gap_character = "N";
+my $index_column = 19;
 
 GetOptions(
+
 	'help|?' 	=> \$help,
 	'quiet' 	=> \$quiet,
 	'input=s' 	=> \$input_file,
@@ -58,7 +69,10 @@ GetOptions(
 	'gff=s'	=> \$gff_file,
 	'threshold=i'	=> \$threshold,
 	'dosage=f'	=> \$dosage_threshold,
-	'n-character=s'	=> \$gap_character,		
+	'n-character=s'	=> \$gap_character,
+	'list=s' => \$list,
+	'column=i' => \$index_column,
+			
 ) or pod2usage(1);
 pod2usage(1) if $help;
 
@@ -74,8 +88,28 @@ $output_file = "$input_dir/PangenomeAlignment.fas" if $output_file eq '';
 $output_file = abs_path($output_file);
 
 # chack gff directory exists.
-die "Error: fasta directory not found.\n" unless -d "$fasta_dir";
+die " - Error: fasta directory not found.\n" unless -d "$fasta_dir";
 
+# [optional] parse list
+my %shash = ();
+if ( $list ne "" ){
+
+	open LIST, "$list" or die " - ERROR: could not open list - $list\n";
+	while (<LIST>){
+	
+		if(/(\S+)/){
+			$shash{$1} = 1;
+		}
+		
+	}close LIST;
+	
+	# feedback
+	my $no_sam = scalar(keys %shash);
+	print " - $no_sam samples in sample list (-l) will be included in output\n";
+		
+}
+my @samples = keys(%shash); 
+ 
 # make sure gap character is backslashed 
 $gap_character = quotemeta($gap_character);
 
@@ -87,10 +121,11 @@ my %loci_genome; # loci in genome.
 my %loci_gene; # gene
 my %loci_product; # product
 
-my @headers = ();
-my @genomes = ();
 my $total_genomes = 0;
-my $no_headers = 0; 
+
+my @headers = ();
+my @header_idx = ();
+my @header_out = ();
 
 # Parse multigene/paralog clusters - store in groups hash.
 open GC, "$input_file" or die "$!";
@@ -99,34 +134,66 @@ while(<GC>){
 	my $line =$_;
 	$line =~ s/\R//g;
 	
-	if(/^allele_name\t/){
+	my @l = split ( /\t/, $line, -1 );
 		
-		@headers = split (/\t/, $line, -1 );
-		$no_headers = scalar(@headers);
+	if(/^allele/){
 		
-		@genomes = @headers[19.. ($no_headers-1) ];
-		$total_genomes = scalar(@genomes);		
+		@headers = @l;
+		
+		# check all samples are in headers
+		my $found = 0;
+		my %checkhash = %shash;
+
+		for my $i ($index_column..$#l){
+			
+			if ( $list ne "" ){
+				if ( $shash{$headers[$i]} ){
+					++$found; 
+				 	$checkhash{$headers[$i]} = "found";
+				 	push(@header_idx, $i);
+				 	push(@header_out, $headers[$i]);
+				}
+			}else{
+				++$found; 
+				 $checkhash{$headers[$i]} = "found";
+				 push(@header_idx, $i);
+				 push(@header_out, $headers[$i]);
+			}
+			 
+		} 		
+		
+		$total_genomes = scalar(@header_out);	
+		@samples = @header_out if $list eq "";
+		
+		# feedback
+		if ( scalar(@samples) != $found ){
+			for (keys %checkhash){ print " - ERROR: sample $_ not in header line\n" if $checkhash{$_} ne "found" }
+			die " - ERROR: Samples in gff directory not found in header line\n";
+		}
 		
 	}else{
 		
 		# sanity check 
-		die "No header line in $input_file" if scalar(@headers) == 0;
-		
-		my @l = split ( /\t/, $line, -1 );
-		
+		die "No header line in $input_file" if scalar(@header_out) == 0;
+				
 		# define group values
 		my $group = $l[1];
-		my $no_genomes = $l[6];	
-		
-		my $per_genomes = ($no_genomes / $total_genomes) * 100;
-		
+
+	
 		my $product = $l[3];
 		my $gene = $l[2];
 
 		my $dosage = $l[7]; # average dose 
 		
 		my $entry_genome = "";
-	
+		
+		# check number of genomes containing gene family
+		my $no_genomes = 0;	
+		for my $idx ( @header_idx ){
+			++$no_genomes if $l[$idx] ne "";
+		}
+		my $per_genomes = ($no_genomes / $total_genomes) * 100;
+		
 		# filter on thresholds
 		if ( ($per_genomes >= $threshold) && ( $dosage <= $dosage_threshold ) ){
 		
@@ -135,7 +202,7 @@ while(<GC>){
 			$loci_product {$group} = $product;					
 		
 			# Store all loci for group
-			for my $idx ( 19..$#l ){
+			for my $idx ( @header_idx ){
 			
 				my $entry = $l[$idx];
 				$entry_genome = $headers[ $idx ];
@@ -216,8 +283,6 @@ for my $file ( sort keys %group_list ){
 			my $no_Ns = () = $temp_seq =~ /$gap_character/g;
 			my $len  = $l_raw - $no_Ns;
 			
-			#print $temp_seq if $no_Ns > 0;
-			
 			# Store sequence and length if locus genome information was in gene_families file ###
 			$seq_store{$header} = $temp_seq if $loci_genome{$header};
 			$l_store{$header} = $len if $loci_genome{$header};
@@ -249,7 +314,7 @@ for my $file ( sort keys %group_list ){
 	$alignment_length = $alignment_length + $l_raw;
 	
 	# Store per genome.
-	for my $g ( @genomes ){
+	for my $g ( @header_out ){
 		
 		my $seq = "";
 		
@@ -283,7 +348,7 @@ print "\r - 100 % clusters added to output\n" unless $quiet == 1;
 
 # check all sequences are correct (equal length)
 my $l_check = 0;
-for my $g ( @genomes ){
+for my $g ( @header_out ){
 
 	my $l_temp = length( join("", @{$sequence_out{$g}}) );
 	
@@ -298,7 +363,7 @@ for my $g ( @genomes ){
 print " - printing to output file\n" unless $quiet == 1;
 #$Text::Wrap::columns = 80;
 open OUT, ">$output_file" or die "Could not write to $output_file";
-for my $g ( @genomes ){
+for my $g ( @header_out ){
 
 	my $seq_out = join("", @{$sequence_out{$g}});
 	
@@ -326,6 +391,8 @@ if ( $gff_file ne '' ){
 	close GFF;
 	
 }
-print "Error; gff alignment length ($alignment_length) does not match sequence length ($l_check).\n" if $alignment_length != $l_check;
 
+# error checking and feedback
+print " - ERROR: gff alignment length ($alignment_length) does not match sequence length ($l_check).\n" if $alignment_length != $l_check;
+print " - Output alignment length: $alignment_length bp\n";
 exit
