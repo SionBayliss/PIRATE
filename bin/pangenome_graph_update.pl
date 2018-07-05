@@ -654,17 +654,17 @@ for my $n ( keys %cluster_number ) { #"g00415"
 		$syn_blocks{$n_blocks}{'in'} = $org_clustn;
 		
 		# store info on synteny blocks that clusters belong to and print to cluster file.
-		for (@block) { 
+		for my $m (0..$#block) { 
 			
 			# remove -r 
-			my $iso = $_;
+			my $iso = $block[$m];
 			$iso =~ s/-r//;
 			
 			# store in hash
 			$syn_block_isolates {$iso} = $n_blocks;
 			
 			# print to file
-			print C1 "$iso\t$n_blocks\n";
+			print C1 "$iso\t$n_blocks\t",$m+1,"\n";
 		}		
 				
 	}
@@ -699,7 +699,7 @@ for my $i (1..$n_blocks){
 		my $c_block_iso = $syn_blocks{$c_block}{'in'};
 		if ( $c_block_iso == $no_iso ){
 		
-			print "yes\n";
+			#print "yes\n";
 			my @c_block = @{$syn_blocks{$c_block}{'block'}};
 			my @c_up = @{$syn_blocks{$c_block}{'up'}};
 			my @c_down = @{$syn_blocks{$c_block}{'down'}};
