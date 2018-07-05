@@ -111,12 +111,12 @@ while(<IN>){
 		my $no_samples = $vars[6];
 		my $dosage = $vars[7];
 		
-		# store no_samples per cluster
-		$cluster_number{$family} = $no_samples;
-		
 		# [optional filter on dosage]
 		if ( ($dosage_threshold == 0) || ($dosage <= $dosage_threshold) ){
-						
+		
+			# store no_samples per cluster
+			$cluster_number{$family} = $no_samples;
+				
 			# loop through all loci for all genomes.
 			for my $i (19..$#vars){
 		
@@ -162,10 +162,6 @@ if($dosage_threshold == 0) {
 
 # parse gff files and store connections between gene families
 my %edges = ();
-my %rev_edges = ();
-
-my %links = ();
-
 my %node_links = ();
 for my $sample( @genomes ){
 	
@@ -254,15 +250,12 @@ for my $sample( @genomes ){
 									die " - ERROR: could not store orientation: $cluster_o1($stored_direction) - $cluster_o2($strand)\n";
 								}
 								
-								# store links - oriented on relevant cluster
-								$links{$cluster_o1}{"D"}{"$cluster_o2-r"}++;
-								$links{$cluster_o2}{"D"}{"$cluster_o1-r"}++;
-								
-								
 							}
 							# orientation ( <- -> i.e. 1R 2F / 2R 1F )
 							elsif ( ( $stored_direction eq "R") && ( $strand eq "F" ) ){
 							
+								
+
 								# check for previous stored link
 								if( (!$node_links{"$cluster_o1-r:$cluster_o2"}) && (!$node_links{"$cluster_o2-r:$cluster_o1"}) ){
 									$node_links{"$cluster_o1-r:$cluster_o2"}++;
@@ -276,27 +269,15 @@ for my $sample( @genomes ){
 									die " - ERROR: could not store orientation: $cluster_o1($stored_direction) - $cluster_o2($strand)\n";
 								}	
 								
-								# store links - oriented on relevant cluster
-								$links{$cluster_o1}{"U"}{"$cluster_o2"}++; 
-								$links{$cluster_o2}{"U"}{"$cluster_o1"}++;
-								
 							}elsif ( ( $stored_direction eq "F") && ( $strand eq "F" ) ) {
 								
 								# orientaion FF 
 								$node_links{"$cluster_o1:$cluster_o2"}++;
-								
-								# store links - oriented on relevant cluster
-								$links{$cluster_o1}{"D"}{"$cluster_o2"}++; 
-								$links{$cluster_o2}{"U"}{"$cluster_o1-r"}++; 
 																
 							}elsif ( ( $stored_direction eq "R") && ( $strand eq "R" ) ) {
 								
 								# orientaion RR
 								$node_links{"$cluster_o2:$cluster_o1"}++;
-								
-								# store links - oriented on relevant cluster
-								$links{$cluster_o2}{"D"}{"$cluster_o1"}++; 
-								$links{$cluster_o1}{"U"}{"$cluster_o2-r"}++; 
 																
 							}
 							
@@ -433,18 +414,21 @@ if ( $gfa1 ne "" ){
 } 
 
 # convert node links to edges 
+my %rev_edges = ();
+for my $e (sort keys %node_links){
 
-#for my $e (sort keys %node_links){
-
-#	my @entry = split(/:/, $e);
+	my @entry = split(/:/, $e);
 	
-#	$edges{$entry[0]}{$entry[1]} = $node_links{$e};
-#	$rev_edges{$entry[1]}{$entry[0]} = $node_links{$e};
+	$edges{$entry[0]}{$entry[1]} = $node_links{$e};
+	$rev_edges{$entry[1]}{$entry[0]} = $node_links{$e};
 	
-#}#%node_links = ();
+}#%node_links = ();
 
 # [optional] cluster on pangenome graph
 exit if $cluster eq ""; 
+
+# open cluster file 1
+open C1, ">$cluster" or die " - ERROR: could not open $cluster\n";
 
 # cluster output naming variables
 my %output_c = ();
@@ -453,278 +437,294 @@ my $graph_count = 0;
 # sub_function
 
 # find consensus paths through pangenome graph and output these segments
-my $continue = 1; ####
+my $continue = 1;
 my %processed = ();
-my $previous_processed = 0; ####
+my $previous_processed = 0;
 
-# subfunctions
-
-# find and classify edges 
-sub find_links{
-
-	my $current_node = shift;
+while( $continue == 1 ){
 	
-	# remove orientation nomenclature
-	$current_node =~ s/-r//;
-	
-	# find all edges/links from node - orient on direction of the node
-	my @u_e = (); # upstream
-	if ( $links{$current_node}{"U"} ){
-		for my $l ( keys %{$links{$current_node}{"U"}} ){
-			push(@u_e, $l); 
-			#print "U-$l\n";
-		}
-	}
-	
-	my @d_e = (); # downstream
-	if ( $links{$current_node}{"D"} ){
-		for my $l ( keys %{$links{$current_node}{"D"}} ){
-			push(@d_e, $l); 
-			#print "D-$l\n";
-		}
-	}
-	
-	return(\@u_e,\@d_e);
-}
-
-# block variables
-my $n_blocks = 0;
-my %syn_block_isolates = ();
-my %syn_blocks = ();
-
-# open file for storage of info on synteny blocks
-#open  
-
-# open cluster file - store info on the synteny block that a cluster belongs to.
-open C1, ">$cluster" or die " - ERROR: could not open $cluster\n";
-
-# start with random node - find upstream and downstream links
-for my $n ( keys %cluster_number ) { #"g00415"
-	
-	# find seed cluster name
-	my $alt_org = $n;
-	$alt_org =~ s/-r//;
-	
-	# number of isolates in seed cluster
-	my $org_clustn = $cluster_number{$alt_org};
-	
-	if (!$processed{$alt_org}){
-	
-		# start syntenic block
-		my @block = ($n);
+	# start with node - find upstream and downstream links
+	for my $n ( "g01503" ){ #keys %edges ) {
 		
-		# find links (upstream-downstream)
-		my ($o1, $o2) = find_links($n);
-		my @up = @{$o1};
-		my @down = @{$o2};
+		# remove -r if present
+		my $n_clean = $n;
+		$n_clean =~ s/-r//g;
 		
-		# number up/down
-		my $n_up = @up;
-		my $n_down = @down;
-	
-		# variables containing current up/down links
-		my @upstream_links = @up;
-		my @downstream_links = @down;
+		# collect all possible edges
 		
-		# store current node as processed 
-		$processed {$alt_org} = 1;
-		
-		# set current node
-		my $current_node = $down[0];
-		my $cont = 1;
-	
-		# if downstream nodes == 1 then check node and move downstream
-		$cont = 0 if ($n_down != 1);	
-		while ($cont == 1){
-	
-			# find cluster name
-			my $alt_cluster = $current_node;
-			$alt_cluster =~ s/-r//;
+		if ( !$processed{$n_clean} ){
 			
-			# find links
-			my ($o1, $o2) = find_links($current_node);
-			my @up_c = @{$o1};
-			my @down_c = @{$o2};
+			# add to processed 
+			$processed{$n_clean} = 1;
 		
-			# if current node is reverse complement then swap up and downstream links to retain direction
-			if ($current_node =~ /-r/){
-				@up_c = @{$o2};
-				@down_c = @{$o1};
-			}
-	
-			# number of up/down links
-			my $n_up_c = @up_c;
-			my $n_down_c = @down_c;
-
-			# add current cluster to syntenic block if only one link upstream, otherwise stop.
-			if ( $n_up_c == 1 ){
-				push(@block, $current_node);
-				$processed {$alt_cluster} = 1;
-			}else{
-				$cont = 0;
-			}			
+			# find number samples in n
+			my $n1_no = $cluster_number{$n_clean};
 		
-			# if > 1 link downstream then stop.
-			$cont = 0 if $n_down_c != 1;
+			# check downstream
+			my $cont = 1;
+			my $current = $n;
 		
-			# check number of isolates matches number of isolates in seed cluster
-			my $c_clustn = $cluster_number{$alt_cluster};	
-			#$cont = 0 if $c_clustn != $org_clustn;	######		
+			# array of nodes linked together
+			my @segment = ($current);
 		
-			# set new node
-			$current_node = $down_c[0] if scalar(@down_c) > 0;
-			
-			# check new node has not already been processed
-			my $current_node = $current_node;
-			$current_node =~ s/-r//;
-			$cont = 0 if $processed{$current_node};
-			
-			# store downstream links
-			@downstream_links	= @down_c;		
-	
-		}
-	
-		# if downstream nodes == 1 then check node and move downstream
-		$current_node = $up[0];
-		$cont = 1;
-		$cont = 0 if ($n_up != 1);			
-		while ($cont == 1){
-		
-			# find cluster name 
-			my $alt_cluster = $current_node;
-			$alt_cluster =~ s/-r//;
-		
-			# find links
-			my ($o1, $o2) = find_links($current_node);
-			my @up_c = @{$o2};
-			my @down_c = @{$o1};
-		
-			# if current node is reversed then swap up and downstream links to retain direction
-			if ( $current_node =~ /-r/ ){
-				@up_c = @{$o1};
-				@down_c = @{$o2};
-			}
-			
-			# number of up/down links
-			my $n_up_c = @up_c;
-			my $n_down_c = @down_c;
-		
-			# add current cluster to syntenic block if only one link upstream, otherwise stop.
-			if ( $n_down_c == 1 ){
-				unshift(@block, $current_node);
-				$processed {$alt_cluster} = 1;
-			}else{
-				$cont = 0;
-			}
-		
-			# if > 1 link upstream then stop.
-			$cont = 0 if $n_up_c != 1;
-		
-			# check number of isolates matches number of isolates in seed cluster
-			my $c_clustn = $cluster_number{$alt_cluster};	
-			#$cont = 0 if $c_clustn != $org_clustn;	######
-		
-			# set new node			
-			$current_node = $up_c[0] if scalar(@up_c) > 0;
-			
-			# check new node has not already been processed
-			my $current_node = $current_node;
-			$current_node =~ s/-r//;
-			$cont = 0 if $processed{$current_node};
-		
-			# store upstream links
-			@upstream_links = @up_c;	
-	
-		}
-		
-		# prepare output line
-		my $outline = sprintf( "%s\t%s\t%s\t%i\t%i\t%i\n", join(",",@block), join(";", @upstream_links), join(";", @downstream_links), scalar(@upstream_links), scalar(@downstream_links), $org_clustn );
-	
-		# replace -r with -.
-		$outline =~ s/\-r/\-/g;
-	
-		# print block and info to file.
-		#print C1 $outline;#########
-	
-		# store synteny block info
-		++$n_blocks;
-		$syn_blocks{$n_blocks}{'block'} = \@block;
-		$syn_blocks{$n_blocks}{'up'} = \@upstream_links;
-		$syn_blocks{$n_blocks}{'down'} = \@downstream_links;
-		$syn_blocks{$n_blocks}{'in'} = $org_clustn;
-		
-		# store info on synteny blocks that clusters belong to and print to cluster file.
-		for (@block) { 
-			
-			# remove -r 
-			my $iso = $_;
-			$iso =~ s/-r//;
-			
-			# store in hash
-			$syn_block_isolates {$iso} = $n_blocks;
-			
-			# print to file
-			print C1 "$iso\t$n_blocks\n";
-		}		
+			# continue until there is only one edge to follow.
+			while ($cont == 1){
 				
-	}
-	
-	
-	
-}
-
-# feedback 
-print " - $n_blocks syntenic blocks after first pass\n";
-
-# join syntenic blocks the same number of isolates and only one possible link.
-my $proc_blocks = ();
-for my $i (1..$n_blocks){
-	
-	my @block = @{$syn_blocks{"$i"}{'block'}};
-	my @up = @{$syn_blocks{"$i"}{'up'}};
-	my @down = @{$syn_blocks{"$i"}{'down'}};
-	my $no_iso = $syn_blocks{"$i"}{'in'};
-		
-	# find possible links between blocks for every upstream link
-	foreach my $l (@up){
-	
-		#print "$l\n";
-		
-		# find synteny block
-		my $l_clean = $l;
-		$l_clean =~ s/-r//; 
-		my $c_block = $syn_block_isolates {$l_clean};
+				# remove -r 
+				my $current_clean = $current;
+				$current_clean =~ s/-r//g;
 				
-		# check no isolates
-		my $c_block_iso = $syn_blocks{$c_block}{'in'};
-		if ( $c_block_iso == $no_iso ){
+				print "c - $current - $current_clean\n";
+				print "Seg - @segment\n";
+			
+							
+				if ( $edges{$current} ){
+			
+					my @keys = keys %{$edges{$current}};
+					
+					print "current - @keys - ", scalar(@keys),"\n";
+				
+					# find potential next node and remove -r
+					my $next_n = $keys[0];
+					my $next_n_clean = $next_n;
+					$next_n_clean=~ s/-r//g;
+				
+					# check that there is only one edge
+					if ( scalar(@keys) > 1 ){
+						$cont = 0;
+					}
+					
+					# check the edge is not with itself
+					if( $keys[0] eq $current ){
+						$cont = 0;
+					}
+					
+					# check that the reverse edge is does not have multiple links.
+					my $link_count = 0;
+					if( $rev_edges{ $next_n }{ $current } ){
+						print "1 - ", (scalar keys %{$rev_edges{ $next_n }}), "\n";
+						$link_count += scalar keys %{$rev_edges{ $next_n }}; 
+					}
+					
+					if( ($next_n_clean ne $next_n) && ($rev_edges{ $next_n_clean }{ $current }) ){
+						print "2 - ",(scalar keys %{$rev_edges{ $next_n_clean }}), "\n";
+						$link_count += scalar keys %{$rev_edges{ $next_n_clean }};
+					}
+					# only check alternative name if differnet from current
+					if ($current_clean ne $current){
+						if( $rev_edges{ $next_n }{ $current_clean } ){
+							print "3 - ", (scalar keys %{$rev_edges{ $next_n }}), "\n";
+							$link_count += scalar keys %{$rev_edges{ $next_n }};
+						}
+						if(  ($next_n_clean ne $next_n) && ($rev_edges{ $next_n_clean }{ $current_clean }) ){
+							print "4 - ", (scalar keys %{$rev_edges{ $next_n_clean }}), "\n";
+							$link_count += scalar keys %{$rev_edges{ $next_n_clean }};
+						}
+					}
+					print "lc - $link_count\n";
+					$cont = 0 if $link_count > 1;  
+					
+					# otherwise store and iterate.
+					if ($cont == 1){					
+						$current = $keys[0];
+						push(@segment, $keys[0]);
+						$processed{$next_n_clean} = 1;
+					}
+				
+				}elsif( ($current ne $current_clean) && ($edges{$current_clean}) ){
+			
+					my @keys = keys %{$edges{$current_clean}};
+					
+					print "clean - @keys\n";
+					
+					# find potential next node and remove -r
+					my $next_n = $keys[0];
+					my $next_n_clean = $next_n;
+					$next_n_clean=~ s/-r//g;
+				
+					# check that there is only one edge
+					if ( scalar(@keys) > 1 ){
+						$cont = 0;
+					}
+					
+					# check the edge is not with itself
+					if( $keys[0] eq $current ){
+						$cont = 0;
+					}
+					
+					my $link_count = 0;
+					if( $rev_edges{ $next_n }{ $current } ){
+						print "1 - ", (scalar keys %{$rev_edges{ $next_n }}), "\n";
+						$link_count += scalar keys %{$rev_edges{ $next_n }}; 
+					}
+					if(  ($next_n_clean ne $next_n) && ($rev_edges{ $next_n_clean }{ $current }) ){
+						print "2 - ",(scalar keys %{$rev_edges{ $next_n_clean }}), "\n";
+						$link_count += scalar keys %{$rev_edges{ $next_n_clean }};
+					}
+					# only check alternative name if differnet from current
+					if ($current_clean ne $current){
+						if( $rev_edges{ $next_n }{ $current_clean } ){
+							print "3 - ", (scalar keys %{$rev_edges{ $next_n }}), "\n";
+							$link_count += scalar keys %{$rev_edges{ $next_n }};
+						}
+						if(  ($next_n_clean ne $next_n) && ($rev_edges{ $next_n_clean }{ $current_clean }) ){
+							print "4 - ", (scalar keys %{$rev_edges{ $next_n_clean }}), "\n";
+							$link_count += scalar keys %{$rev_edges{ $next_n_clean }};
+						}
+					}
+					print "lc - $link_count\n";
+					$cont = 0 if $link_count > 1;  
+										
+					# otherwise store and interate.
+					if ($cont == 1){					
+						$current = $keys[0];
+						push(@segment, $keys[0]);
+						$processed{$next_n_clean} = 1;
+					}
+				
+			
+				}else{
+					$cont = 0; 
+				}
+			
 		
-			print "yes\n";
-			my @c_block = @{$syn_blocks{$c_block}{'block'}};
-			my @c_up = @{$syn_blocks{$c_block}{'up'}};
-			my @c_down = @{$syn_blocks{$c_block}{'down'}};
+			}
+		
+			print "upstream\n";
+		
+			# check upstream
+			$cont = 1;
+			$current = $n;
+		
+			# continue until there is only one edge to follow.
+			while ($cont == 1){
+					
+				# remove -r 
+				my $current_clean = $current;
+				$current_clean =~ s/-r//g;
+				
+				print "c - $current - $current_clean\n";
+				print "Seg - @segment\n";
 			
-			# find matching end
-			my $start = ""; 
-			my $end = "";
-			#if ( $lclean ){
+				if ( $rev_edges{$current} ){
 			
-			#}elsif(){
+					my @keys = keys %{$rev_edges{$current}};
+					
+					print "@keys\n";
+				
+					# find potential next node and remove -r
+					my $next_n = $keys[0];
+					my $next_n_clean = $next_n;
+					$next_n_clean =~ s/-r//g;
+				
+					# check that there is only one edge
+					if ( scalar(@keys) > 1 ){
+						$cont = 0;
+					}
+					
+					# check the edge is not with itself
+					if( $keys[0] eq $current ){
+						$cont = 0;
+					}
+					
+					# check that the reverse edge is does not have multiple links.
+					my $link_count = 0;
+					if( $edges{ $next_n }{ $current } ){
+						$link_count +=  scalar keys %{$edges{ $next_n }};
+					}
+					if(  ($next_n_clean ne $next_n) && ($edges{ $next_n_clean }{ $current }) ){
+						$link_count += scalar keys %{$edges{ $next_n_clean }};
+					}
+					# only check alternative name if differnet from current
+					if ($current_clean ne $current){
+						if( $edges{ $next_n }{ $current_clean } ){
+							$link_count +=  scalar keys %{$edges{ $next_n }};
+						}
+						if(  ($next_n_clean ne $next_n) && ($edges{ $next_n_clean }{ $current_clean }) ){
+							$link_count +=  scalar keys %{$edges{ $next_n_clean }};
+						}
+					}	
+					print "lc - $link_count\n";
+					$cont = 0 if $link_count > 1;  				
+					
+					# otherwise store and interate.
+					if ($cont == 1){					
+						$current = $keys[0];
+						unshift(@segment, $keys[0]);
+						$processed{$next_n_clean} = 1;
+					}
+				
+				}elsif( ($current ne $current_clean) && ($rev_edges{$current_clean}) ){
 			
-			#}else{
+					my @keys = keys %{$rev_edges{$current_clean}};
+					
+					print "@keys\n";
+				
+					# find potential next node and remove -r
+					my $next_n = $keys[0];
+					my $next_n_clean = $next_n;
+					$next_n_clean=~ s/-r//g;
+				
+					# check that there is only one edge
+					if ( scalar(@keys) > 1 ){
+						$cont = 0;
+					}
+					
+					# check the edge is not with itself
+					if( $keys[0] eq $current ){
+						$cont = 0;
+					}
+					
+					# check that the reverse edge is does not have multiple links.
+					my $link_count = 0;
+					if( $edges{ $next_n }{ $current } ){
+						$link_count +=  scalar keys %{$edges{ $next_n }};
+					}
+					if(  ($next_n_clean ne $next_n) && ($edges{ $next_n_clean }{ $current }) ){
+						$link_count += scalar keys %{$edges{ $next_n_clean }};
+					}
+					# only check alternative name if differnet from current
+					if ($current_clean ne $current){
+						if( $edges{ $next_n }{ $current_clean } ){
+							$link_count +=  scalar keys %{$edges{ $next_n }};
+						}
+						if(  ($next_n_clean ne $next_n) && ($edges{ $next_n_clean }{ $current_clean }) ){
+							$link_count +=  scalar keys %{$edges{ $next_n_clean }};
+						}
+					}	
+					print "lc - $link_count\n";
+					$cont = 0 if $link_count > 1;  
+					
+					# otherwise store and interate.
+					if ($cont == 1){					
+						$current = $keys[0];
+						unshift(@segment, $keys[0]);
+						$processed{$next_n_clean} = 1;
+					}
+				
 			
-			#}
-			# check no other possibilities for connected synteny block
+				}else{
+					$cont = 0; 
+				}
 			
+		
+			}
+			
+			# print to file 
+			print C1 join(" ", @segment)."\n";
+		
+		
 			exit;
 		
 		}
+		
 	}
+	
 	exit;
+}
 	
 
-}
- 
+
 exit;
 
 # cluster gene families with conserved gene order found in an identical number of genomes.
