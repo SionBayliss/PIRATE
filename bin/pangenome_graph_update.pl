@@ -569,7 +569,7 @@ for my $n ( keys %cluster_number ) { #"g00415"
 		
 			# check number of isolates matches number of isolates in seed cluster
 			my $c_clustn = $cluster_number{$alt_cluster};	
-			#$cont = 0 if $c_clustn != $org_clustn;	######		
+			$cont = 0 if $c_clustn != $org_clustn;	######		
 		
 			# set new node
 			$current_node = $down_c[0] if scalar(@down_c) > 0;
@@ -622,7 +622,7 @@ for my $n ( keys %cluster_number ) { #"g00415"
 		
 			# check number of isolates matches number of isolates in seed cluster
 			my $c_clustn = $cluster_number{$alt_cluster};	
-			#$cont = 0 if $c_clustn != $org_clustn;	######
+			$cont = 0 if $c_clustn != $org_clustn;	######
 		
 			# set new node			
 			$current_node = $up_c[0] if scalar(@up_c) > 0;
