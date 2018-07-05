@@ -491,6 +491,7 @@ sub find_links{
 my $n_blocks = 0;
 my %syn_block_isolates = ();
 my %syn_blocks = ();
+my $feature_count = 0;
 
 # open file for storage of info on synteny blocks
 #open  
@@ -499,11 +500,11 @@ my %syn_blocks = ();
 open C1, ">$cluster" or die " - ERROR: could not open $cluster\n";
 
 # start with random node - find upstream and downstream links
-for my $n ( keys %cluster_number ) { #"g00415"
+for my $n (sort {$cluster_number{$b}<=>$cluster_number{$a}} keys %cluster_number ) { #"g00415"
 	
 	# find seed cluster name
 	my $alt_org = $n;
-	$alt_org =~ s/-r//;
+	#$alt_org =~ s/-r//;
 	
 	# number of isolates in seed cluster
 	my $org_clustn = $cluster_number{$alt_org};
@@ -541,46 +542,51 @@ for my $n ( keys %cluster_number ) { #"g00415"
 			my $alt_cluster = $current_node;
 			$alt_cluster =~ s/-r//;
 			
-			# find links
-			my ($o1, $o2) = find_links($current_node);
-			my @up_c = @{$o1};
-			my @down_c = @{$o2};
+			# check number of isolates matches number of isolates in seed cluster
+			my $c_clustn = $cluster_number{$alt_cluster};
+			print "$c_clustn != $org_clustn\n"; 				
+			if ($c_clustn == $org_clustn){
+			
+				# find links
+				my ($o1, $o2) = find_links($current_node);
+				my @up_c = @{$o1};
+				my @down_c = @{$o2};
 		
-			# if current node is reverse complement then swap up and downstream links to retain direction
-			if ($current_node =~ /-r/){
-				@up_c = @{$o2};
-				@down_c = @{$o1};
-			}
+				# if current node is reverse complement then swap up and downstream links to retain direction
+				if ($current_node =~ /-r/){
+					@up_c = @{$o2};
+					@down_c = @{$o1};
+				}
 	
-			# number of up/down links
-			my $n_up_c = @up_c;
-			my $n_down_c = @down_c;
+				# number of up/down links
+				my $n_up_c = @up_c;
+				my $n_down_c = @down_c;
 
-			# add current cluster to syntenic block if only one link upstream, otherwise stop.
-			if ( $n_up_c == 1 ){
-				push(@block, $current_node);
-				$processed {$alt_cluster} = 1;
+				# add current cluster to syntenic block if only one link upstream, otherwise stop.
+				if ( $n_up_c == 1 ){
+					push(@block, $current_node);
+					$processed {$alt_cluster} = 1;
+				}else{
+					$cont = 0;
+				}
+		
+				# if > 1 link downstream then stop.
+				$cont = 0 if $n_down_c != 1;
+	
+				# set new node
+				$current_node = $down_c[0] if scalar(@down_c) > 0;
+			
+				# check new node has not already been processed
+				my $current_node = $current_node;
+				$current_node =~ s/-r//;
+				$cont = 0 if $processed{$current_node};
+			
+				# store downstream links
+				@downstream_links	= @down_c;	
+			
 			}else{
 				$cont = 0;
-			}			
-		
-			# if > 1 link downstream then stop.
-			$cont = 0 if $n_down_c != 1;
-		
-			# check number of isolates matches number of isolates in seed cluster
-			my $c_clustn = $cluster_number{$alt_cluster};	
-			$cont = 0 if $c_clustn != $org_clustn;	######		
-		
-			# set new node
-			$current_node = $down_c[0] if scalar(@down_c) > 0;
-			
-			# check new node has not already been processed
-			my $current_node = $current_node;
-			$current_node =~ s/-r//;
-			$cont = 0 if $processed{$current_node};
-			
-			# store downstream links
-			@downstream_links	= @down_c;		
+			}	
 	
 		}
 	
@@ -593,47 +599,51 @@ for my $n ( keys %cluster_number ) { #"g00415"
 			# find cluster name 
 			my $alt_cluster = $current_node;
 			$alt_cluster =~ s/-r//;
-		
-			# find links
-			my ($o1, $o2) = find_links($current_node);
-			my @up_c = @{$o2};
-			my @down_c = @{$o1};
-		
-			# if current node is reversed then swap up and downstream links to retain direction
-			if ( $current_node =~ /-r/ ){
-				@up_c = @{$o1};
-				@down_c = @{$o2};
-			}
 			
-			# number of up/down links
-			my $n_up_c = @up_c;
-			my $n_down_c = @down_c;
+			# check new node matches number of isolates in seed cluster.
+			my $c_clustn = $cluster_number{$alt_cluster};	
+			if ($c_clustn == $org_clustn) {
 		
-			# add current cluster to syntenic block if only one link upstream, otherwise stop.
-			if ( $n_down_c == 1 ){
-				unshift(@block, $current_node);
-				$processed {$alt_cluster} = 1;
+				# find links
+				my ($o1, $o2) = find_links($current_node);
+				my @up_c = @{$o2};
+				my @down_c = @{$o1};
+		
+				# if current node is reversed then swap up and downstream links to retain direction
+				if ( $current_node =~ /-r/ ){
+					@up_c = @{$o1};
+					@down_c = @{$o2};
+				}
+			
+				# number of up/down links
+				my $n_up_c = @up_c;
+				my $n_down_c = @down_c;
+		
+				# add current cluster to syntenic block if only one link upstream, otherwise stop.
+				if ( $n_down_c == 1 ){
+					unshift(@block, $current_node);
+					$processed {$alt_cluster} = 1;
+				}else{
+					$cont = 0;
+				}
+		
+				# if > 1 link upstream then stop.
+				$cont = 0 if $n_up_c != 1;
+		
+				# set new node			
+				$current_node = $up_c[0] if scalar(@up_c) > 0;
+						
+				# check new node has not already been processed
+				my $current_node = $current_node;
+				$current_node =~ s/-r//;
+				$cont = 0 if $processed{$current_node};
+		
+				# store upstream links
+				@upstream_links = @up_c;
+			
 			}else{
 				$cont = 0;
 			}
-		
-			# if > 1 link upstream then stop.
-			$cont = 0 if $n_up_c != 1;
-		
-			# check number of isolates matches number of isolates in seed cluster
-			my $c_clustn = $cluster_number{$alt_cluster};	
-			$cont = 0 if $c_clustn != $org_clustn;	######
-		
-			# set new node			
-			$current_node = $up_c[0] if scalar(@up_c) > 0;
-			
-			# check new node has not already been processed
-			my $current_node = $current_node;
-			$current_node =~ s/-r//;
-			$cont = 0 if $processed{$current_node};
-		
-			# store upstream links
-			@upstream_links = @up_c;	
 	
 		}
 		
@@ -664,7 +674,8 @@ for my $n ( keys %cluster_number ) { #"g00415"
 			$syn_block_isolates {$iso} = $n_blocks;
 			
 			# print to file
-			print C1 "$iso\t$n_blocks\t",$m+1,"\n";
+			print C1 "$iso\t$n_blocks\t",$m+1,"\t",++$feature_count,"\n";
+		
 		}		
 				
 	}
