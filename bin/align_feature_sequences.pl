@@ -292,7 +292,7 @@ for my $genome ( @genomes ){
 		my $strand="";
 		my $id="";
 
-		if( $line !~ /^##/ ){
+		if( ($line !~ /^##/) && ($line !~ /^#!/) ){
 			if( $line_array[2] eq "gene"){
 			}else{
 			

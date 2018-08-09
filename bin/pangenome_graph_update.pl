@@ -15,9 +15,9 @@ use Pod::Usage;
 
  Input-Output:	
  -i|--input		input PIRATE.gene_families.tsv file [required]
- -g|--gffs		path to gff directory [required]
+ --gff		path to gff directory [required]
  -o|--output	path to output file [required]
- -c|--cluster   	path to .cluster file containing clusterings based upon the pangenome graph [optional]
+ -c|--cluster   	####path to .cluster file containing clusterings based upon the pangenome graph [optional]
  -fa|--fastg	BUGGED - path to fastg file of pangenome graph [optional]
  
  Filtering options:
@@ -34,10 +34,11 @@ use Pod::Usage;
 my $input = "";
 my $output = "";
 my $gff_dir = "";
+my $prefix = "pangenome";
 
-my $cluster = "";
-my $fastg = "";
-my $gfa1 = "";
+my $cluster = 1;
+my $fastg = 0;
+my $gfa1 = 0;
 
 my $features = "CDS";
 my $dosage_threshold = 0;
@@ -54,10 +55,11 @@ GetOptions(
 	'input=s' 	=> \$input,
 	'gffs=s' 	=> \$gff_dir,
 	'output=s'	=> \$output,
+	'prefix=s'	=> \$prefix,
 
-	'cluster=s'	=> \$cluster,
-	'fastg=s' => \$fastg,
-	'gfa1=s' => \$gfa1,
+	'no-cluster'=> \$cluster,
+	'fastg' => \$fastg,
+	'gfa1' => \$gfa1,
 
 	'features=s' => \$features,
 	'dosage=s' => \$dosage_threshold,
@@ -71,11 +73,12 @@ pod2usage(1) if $help == 1;
  
 # file check
 die " - ERROR: no input file specified" if $input eq "";
-die " - ERROR: no input file specified" if $output eq "";
-die " - ERROR: no input file specified" if $gff_dir eq "";
+die " - ERROR: no output file specified" if $output eq "";
+die " - ERROR: no gff directory specified" if $gff_dir eq "";
 
-# open output files
-open C_OUT, ">$cluster" or die " - ERROR: could not open $cluster for writing" if $cluster ne "";
+# dosage threshold check
+print " - WARNING: current dosage threshold maxima is >2. Setting dosage threshold to 1.99\n" if $dosage_threshold >=2;
+$dosage_threshold = 1.99 if $dosage_threshold >=2;
 
 # regex for features
 my $regex = sprintf("\(%s\)", join("|", split(/,/, $features) ) );
@@ -146,6 +149,9 @@ while(<IN>){
 
 }close IN;
 
+# feedback
+print " - ", scalar(@filtered_clusters), " gene clusters filtered due to dosage >$dosage_threshold. These WILL NOT APPEAR in outputs.\n";
+
 # genome list
 my @genomes = @headers[19..$#headers];
 
@@ -154,15 +160,15 @@ my $no_families = keys %cluster_number;
 
 # feedback
 if($dosage_threshold == 0) {
-	print " - $no_families clusters used for graphing from ", scalar(@genomes), " genomes\n"; 	
+	print " - $no_families clusters used for graphing from ", scalar(@genomes), " genomes.\n"; 	
 }else{
-	print " - $no_families clusters from ", scalar(@genomes), " genomes (dosage threshold <= $dosage_threshold) used for graphing\n"; 	
+	print " - $no_families clusters from ", scalar(@genomes), " genomes (dosage threshold <= $dosage_threshold) used for graphing.\n"; 	
 
 }
 
 # parse gff files and store connections between gene families
-my %edges = ();
-my %rev_edges = ();
+###my %edges = ();
+###my %rev_edges = ();
 
 my %links = ();
 
@@ -295,8 +301,8 @@ for my $sample( @genomes ){
 								$node_links{"$cluster_o2:$cluster_o1"}++;
 								
 								# store links - oriented on relevant cluster
-								$links{$cluster_o2}{"D"}{"$cluster_o1"}++; 
-								$links{$cluster_o1}{"U"}{"$cluster_o2-r"}++; 
+								$links{$cluster_o2}{"D"}{"$cluster_o1"}++;
+								$links{$cluster_o1}{"U"}{"$cluster_o2-r"}++;
 																
 							}
 							
@@ -322,25 +328,36 @@ for my $sample( @genomes ){
 	
 }
 
-# add singleton (disconnected) loci to edges as connected to themselves.
-#for my $c ( values %cluster_loci ){
-#	$edges{$c}{$c} = 1 if !$edges{$c}; 
-#}
+# print edges and weight (i.e. number of genomes in which edge occurs)
+open EDGES, ">$output/$prefix.edges" or die " - ERROR: $output/$prefix.edges would not open for writing.\n";
+for my $n1 ( keys %links ){ 	
+	for my $ud ( "U" , "D" ){	
+		if ( $links{$n1}{$ud} ){		
+			for my $n2 ( keys %{$links{$n1}{$ud}} ){
+				my $temp_n1 = $n1;
+				my $temp_n2 = $n2;
+				$temp_n1 =~ s/-r/-/;
+				$temp_n2 =~ s/-r/-/;
+				print EDGES "$temp_n1\t$temp_n2\t$links{$n1}{$ud}{$n2}\n";
+			}		
+		}
+	}		
+}close EDGES;
 
 # print edges/connections
-open OUTPUT, ">$output" or die " - ERROR: could not open $output\n";
-for my $e1 (keys %edges){
-	for my $e2 (keys %{$edges{$e1}} ){
-		print OUTPUT sprintf("%s\t%s\t%s\n", $e1 , $e2, $edges{$e1}{$e2});
-	}
-}close OUTPUT;
+#open OUTPUT, ">$output" or die " - ERROR: could not open $output\n";
+#for my $e1 (keys %edges){
+#	for my $e2 (keys %{$edges{$e1}} ){
+#		print OUTPUT sprintf("%s\t%s\t%s\n", $e1 , $e2, $edges{$e1}{$e2});
+#	}
+#}close OUTPUT;
 
 # make pseudo-fastg (no sequence).
-if ( $fastg ne "" ){
+if ( $fastg == 1 ){
 
 	print " - WARNING: FASTG format outputs are currently bugged, use GFA (-gfa1)\n";
 	
-	open FASTG, ">$fastg" or die " - ERROR: $fastg would not open for writing.\n"; 
+	open FASTG, ">$output/$prefix.fastg" or die " - ERROR: $output/$prefix.fastg would not open for writing.\n"; 
 	for my $e (keys %node_links){
 	
 		my @entry = split(/:/, $e);
@@ -383,9 +400,9 @@ if ( $fastg ne "" ){
 } 
 
 # make pseudo-fastg (no sequence).
-if ( $gfa1 ne "" ){
+if ( $gfa1 == 1 ){
 
-	open GFA1, ">$gfa1" or die " - ERROR: $gfa1 would not open for writing.\n"; 
+	open GFA1, ">$output/$prefix.gfa" or die " - ERROR: $output/$prefix.gfa would not open for writing.\n"; 
 	
 	# create segments
 	for my $k (sort keys %cluster_number){
@@ -444,7 +461,7 @@ if ( $gfa1 ne "" ){
 #}#%node_links = ();
 
 # [optional] cluster on pangenome graph
-exit if $cluster eq ""; 
+exit if $cluster == 0; 
 
 # cluster output naming variables
 my %output_c = ();
@@ -471,7 +488,7 @@ sub find_links{
 	my @u_e = (); # upstream
 	if ( $links{$current_node}{"U"} ){
 		for my $l ( keys %{$links{$current_node}{"U"}} ){
-			push(@u_e, $l); 
+			push(@u_e, $l);
 			#print "U-$l\n";
 		}
 	}
@@ -492,24 +509,25 @@ my $n_blocks = 0;
 my %syn_block_isolates = ();
 my %syn_blocks = ();
 my $feature_count = 0;
-
-# open file for storage of info on synteny blocks
-#open  
+my @block_size = ();
 
 # open cluster file - store info on the synteny block that a cluster belongs to.
-open C1, ">$cluster" or die " - ERROR: could not open $cluster\n";
+open C1, ">$output/$prefix.syntenic_blocks" or die " - ERROR: could not open $output/$prefix.syntenic_blocks\n";
 
 # start with random node - find upstream and downstream links
 for my $n (sort {$cluster_number{$b}<=>$cluster_number{$a}} keys %cluster_number ) { #"g00415"
 	
 	# find seed cluster name
 	my $alt_org = $n;
-	#$alt_org =~ s/-r//;
+	$alt_org =~ s/-r//;
 	
 	# number of isolates in seed cluster
 	my $org_clustn = $cluster_number{$alt_org};
 	
 	if (!$processed{$alt_org}){
+	
+		# store current node as processed 
+		$processed {$alt_org} = 1;
 	
 		# start syntenic block
 		my @block = ($n);
@@ -527,25 +545,21 @@ for my $n (sort {$cluster_number{$b}<=>$cluster_number{$a}} keys %cluster_number
 		my @upstream_links = @up;
 		my @downstream_links = @down;
 		
-		# store current node as processed 
-		$processed {$alt_org} = 1;
-		
-		# set current node
+		# set current node and loop variable
 		my $current_node = $down[0];
 		my $cont = 1;
-	
+		
 		# if downstream nodes == 1 then check node and move downstream
-		$cont = 0 if ($n_down != 1);	
+		$cont = 0 if $n_down != 1;
 		while ($cont == 1){
 	
 			# find cluster name
 			my $alt_cluster = $current_node;
 			$alt_cluster =~ s/-r//;
-			
+						
 			# check number of isolates matches number of isolates in seed cluster
 			my $c_clustn = $cluster_number{$alt_cluster};
-			print "$c_clustn != $org_clustn\n"; 				
-			if ($c_clustn == $org_clustn){
+			if ( ($c_clustn == $org_clustn) && (!$processed{$alt_cluster}) ){
 			
 				# find links
 				my ($o1, $o2) = find_links($current_node);
@@ -562,28 +576,34 @@ for my $n (sort {$cluster_number{$b}<=>$cluster_number{$a}} keys %cluster_number
 				my $n_up_c = @up_c;
 				my $n_down_c = @down_c;
 
-				# add current cluster to syntenic block if only one link upstream, otherwise stop.
-				if ( $n_up_c == 1 ){
+				# only add current cluster to the block if upstream links == 1 (i.e. no other possible previous connections); 
+				if ($n_up_c == 1) {
+				
+					# store to block
 					push(@block, $current_node);
 					$processed {$alt_cluster} = 1;
+					
+					# store downstream links
+					@downstream_links	= @down_c;
+					
+					# do  not continue if >1 link downstream			
+					if ($n_down_c != 1) {
+						$cont = 0 
+					}else{ 
+					
+						# set new node
+						$current_node = $down_c[0];
+						
+						# check new node has not already been processed
+						my $c_node = $current_node;
+						$c_node =~ s/-r//;
+						$cont = 0 if $processed{$c_node};					
+					}					
+					
 				}else{
 					$cont = 0;
 				}
-		
-				# if > 1 link downstream then stop.
-				$cont = 0 if $n_down_c != 1;
-	
-				# set new node
-				$current_node = $down_c[0] if scalar(@down_c) > 0;
-			
-				# check new node has not already been processed
-				my $current_node = $current_node;
-				$current_node =~ s/-r//;
-				$cont = 0 if $processed{$current_node};
-			
-				# store downstream links
-				@downstream_links	= @down_c;	
-			
+				
 			}else{
 				$cont = 0;
 			}	
@@ -593,7 +613,8 @@ for my $n (sort {$cluster_number{$b}<=>$cluster_number{$a}} keys %cluster_number
 		# if downstream nodes == 1 then check node and move downstream
 		$current_node = $up[0];
 		$cont = 1;
-		$cont = 0 if ($n_up != 1);			
+
+		$cont = 0 if ($n_up != 1);
 		while ($cont == 1){
 		
 			# find cluster name 
@@ -602,7 +623,7 @@ for my $n (sort {$cluster_number{$b}<=>$cluster_number{$a}} keys %cluster_number
 			
 			# check new node matches number of isolates in seed cluster.
 			my $c_clustn = $cluster_number{$alt_cluster};	
-			if ($c_clustn == $org_clustn) {
+			if ( ($c_clustn == $org_clustn) && (!$processed{$alt_cluster}) ) {
 		
 				# find links
 				my ($o1, $o2) = find_links($current_node);
@@ -619,49 +640,78 @@ for my $n (sort {$cluster_number{$b}<=>$cluster_number{$a}} keys %cluster_number
 				my $n_up_c = @up_c;
 				my $n_down_c = @down_c;
 		
-				# add current cluster to syntenic block if only one link upstream, otherwise stop.
-				if ( $n_down_c == 1 ){
+				# only add current cluster to the block if downstream links == 1 (i.e. no other possible previous connections); 
+				if ($n_down_c == 1) {
+				
+					# store to block
 					unshift(@block, $current_node);
 					$processed {$alt_cluster} = 1;
+					
+					# store downstream links
+					@upstream_links = @up_c;
+					
+					# do  not continue if >1 link downstream			
+					if ($n_up_c != 1) {
+						$cont = 0 
+					}else{ 
+					
+						# set new node
+						$current_node = $up_c[0];
+						
+						# check new node has not already been processed
+						my $c_node = $current_node;
+						$c_node =~ s/-r//;
+						$cont = 0 if $processed{$c_node};					
+					}					
+					
 				}else{
 					$cont = 0;
 				}
-		
-				# if > 1 link upstream then stop.
-				$cont = 0 if $n_up_c != 1;
-		
-				# set new node			
-				$current_node = $up_c[0] if scalar(@up_c) > 0;
-						
-				# check new node has not already been processed
-				my $current_node = $current_node;
-				$current_node =~ s/-r//;
-				$cont = 0 if $processed{$current_node};
-		
-				# store upstream links
-				@upstream_links = @up_c;
-			
+				
 			}else{
 				$cont = 0;
 			}
 	
 		}
 		
-		# prepare output line
-		my $outline = sprintf( "%s\t%s\t%s\t%i\t%i\t%i\n", join(",",@block), join(";", @upstream_links), join(";", @downstream_links), scalar(@upstream_links), scalar(@downstream_links), $org_clustn );
-	
-		# replace -r with -.
-		$outline =~ s/\-r/\-/g;
-	
-		# print block and info to file.
-		#print C1 $outline;#########
-	
 		# store synteny block info
 		++$n_blocks;
 		$syn_blocks{$n_blocks}{'block'} = \@block;
 		$syn_blocks{$n_blocks}{'up'} = \@upstream_links;
 		$syn_blocks{$n_blocks}{'down'} = \@downstream_links;
 		$syn_blocks{$n_blocks}{'in'} = $org_clustn;
+		
+		# bookend clusters
+		my $be_up = $block[0]; 
+		my $be_down = $block[$#block];
+		$be_up =~ s/-r//; 
+		$be_down =~ s/-r//; 
+		$syn_blocks{$n_blocks}{'upe'} = $be_up;
+		$syn_blocks{$n_blocks}{'doe'} = $be_down;
+		
+		# prepare output variables
+		my $links_up = join(",", @upstream_links);		
+		my $links_down = join(",", @downstream_links);
+		
+		# correct for erroneous self links
+		$links_up = "NA", if ($links_up eq $block[0]);
+		$links_down = "NA", if ($links_down eq $block[$#block]);
+		
+		############
+		print " - WARNING: @block connects to itself\n" if ($links_up eq $block[0]);
+		print " - WARNING: @block connects to itself\n" if ($links_down eq $block[$#block]);
+		
+		# prepare output line 
+		my $outline = sprintf("%s\t%i\t%i\t%s\t%s\t%s\n", $n_blocks, $org_clustn ,scalar(@block), join(",",@block), $links_up, $links_down );
+		
+		# replace -r with -.
+		$outline =~ s/\-r/\-/g;
+	
+		# print block and info to file.
+		print C1 $outline;#########
+		
+		#test
+		#print "@block\n";
 		
 		# store info on synteny blocks that clusters belong to and print to cluster file.
 		for my $m (0..$#block) { 
@@ -674,428 +724,406 @@ for my $n (sort {$cluster_number{$b}<=>$cluster_number{$a}} keys %cluster_number
 			$syn_block_isolates {$iso} = $n_blocks;
 			
 			# print to file
-			print C1 "$iso\t$n_blocks\t",$m+1,"\t",++$feature_count,"\n";
+			#print C1 "$iso\t$n_blocks\t",$m+1,"\t",++$feature_count,"\n"; ##########
 		
-		}		
+		}
+		
+		# store block size
+		push( @block_size, scalar(@block) );		
 				
 	}
-	
-	
 	
 }
 
 # feedback 
 print " - $n_blocks syntenic blocks after first pass\n";
 
+###
+open TEMP, ">$output/$prefix.temp" or die $!; 
+
 # join syntenic blocks the same number of isolates and only one possible link.
-my $proc_blocks = ();
-for my $i (1..$n_blocks){
+my %r_links = ();
+for my $i ( sort {$block_size[$b]<=>$block_size[$a]} 1..$n_blocks ){ # start with larger blocks (avoids superconnetors until later in process). - no effect
 	
-	my @block = @{$syn_blocks{"$i"}{'block'}};
-	my @up = @{$syn_blocks{"$i"}{'up'}};
-	my @down = @{$syn_blocks{"$i"}{'down'}};
-	my $no_iso = $syn_blocks{"$i"}{'in'};
-		
-	# find possible links between blocks for every upstream link
+	# collect info on current synteny block
+	my $no_iso = $syn_blocks{"$i"}{'in'}; # number of isolates in block
+	my @block = @{$syn_blocks{"$i"}{'block'}}; # isolates
+	my @up = @{$syn_blocks{"$i"}{'up'}}; # upstream links
+	my @down = @{$syn_blocks{"$i"}{'down'}}; # downstream links
+	my $upstream_iso = $syn_blocks{$i}{'upe'}; # upstream isolate
+	my $downstream_iso = $syn_blocks{$i}{'doe'}; # downstream isolate
+	
+	# store current block info for self-loop check
+	my %block_inc = (); 
+	for (@block) { my $temp = $_; $temp =~ s/-r//; $block_inc{$temp} = 1 }; 
+	
+	# for each upstream/downstream link: a) check for links to block with same number of isolates b) check that the current block that is the only reciprocal link that fits A.
+	
+	# check for number of isolates in linked blocks
+	print "no_iso = $no_iso\nup cluster = $upstream_iso\nblock = @block\nup_links = @up\n"; ###
+	print "\nupstream:\n"; ###
+	my @up_match = ();
 	foreach my $l (@up){
 	
-		#print "$l\n";
-		
+		print " - up link: $l\n";
+	
 		# find synteny block
 		my $l_clean = $l;
-		$l_clean =~ s/-r//; 
+		$l_clean =~ s/-r//;
+		my $c_block = $syn_block_isolates {$l_clean};
+		
+		# find number of isolates in linked block
+		my $c_block_iso = $syn_blocks{$c_block}{'in'};
+		print "link: $l = $c_block_iso\n";
+		
+		# add link to array if it links to a block with the same number of isolates as the current block.
+		if ( $block_inc{$l_clean} ){
+			print " - self-loop: $l_clean\n";
+		}elsif ( $c_block_iso == $no_iso ){
+			push( @up_match, $l_clean);
+		}
+		
+	}
+	
+	# 
+	print "\ndownstream:\n";
+	my @down_match = ();
+	foreach my $l (@down){
+	
+		print " - down link: $l\n";
+	
+		# find synteny block
+		my $l_clean = $l;
+		$l_clean =~ s/-r//;
 		my $c_block = $syn_block_isolates {$l_clean};
 				
-		# check no isolates
+		# find number of isolates in linked block
 		my $c_block_iso = $syn_blocks{$c_block}{'in'};
-		if ( $c_block_iso == $no_iso ){
+		print "link: $l = $c_block_iso\n";
 		
-			#print "yes\n";
-			my @c_block = @{$syn_blocks{$c_block}{'block'}};
-			my @c_up = @{$syn_blocks{$c_block}{'up'}};
-			my @c_down = @{$syn_blocks{$c_block}{'down'}};
+		# add link to array if it links to a block with the same number of isolates as the current block.
+		if ( $block_inc{$l_clean} ){
+			print " - self-loop: $l_clean\n";
+		}elsif ( $c_block_iso == $no_iso ){
+			push( @down_match, $l_clean);
+		}
+		
+	}
+	
+	# number of matching links
+	my $no_match_up = scalar(@up_match);
+	my $no_match_down = scalar(@down_match);
+		
+	# if only one link matches original block -> check for a reciprocal link.
+	if ($no_match_up == 1){
+		
+		# set block isolates
+		my $ex_iso = $up_match[0];
+		
+		# find synteny block;
+		my $c_block = $syn_block_isolates {$ex_iso};
+		
+		# find connecting links is connecting isolates upstream or downstream isolate
+		my @c_links = ();
+		if ( $syn_blocks{$c_block}{'upe'} eq $ex_iso ) {
+			@c_links = @{$syn_blocks{$c_block}{'up'}};
+		}elsif ( $syn_blocks{$c_block}{'doe'} eq $ex_iso ) {
+			@c_links = @{$syn_blocks{$c_block}{'down'}};
+		}else{
+			print " - WARNING: no matching block - $ex_iso\n";
+		}
+		
+		# check other links for connected synteny blocks that also match
+		my $no_match = 0;
+		foreach my $cl (@c_links){
+
+			# find synteny block
+			my $cl_clean = $cl;
+			$cl_clean =~ s/-r//;
+			my $cc_block = $syn_block_isolates {$cl_clean};
 			
-			# find matching end
-			my $start = ""; 
-			my $end = "";
-			#if ( $lclean ){
-			
-			#}elsif(){
-			
-			#}else{
-			
-			#}
-			# check no other possibilities for connected synteny block
-			
-			exit;
+			# if no. isolates match original block then store as a reciprocal link. 
+			my $cc_block_iso = $syn_blocks{$cc_block}{'in'};
+			++$no_match if ( $cc_block_iso == $no_iso );
 		
 		}
+		
+		# if there is only one possible reciprocal link	then link the blocks for later processing.		
+		if ($no_match == 1){
+			$r_links{$ex_iso} = $upstream_iso;
+			$r_links{$upstream_iso} = $ex_iso;
+			print TEMP "$ex_iso - $upstream_iso\n";###
+		}
+		
 	}
-	exit;
 	
+	# if only one link matches original block -> check for a reciprocal link.
+	if ($no_match_down == 1){
+		
+		# set block isolates
+		my $ex_iso = $down_match[0];
+		
+		# find synteny block;
+		my $c_block = $syn_block_isolates {$ex_iso};
+		
+		# find connecting links is connecting isolates upstream or downstream isolate
+		my @c_links = ();
+		if ( $syn_blocks{$c_block}{'upe'} eq $ex_iso ) {
+			@c_links = @{$syn_blocks{$c_block}{'up'}};
+		}elsif ( $syn_blocks{$c_block}{'doe'} eq $ex_iso ) {
+			@c_links = @{$syn_blocks{$c_block}{'down'}};
+		}else{
+			print " - WARNING: no matching block - $ex_iso\n";
+		}
+		
+		# check other links for connected synteny blocks that also match
+		my $no_match = 0;
+		foreach my $cl (@c_links){
+
+			# find synteny block
+			my $cl_clean = $cl;
+			$cl_clean =~ s/-r//;
+			my $cc_block = $syn_block_isolates {$cl_clean};
+			
+			# if no. isolates match original block then store as a reciprocal link. 
+			my $cc_block_iso = $syn_blocks{$cc_block}{'in'};
+			++$no_match if ( $cc_block_iso == $no_iso );
+		
+		}
+		
+		# if there is only one possible reciprocal link	then link the blocks for later processing.		
+		if ($no_match == 1){
+			$r_links{$ex_iso} = $downstream_iso;
+			$r_links{$downstream_iso} = $ex_iso;
+			print TEMP "$ex_iso - $downstream_iso\n";###
+		}
+			
+	}
+
 
 }
- 
-exit;
 
-# cluster gene families with conserved gene order found in an identical number of genomes.
-my $continue = 1;
-my %processed = ();
-my $previous_processed = 0;
-
-while( $continue == 1 ){
+# connect (i.e find paths through) blocks with reciprocal links 
+my $print_count = 0;
+my %r_processed = ();
+my %cluster_blocks = ();
+my %block_store = ();
+my %b_up = ();
+my %b_down = ();
+for my $i (1..$n_blocks){
 	
-	# find a random sample with two connecting edges to process from (descending no. genomes)
-	for my $sn ( sort { $cluster_number{$b}<=>$cluster_number{$a} } keys %edges ){
-		
-		# find edge number and connecting nodes
-		my $e_no = 0;
-		for my $i (keys(%{$edges{$sn}})) {				
-			if ( (!$processed{$i}) && ($i ne $sn) ){
-				++$e_no;
-			}
-		}
-		
-		# only process samples with two connections.
-		if ( (!$processed{$sn}) && ($e_no == 2) ) {
-			
-			# no_genomes in starting node
-			my $current_samples = $cluster_number{$sn};
-		
-			# check upstream and downstream node match no. genomes in initial node
-			my @next_nodes = ();
-			for my $eno ( keys %{$edges{$sn}} ){
-				my $next_samples = $cluster_number{$eno};	
-				if ( (!$processed{$eno}) && ($next_samples == $current_samples) && !($sn eq $eno) ){
-					push(@next_nodes, $eno)
-				}
-			}
-		
-			# process if suitable node found
-			if ( @next_nodes > 0 ){
-			
-				++$graph_count;
-			
-				# remove initial cluster
-				$processed{$sn}++;
-				
-				# process node 1 
-				my ($o1, $o2) = follow_node($next_nodes[0]);
-				my @output_nodes = @{$o1};
-				my @connected_nodes = @{$o2};
-				
-				# add initial sample to output
-				unshift(@output_nodes, $sn);
-			
-				# process node 2 if present
-				if( @next_nodes == 2 ){
-				
-					my ($o1, $o2) = follow_node($next_nodes[1]);
-					my @output_nodes2 = @{$o1};
-					
-					# add to front of node1 samples
-					foreach(@output_nodes2){unshift(@output_nodes, $_)}
-				
-				}
-								
-				# get cluster output number
-				my ($s_no, $c_no) = cluster_no($sn);
-				
-				# number of genomes in cluster
-				my $g_number = $cluster_number{$sn};
-							
-				# print connected nodes
-				my $order = 0;
-				for (@output_nodes) { print C_OUT "$_\t$s_no\t$c_no\t",++$order,"\t$g_number\n" }
-				
-				# final node
-				my $final_node = $output_nodes[$#output_nodes];
-				
-				# remaining nodes
-				my %remaining_nodes = ();
-				for my $jj (@connected_nodes) { $remaining_nodes{$jj}{$final_node} = 1; };
-				
-				# process all connected nodes until none remain
-				while ( keys(%remaining_nodes) > 0 ){
-			
-					my %remain = ();
-					
-					# make variable containing number of edges between nodes.
-					my %edge_counts = ();
-					for my $e1 (keys %remaining_nodes){
-						for my $e2 (keys %{$remaining_nodes{$e1}}){
-							$edge_counts{$e1} = $edges{$e1}{$e2};
-						}
-					}
-				
-					# sort on number of connecting edges descending order of no. samples.
-					my @sorted_counts = sort{ $edge_counts{$b}<=>$edge_counts{$a} } keys %edge_counts;
-					@sorted_counts = (sort{ $edge_counts{$a}<=>$edge_counts{$b} } keys %edge_counts) if $ascending == 1 ;
-					
-					# reduce number of connected nodes if > $max_links
-					if ($max_links > 0){
-						@sorted_counts = @sorted_counts[0..($max_links-1)] if ( @sorted_counts > $max_links );
-					}else{
-						@sorted_counts = ();
-					}
-				
-					for my $cn ( @sorted_counts ){
-					
-						if (!$processed{$cn}){
-							
-							# number of genomes in cluster
-							my $g_number = $cluster_number{$cn};
-							
-							# output cluster number
-							my ($s_no, $c_no) = cluster_no($cn);
-			
-							# follow node
-							my ($o1, $o2) = follow_node($cn);
-							my @output_nodes = @{$o1};
-							my @connected_nodes = @{$o2};
-					
-							# print connected nodes
-							my $order = 0;
-							for my $j (@output_nodes) { print C_OUT "$j\t$s_no\t$c_no\t",++$order,"\t$g_number\n" }	
-					
-							# final node
-							my $final_node = $output_nodes[$#output_nodes];
-				
-							# store remaining nodes to process
-							for my $k (@connected_nodes) {
-								$remain{$k}{$final_node} = 1 if !$processed{$k};
-							}
-							
-						}					
-					}
-				
-					# store remaining nodes (if any)
-					%remaining_nodes = %remain;		
-				}
-			}				
-		}
-	}
-		
-	# loop through all single edge nodes in descending order
-	for my $sn ( sort { $cluster_number{$b}<=>$cluster_number{$a} } keys %edges ){
-		
-		# find edge number
-		my $e_no = 0;
-		my $process_node = "";
-		for my $i (keys(%{$edges{$sn}})) {				
-			if ( (!$processed{$i}) && ($i ne $sn) ){
-				++$e_no;
-				$process_node = $i;
-			}
-		}
-		
-		# only process samples with only one connection.
-		if ( !($processed{$sn}) && ($e_no == 1) ) {
-		
-			++$graph_count;
-			
-			# node to process
-			my %remaining_nodes = ();
-			$remaining_nodes{$process_node}{$sn} = 1; 
+	unless ($r_processed{$i} ){
+	
+		++$print_count;
+	
+		# collect info on current synteny block
+		my $no_iso = $syn_blocks{$i}{'in'}; # number of isolates in block
+		my @block = @{$syn_blocks{$i}{'block'}}; # isolates
+		my $upstream_iso = $syn_blocks{$i}{'upe'}; # upstream isolate
+		my $downstream_iso = $syn_blocks{$i}{'doe'}; # downstream isolate
 
-			# process all connected nodes until none remain
-			while ( (keys(%remaining_nodes) > 0) && (keys(%remaining_nodes) <= $max_links) ){
-		
-				my %remain = ();
+		# add block to processed
+		$r_processed{$i} = 1;
+	
+		####
+		print "\nblock - @block\n";
+	
+		# grow block upstream
+		my $cont = 1;
+		while ($cont == 1){
+			if ( $r_links{$upstream_iso} ){
+			
+				# block info
+				my $new_iso = $r_links{$upstream_iso};
+				my $new_block = $syn_block_isolates {$new_iso};
+			
+				# check it has not already been processed 
+				if (!$r_processed{$new_block}){
+			
+					print "link =  $upstream_iso -> $r_links{$upstream_iso}\n";
 				
-				# make variable containing number of edges between nodes.
-				my %edge_counts = ();
-				for my $e1 (keys %remaining_nodes){
-					for my $e2 (keys %{$remaining_nodes{$e1}}){
-						$edge_counts{$e1} = $edges{$e1}{$e2};
-					}
-				}
+					# get block, orient correctly and set next upstream cluster to test.
+					my @new_block = @{$syn_blocks{$new_block}{'block'}};
+					@new_block = reverse(@new_block) if ($new_block[0] =~ /$new_iso/);
+					$upstream_iso = $new_block[0];
+					
+					# sanity check ###
+					if ( (!($new_block[0] =~ /$new_iso/) && !($new_block[$#new_block] =~ /$new_iso/)) ){
+						die " -ERROR: could not find linker isolate in new block\n";
+					}				
+					print "new block - @new_block\nnew up -$upstream_iso\n";
 				
-				# process connecting nodes in descending order of no. samples/genomes.
-				my @sorted_counts = sort { $edge_counts{$b}<=>$edge_counts{$a} } keys %edge_counts;
-				@sorted_counts = (sort{ $edge_counts{$a}<=>$edge_counts{$b} } keys %edge_counts) if $ascending == 1 ;
+					# add block to processed
+					$r_processed{$new_block} = 1;	
+			
+					# add new block isolates to current block
+					unshift(@block, @new_block);
+			
+					print "stop - @block\n";
 				
-				# reduce number of connected nodes if > $max_links
-				if ($max_links > 0){
-					@sorted_counts = @sorted_counts[0..($max_links-1)] if ( @sorted_counts > $max_links );
 				}else{
-					@sorted_counts = ();
+					$cont = 0;
 				}
-				
-				for my $cn ( @sorted_counts ){
-					
-					if (!$processed{$cn}){
-					
-						# number of genomes in cluster
-						my $g_number = $cluster_number{$sn};
-				
-						# output cluster number
-						my ($s_no, $c_no) = cluster_no($cn);
 			
-						# follow node
-						my ($o1, $o2) = follow_node($cn);
-						my @output_nodes = @{$o1};
-						my @connected_nodes = @{$o2};
-				
-						# print connected nodes
-						my $order = 0;
-						for my $j (@output_nodes) { print C_OUT "$j\t$s_no\t$c_no\t",++$order,"\t$g_number\n" }	
-					
-						# final node
-						my $final_node = $output_nodes[$#output_nodes];
-			
-						# store remaining nodes to process
-						for my $k (@connected_nodes) { 
-							$remain{$k}{$final_node} = 1 if !$processed{$k};
-						}
-					
-					}
-
-				} 
-				
-				# store remaining nodes (if any)
-				%remaining_nodes = %remain;
-			
+			}else{
+				$cont = 0;
 			}
-		}		
-	}
+		}
 	
-	# store disconnected clusters - 0 edges (if any) 
-	for my $n ( sort { $cluster_number{$b}<=>$cluster_number{$a} } keys %edges){
-	
-		if ( !$processed{$n} ){
-		
-			my $e_no = 0; 
-			for my $i (keys(%{$edges{$n}})) {				
-				if ( (!$processed{$i}) && ($i ne $n) ){
-					++$e_no;
+		# grow block downstream
+		print "\ndownstream!\n";
+		$cont = 1;
+		while ($cont == 1){
+			if ( $r_links{$downstream_iso} ){
+			
+				# block info
+				my $new_iso = $r_links{$downstream_iso};
+				my $new_block = $syn_block_isolates {$new_iso};
+			
+				# check it has not already been processed 
+				if (!$r_processed{$new_block}){
+			
+					print "link =  $downstream_iso -> $r_links{$downstream_iso}\n";
+				
+					# get block, orient correctly and set next upstream cluster to test.
+					my @new_block = @{$syn_blocks{$new_block}{'block'}};
+					@new_block = reverse(@new_block) if ($new_block[$#new_block] =~ /$new_iso/);
+					$upstream_iso = $new_block[$#new_block];
+					
+					# get block and set next cluster to test.
+					#my @new_block = ();
+					#@new_block = @{$syn_blocks{$new_block}{'block'}};
+					#my @alt_block = (); 
+					#if ( $syn_blocks{$new_block}{'upe'} eq $r_links{$downstream_iso} ) {
+					#	@alt_block = reverse(@{$syn_blocks{$new_block}{'block'}});
+					#	$downstream_iso = $syn_blocks{$new_block}{'doe'};
+					#}elsif ( $syn_blocks{$new_block}{'doe'} eq $r_links{$downstream_iso} ) {
+					#	print " - reverse\n";
+					#	@alt_block = @{$syn_blocks{$new_block}{'block'}};
+					#	$downstream_iso = $syn_blocks{$new_block}{'upe'};
+					#}else{
+					#	die " - Error: no matching block!\n";
+					#} 
+				
+					print "new block - @new_block\nnew up -$upstream_iso\nnew down: $downstream_iso\n";
+				
+					# add block to processed
+					$r_processed{$new_block} = 1;	
+			
+					# add new block isolates to current block
+					push(@block, @new_block);
+			
+					print "stop - @block\n";
+				
+				}else{
+					$cont = 0;
 				}
+			
+			}else{
+				$cont = 0;
 			}
-			
-			# print if disconnected
-			if ( $e_no == 0 ){
-			
-				++$graph_count;
-				
-				# number of genomes in cluster
-				my $g_number = $cluster_number{$n};
-			
-				# output cluster number
-				my ($s_no, $c_no) = cluster_no($n);
-				
-				# store 
-				print C_OUT "$n\t$s_no\t$c_no\t1\t$g_number\n";
-				$processed{$n} = 1;
-				
-			}			
 		}
-	}
-			
-	# check for remaining nodes	
-	my $total_processed = keys(%processed);
-	my $total_to_process = keys(%edges);
-	$continue = 0 if $total_processed == $total_to_process;
-	
-}
-
-# add in filtered clusters
-for my $fc (@filtered_clusters){
-	++$graph_count;
-	
-	# number of genomes in cluster
-	my $g_number = $filtered_number{$fc};
-	
-	print C_OUT "$fc\t$graph_count\t1\t1\t$g_number\n";				
-}
-
-# sub-functions
-sub cluster_no{
-
-	my $current_node = shift;
-	
-	#my $o1 = $cluster_number{$current_node};
-	my $o1 = $graph_count;
-	
-	my $o2 = 0; 	
-	if ($output_c{$o1}){
-		$output_c{$o1} = $output_c{$o1}+1;
-		$o2 = $output_c{$o1};
-	}else{
-		$o2 = 1;
-		$output_c{$o1} = 1;
-	}
-	
-	return($o1,$o2);
-			
-}
-
-sub follow_node{
-
-	my $current_node = shift;
-	
-	# output variables
-	my @links = ();
-	my @connected = ();
 		
-	# no. genomes in starting node
-	my $current_samples = $cluster_number{$current_node};	
-	
-	# process all nodes
-	my $continue = 1;
-    while( $continue == 1 ){
+		# find upstream and downstream links - currently this is not predictable based on the orienation of the cluster
+		# in the block. This might be due to not reverseing the sign on the clusters when a block containing only
+		# one cluster is added. ###### TO DO.
+		my ($o1, $o2);
+		($o1, $o2) = find_links($block[0]);
+		my @up_links = @{$o1};
 		
-		# store starting node
-		$processed{$current_node}++;
-		push( @connected, $current_node);
+		# check upstream links are correct.
+		my $self_check = 0;
+		if ( scalar(@block)>1 ){
+			for (@up_links) { 
+				$self_check = 1 if( ($_ =~ $block[1]) || ($block[1] =~ $_) ); 
+			}
+			@up_links = @{$o2} if $self_check == 1;
+		}
 		
-		# check number of nodes
-		my @nodes = ();
-		for my $i ( keys %{$edges{$current_node}} ){
-			push( @nodes , $i ) if !$processed{$i};
+		# check downstream links are correct.
+		($o1, $o2) = find_links($block[$#block]);
+		my @down_links = @{$o2};
+		$self_check = 0;
+		if ( scalar(@block)>1 ){
+			for (@down_links) { 
+				$self_check = 1 if( ($_ =~ $block[$#block]) || ($block[$#block] =~ $_) );
+			}
+			@down_links = @{$o1} if $self_check == 1;
 		}
-	
-		my $no_nodes = scalar(@nodes);
-	
-		# end of branch
-		if ( $no_nodes == 0 ){
-			$continue = 0;
-		}
-		# multi-branching - add links
-		elsif( $no_nodes > 1 ){
-			push( @links, @nodes );
-			$continue = 0;
-		}
-		# one branch - follow
-		elsif( $no_nodes == 1 ){
-	
-			# check if next node has same number of samples as previous.
-			my $next_node = $nodes[0];
-			my $next_samples = $cluster_number{$next_node};
-			
-			# stop, store and add branch if different # samples from original
-			if( $current_samples != $next_samples ){
-			
-				push(@links, $next_node);
 						
-				$continue = 0;
-			}
-			# otherwise iterate over next node
-			else{
-			
-				$current_node = $next_node;
+		# correct block formatting
+		for (0..$#block) { $block[$_] =~ s/-r/-/ };
+		
+		# store upstream and downstream links
+		$b_up{$print_count} = \@up_links;
+		$b_down{$print_count} = \@down_links;
+		
+		# store block 
+		my $store_block = sprintf("%s\t%i\t%i\t%s", $print_count, $no_iso ,scalar(@block), join(",",@block) );
+		$block_store{$print_count} = $store_block;
+		
+		# store which block each isolate is present in
+		for my $temp (@block){ 
+			$temp =~ s/-//;
+			$cluster_blocks{$temp} = $print_count; 
+		};	 
 
-			}
-				
-		}
-		
-		last if $continue == 0;
-		
 	}
-		
-	# return connected nodes
-	return(\@connected, \@links);
-					
+	
+}close OUTPUT;
+
+# print connected blocks to file
+open OUTPUT, ">$output/$prefix.connected_blocks" or die " - ERROR: could not open $output/$prefix.connected_blocks\n";
+print OUTPUT sprintf("block_number\tnumber_isolates\tnumber_clusters_in_block\tclusters_in_block\tupstream_blocks\tdownstream_blocks\tupstream_links\tdownstream_links\n"); # headers
+for my $b_no ( keys %block_store ) {
+
+	# find connected block for upstream links
+	my @up_links = @{$b_up{$b_no}};
+	my @up_blocks = ();
+	for my $temp (@up_links){
+		$temp =~ s/-r//;
+		if( !$cluster_blocks{$temp} ){
+			print " - WARNING: no block found for cluster - $temp\n";
+			push(@up_blocks, "NA");
+		}else{
+			push(@up_blocks, $cluster_blocks{$temp});
+			print "self_link - $b_no - $cluster_blocks{$temp} - $temp\n" if ($cluster_blocks{$temp} == $b_no); ###
+		}
+	}
+	
+	# find connected block for downstream links
+	my @down_links = @{$b_down{$b_no}};
+	my @down_blocks = ();
+	for my $temp (@down_links){
+		$temp =~ s/-r//;
+		if( !$cluster_blocks{$temp} ){
+			print " - WARNING: no block found for cluster - $temp\n";
+			push(@down_blocks, "NA");
+		}else{
+			push(@down_blocks, $cluster_blocks{$temp});
+		}
+	}
+	
+	# classify block
+	
+	# format links for printing
+	for (0..$#up_links) { $up_links[$_] =~ s/-r/-/ };
+	for (0..$#down_links) { $down_links[$_] =~ s/-r/-/ };
+	
+	my $print_block = sprintf("%s\t%s\t%s\t%s\t%s\n", $block_store{$b_no}, join(",", @up_blocks), join(",", @down_blocks), join(",", @up_links), join(",", @down_links) );
+	print OUTPUT $print_block;
 }
+		
+# print 
 
-exit
+# check for loop/link/flipping
 
+### outputs
+# a) edges - done
+# b) fastg/gfa done
+# c) absolute synteny blocks
+# d) connected syntenty blocks
+# e) order of connected synteny blocks
+# f) flip/loop/link info
+
+exit;
