@@ -230,10 +230,10 @@ if ( ($treeWAS_path ne "") && ($no_treewas == 0) ){
 				print " - running treeWAS on $p $test\n";
 				
 				#if( $test eq "snps"){
-				#	system ("Rscript --verbose $treeWAS_path/run_treeWAS.R $snps $metadata $p $tree $output_dir/$test --s --p $l_threshold >>$output_dir/$test/treeWAS.log 2>>$output_dir/$test/treeWAS.log");
+				#	system ("Rscript --verbose $treeWAS_path/run_treeWAS.R $snps $metadata $tree $output_dir/$test --s --p $l_threshold >>$output_dir/$test/treeWAS.log 2>>$output_dir/$test/treeWAS.log");
 				#}
 				#else{
-					system ("Rscript --verbose $treeWAS_path/run_treeWAS.R $output_dir/$test.treeWAS_input $metadata $p $tree $output_dir/$test >>$output_dir/$test/treeWAS.log 2>>$output_dir/$test/treeWAS.log");
+					system ("Rscript --verbose $treeWAS_path/run_treeWAS.R $output_dir/$test.treeWAS_input $metadata $tree $output_dir/$test >>$output_dir/$test/treeWAS.log 2>>$output_dir/$test/treeWAS.log");
 				#}
 				
 				# check treeWAS completed without errors

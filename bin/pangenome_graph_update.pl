@@ -1046,7 +1046,7 @@ for my $i (1..$n_blocks){
 		$self_check = 0;
 		if ( scalar(@block)>1 ){
 			for (@down_links) { 
-				$self_check = 1 if( ($_ =~ $block[$#block]) || ($block[$#block] =~ $_) );
+				$self_check = 1 if( ($_ =~ $block[$#block-1]) || ($block[$#block-1] =~ $_) );
 			}
 			@down_links = @{$o1} if $self_check == 1;
 		}
@@ -1074,12 +1074,16 @@ for my $i (1..$n_blocks){
 
 # print connected blocks to file
 open OUTPUT, ">$output/$prefix.connected_blocks" or die " - ERROR: could not open $output/$prefix.connected_blocks\n";
-print OUTPUT sprintf("block_number\tnumber_isolates\tnumber_clusters_in_block\tclusters_in_block\tupstream_blocks\tdownstream_blocks\tupstream_links\tdownstream_links\n"); # headers
+print OUTPUT sprintf("block_number\tnumber_isolates\tnumber_clusters_in_block\tclusters_in_block\tupstream_blocks\tdownstream_blocks\tupstream_links\tdownstream_links\tdescription\n"); # headers
 for my $b_no ( keys %block_store ) {
+	
+	# find connected block upstream/downstream - check for self links
+	my $self_link = 0;
 
 	# find connected block for upstream links
 	my @up_links = @{$b_up{$b_no}};
 	my @up_blocks = ();
+	my @up_filtered = ();
 	for my $temp (@up_links){
 		$temp =~ s/-r//;
 		if( !$cluster_blocks{$temp} ){
@@ -1087,13 +1091,18 @@ for my $b_no ( keys %block_store ) {
 			push(@up_blocks, "NA");
 		}else{
 			push(@up_blocks, $cluster_blocks{$temp});
-			print "self_link - $b_no - $cluster_blocks{$temp} - $temp\n" if ($cluster_blocks{$temp} == $b_no); ###
+			if ( $cluster_blocks{$temp} == $b_no ){
+				$self_link = 1;
+			}else{
+				push(@up_filtered, $cluster_blocks{$temp});
+			}
 		}
 	}
 	
 	# find connected block for downstream links
 	my @down_links = @{$b_down{$b_no}};
 	my @down_blocks = ();
+	my @down_filtered = ();
 	for my $temp (@down_links){
 		$temp =~ s/-r//;
 		if( !$cluster_blocks{$temp} ){
@@ -1101,22 +1110,45 @@ for my $b_no ( keys %block_store ) {
 			push(@down_blocks, "NA");
 		}else{
 			push(@down_blocks, $cluster_blocks{$temp});
+			if ($cluster_blocks{$temp} == $b_no ){
+				$self_link = 1;
+			}else{
+				push(@down_filtered, $cluster_blocks{$temp});
+			}
 		}
 	}
-	
-	# classify block
+
+	# classify blocks	
+	my @description = ();
+	push(@description, "self-loop") if $self_link == 1; # check for self-self loop
+	if ( (@up_filtered == 1) && (@down_filtered == 1) ){
+		# loop to defined syntenic block
+		if ( $up_filtered[0] == $down_filtered[0] ){
+			push(@description, "insertion(loop)");
+		}
+		# connector
+		else{
+			push(@description, "insertion");
+		}
+	}elsif ( (@up_filtered > 5) || (@down_filtered > 5) ){
+		push(@description, "superconnector");
+	}else{
+		push(@description, "multiconnector");
+	}
+	my $desc = join(";", @description);
 	
 	# format links for printing
 	for (0..$#up_links) { $up_links[$_] =~ s/-r/-/ };
 	for (0..$#down_links) { $down_links[$_] =~ s/-r/-/ };
 	
-	my $print_block = sprintf("%s\t%s\t%s\t%s\t%s\n", $block_store{$b_no}, join(",", @up_blocks), join(",", @down_blocks), join(",", @up_links), join(",", @down_links) );
+	# print to file
+	my $print_block = sprintf("%s\t%s\t%s\t%s\t%s\t%s\n", $block_store{$b_no}, join(",", @up_blocks), join(",", @down_blocks), join(",", @up_links), join(",", @down_links), $desc );
 	print OUTPUT $print_block;
 }
 		
 # print 
 
-# check for loop/link/flipping
+# check for loop/link/flipping in nested blocks
 
 ### outputs
 # a) edges - done
