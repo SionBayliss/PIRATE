@@ -35,6 +35,8 @@ die "Dependencies missing.\n" if $dep_err == 1;
  -p|--processes		no threads/parallel processes to use [default: 2]
  -t|--threshold		% threshold below which clusters are excluded
  			[default: off]
+ -m|--max-threshold	% threshold above which clusters are excluded
+ 			[default: off]
  -d|--dosage		upper threshold of dosage to exclude from alignment 
  			[default: off]
  -n|--nucleotide 	align nucleotide sequence [default: off]
@@ -56,6 +58,7 @@ my $threads = 2;
 my $nucleotide = 0;
 
 my $threshold = 0;
+my $max_threshold = 0;
 my $dosage_threshold = 0;
 
 my $input_file = '';
@@ -70,7 +73,8 @@ GetOptions(
 	'gff=s' 	=> \$gff_dir,
 	'output=s'	=> \$output_dir,
 	'processes=i'	=> \$threads,
-	'threshold=i'	=> \$threshold,
+	'threshold=f'	=> \$threshold,
+	'max-threshold=f' => \$max_threshold,
 	'dosage=f'	=> \$dosage_threshold,
 	'nucleotide' => \$nucleotide,
 	
@@ -143,7 +147,7 @@ while(<GC>){
 		my $per_genomes = ($no_genomes / $total_genomes) * 100;
 		
 		# filter on thresholds
-		if ( $per_genomes >= $threshold ){
+		if ( ($per_genomes >= $threshold) && ($per_genomes <= $max_threshold) ){
 		
 			# [optional] filter on dosage 
 			if ( ($dosage_threshold == 0) || ($dosage <= $dosage_threshold) ){
