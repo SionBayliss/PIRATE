@@ -58,7 +58,7 @@ my $threads = 2;
 my $nucleotide = 0;
 
 my $threshold = 0;
-my $max_threshold = 0;
+my $max_threshold = 100;
 my $dosage_threshold = 0;
 
 my $input_file = '';
@@ -142,7 +142,7 @@ while(<GC>){
 		
 		# define group values
 		my $group = $l[1];
-		my $no_genomes = $l[6];	
+		my $no_genomes = $l[6];
 		my $dosage = $l[7]; # max dosage
 		my $per_genomes = ($no_genomes / $total_genomes) * 100;
 		
