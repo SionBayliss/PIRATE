@@ -133,7 +133,13 @@ while(<IN>){
 		# sanity check
 		if( scalar(@idx) > 0 ){
 			my $no_samples = scalar(@idx);
-			print " - $no_samples samples of ", scalar(keys(%include)), " found in file headers\n";
+			
+			if ( scalar(keys(%include)) > 0 ){
+				print " - $no_samples samples of ", scalar(keys(%include)), " found in file headers\n";
+			}else{
+				print " - $no_samples samples found in file headers\n";
+			}
+			
 		}else{
 			die " - ERROR: no samples found in $input file headers.\n";
 		}

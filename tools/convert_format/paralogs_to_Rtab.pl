@@ -18,11 +18,12 @@ use Pod::Usage;
  			d - duplication) [required]		
  
  Filtering options:
- --fl|freq-low		min snp frequency to include in output 
+ -l|--freq-low		min snp frequency to include in output 
 			[default: 0.00]
- --fh|freq-high		max snp frequency to include in output 
+ -h|--freq-high		max snp frequency to include in output 
 			[default: 1.00]
-			
+ -s|--samples		tab delimited list of samples to include in output 
+ 			[default: off]			
  Output options:		
  -b|--binary		binary present/absent insetad of count 
  			[default: count]
@@ -44,6 +45,8 @@ my $binary = 0;
 
 my $help = 0; 
 
+my $list = "";
+
 GetOptions(
 
 	'help|?' 	=> \$help,
@@ -52,10 +55,12 @@ GetOptions(
 	'output=s'	=> \$output,
 	'type=s' => \$type,
 	
-	'fl|freq-low=f' => \$l_threshold,
-	'fh|freq-high=f' => \$h_threshold,
+	'low=f' => \$l_threshold,
+	'high=f' => \$h_threshold,
 	
 	'binary' => \$binary,
+	
+	'samples=s' => \$list,
 	
 ) or pod2usage(1);
 pod2usage(1) if $help;
@@ -69,6 +74,27 @@ die " - ERROR: type must be ff or d.\n" unless ( ($type eq "ff") || ($type eq "d
 # open output file
 open OUT, ">$output" or die " - ERROR: could not open output file ($output)\n";
 
+# [optional] open list file
+my %list  = (); 
+my $no_samples_list = 0;
+if ($list ne ''){
+	open LIST, $list or die " - ERROR: could not open list ($list)\n";
+	while (<LIST>){
+	
+		my $line = $_;
+		chomp $line;
+		
+		my @vars = split(/\t/, $line, -1);
+		
+		$list {$vars[0]} = 1;
+		
+	}close LIST;
+	
+	# feedback
+	$no_samples_list = keys(%list); 
+	print " - $no_samples_list samples to include from list file.\n";
+}
+
 # parse input file.
 my $sample_idx = 19;
 
@@ -77,6 +103,7 @@ my @samples = ();
 
 my $no_included = 0;
 my $count = 0;
+my $no_samples = 0;
 
 open INPUT, $input or die "Input file did not open.\n";
 while(<INPUT>){
@@ -92,9 +119,37 @@ while(<INPUT>){
 		# adjust for ordered output
 		$sample_idx = 22 if $line =~ /cluster\tsegment\torder/;
 		
-		# store headers
 		@headers = @line;
-		@samples = @headers[$sample_idx..$#headers];
+		my @include = ();
+		
+		# check for samples in list 
+		if ($list ne ''){
+			for my $t ( $sample_idx..$#headers ){ 
+				if ($list{$headers[$t]}){
+					$list{$headers[$t]} = 2;
+					push(@include, $t);
+				}
+			}
+		}else{			
+			for my $t ( $sample_idx..$#headers ){ push(@include, $t) }; 	
+		}
+ 
+		# list missing samples
+		my @missing_samples = ();
+		for ( keys %list ){
+			push(@missing_samples, $_) if $list{$_} == 1;
+		}
+		print " - missing samples:\n" if scalar(@missing_samples) > 0;
+		print sprintf("%s\n", join("\n", @missing_samples)) if scalar(@missing_samples) > 0;
+		
+		# feedback and store
+		@samples = @headers[@include];
+		$no_samples = @include; 
+		if ($list ne "" ){
+			print " - $no_samples/$no_samples_list samples found in input file\n";
+		}else{
+			print " - $no_samples samples in input file\n";
+		}
 		
 		# print appropriate headers
 		print OUT "$line[0]\t".join("\t", @samples)."\n";

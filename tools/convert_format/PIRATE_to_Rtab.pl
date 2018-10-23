@@ -5,27 +5,39 @@ use warnings;
 use Getopt::Long qw(GetOptions);
 use Pod::Usage;
 
-# Convert PIRATE.*.tsv file to treeWAS.
-# assumes file is sorted (for excluding families/alleles on their initial frequency)
+# Convert PIRATE.*.tsv file to Rtab.
+# assumes multi-threshold files are sorted by family/threshold (for excluding families/alleles on their initial frequency).
 
 =head1  SYNOPSIS
 
- convert_to_treeWAS.pl -i /path/to/PIRATE.*.tab -o /path/to/output_file
+ PIRATE_to_Rtab.pl -i /path/to/PIRATE.*.tab -o /path/to/output_file
 
+ Input-Output:
  -i|--input		input PIRATE.*.tsv file [required]
- -o|--output		output treeWAS input file [required]	
+ -o|--output		output treeWAS input file [required]
+ 
+ Allele frequency:
  -l|--low		min allele frequency to include in output 
 			[default: 0.05]
- -m|--max		max allele frequency to include in output 
+ -h|--high		max allele frequency to include in output 
 			[default: 0.95]
+ 
+ Family frequency:			
  -fl|--family-freq-l	min cluster frequency at lowest threshold to include
  			in output [default: 0]
  -fh|--family-freq-h	max cluster frequency at lowest threshold to include
  			in output [default: 100]
+ 
+ Filtering options:
+ -s|--samples		tab delimited list of samples to include in output 
+ 			[default: off]			
  -d|--dosage		upper threshold of dosage to exclude from alignment 
- 			[default: 0]
- --include_family	include family cluster when processing files 
-			containing multiple alleles over multiple thresholds  
+ 			[default: 0]			
+ -a|--all		include family cluster when processing files
+			containing multiple alleles
+			[default: exclude] 
+			
+ General options:
  -h|--help		usage information
  
 =cut
@@ -41,10 +53,12 @@ my $l_threshold = 0.05;
 my $h_threshold = 0.95;
 
 my $dosage_threshold = 0;
+
 my $family_freq_l = 0;
 my $family_freq_h = 1;
 
 my $include_family = 0;
+my $list = "";
 
 my $help = 0;
 
@@ -54,11 +68,12 @@ GetOptions(
 	'input=s' 	=> \$input,
 	'output=s'	=> \$output_file,
 	'low=f' => \$l_threshold,
-	'max=f' => \$h_threshold,
+	'high=f' => \$h_threshold,
 	'dosage=f' => \$dosage_threshold,
 	'fl|family-freq-l=f' => \$family_freq_l,
 	'fh|family-freq-h=f' => \$family_freq_h,
-	'all-alleles' => \$include_family,
+	'all' => \$include_family,
+	'samples=s' => \$list,
 	
 ) or pod2usage(1);
 pod2usage(1) if $help;
@@ -68,10 +83,32 @@ pod2usage( {-message => q{output file is a required arguement}, -exitval => 1, -
 # modify dosage input if 0
 $dosage_threshold = "" if $dosage_threshold == 0;
 
+# [optional] open list file
+my %list  = (); 
+my $no_samples_list = 0;
+if ($list ne ''){
+	open LIST, $list or die " - ERROR: could not open list ($list)\n";
+	while (<LIST>){
+	
+		my $line = $_;
+		chomp $line;
+		
+		my @vars = split(/\t/, $line, -1);
+		
+		$list {$vars[0]} = 1;
+		
+	}close LIST;
+	
+	# feedback
+	$no_samples_list = keys(%list); 
+	print " - $no_samples_list samples to include from list file.\n";
+}
+
 # parse input file.
 my @headers = ();
 my @samples = ();
 my $no_samples = "";
+my $sample_idx = 19;
 
 my %prop_thresh = ();
 my %out_hash = ();
@@ -89,9 +126,43 @@ while(<INPUT>){
 	# get genome names
 	if(/^allele_name/){
 		
+		# adjust for ordered output
+		$sample_idx = 22 if $line =~ /cluster\tsegment\torder/;
+		
 		@headers = @line;
-		@samples = @headers[19..$#headers];
-		$no_samples  = scalar(@samples);
+		my @include = ();
+		
+		# check for samples in list 
+		if ($list ne ''){
+			for my $t ( $sample_idx..$#headers ){ 
+				if ($list{$headers[$t]}){
+					$list{$headers[$t]} = 2;
+					push(@include, $t);
+				}
+			}
+		
+		}else{
+			
+			for my $t ( $sample_idx..$#headers ){ push(@include, $t) }; 	
+		
+		}
+ 
+		# list missing samples
+		my @missing_samples = ();
+		for ( keys %list ){
+			push(@missing_samples, $_) if $list{$_} == 1;
+		}
+		print " - missing samples:\n" if scalar(@missing_samples) > 0;
+		print sprintf("%s\n", join("\n", @missing_samples)) if scalar(@missing_samples) > 0;
+		
+		# feedback and store
+		@samples = @headers[@include];
+		$no_samples = @include; 
+		if ($list ne "" ){
+			print " - $no_samples/$no_samples_list samples found in input file\n";
+		}else{
+			print " - $no_samples samples in input file\n";
+		}
 		
 	}else{
 	
