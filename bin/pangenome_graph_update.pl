@@ -14,20 +14,23 @@ use Pod::Usage;
  pangenome_graph.pl -i /path/to/PIRATE.gene_families.tsv -g /path/to/gff_directory/ -o /path/to/output_file 
 
  Input-Output:	
- -i|--input		input PIRATE.gene_families.tsv file [required]
- --gff		path to gff directory [required]
- -o|--output	path to output file [required]
- -c|--cluster   	####path to .cluster file containing clusterings based upon the pangenome graph [optional]
- -fa|--fastg	BUGGED - path to fastg file of pangenome graph [optional]
+ --input	input PIRATE.gene_families.tsv file [required]
+ --gffs		path to gff directory [required]
+ --output	path to output directory [required]
  
  Filtering options:
- -d|--dosage 	exclude features with a dosage greater than this value [default: off]
- -fe|--features 	features to include in graph [default: CDS]
- -l|--list		list of subset of isolates to include in outputs [default: off] 
+ --dosage 	exclude features with a dosage greater than this value [default: off]
+ --features 	features to include in graph [default: CDS]
+ --list		list of subset of isolates to include in outputs [default: off] 
+ 
+ Output options:
+ --no-cluster	do not generate clusters based on pangneome graph
+ --prefix		prefix for outut file [deafault: pangneome]
+ --gfa1		create GFA1 formatted graph file []	
  
  General:
- -h|--help 		usage information
- 
+ -h|--help 	usage information
+
 =cut
 
 # option variables
