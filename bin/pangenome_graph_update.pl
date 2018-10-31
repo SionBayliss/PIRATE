@@ -19,14 +19,16 @@ use Pod::Usage;
  --output	path to output directory [required]
  
  Filtering options:
- --dosage 	exclude features with a dosage greater than this value [default: off]
+ --dosage 	exclude features with a dosage greater than this value 
+ 		[default: off]
  --features 	features to include in graph [default: CDS]
- --list		list of subset of isolates to include in outputs [default: off] 
+ --list		list of subset of isolates to include in outputs 
+ 		[default: off] 
  
  Output options:
- --no-cluster	do not generate clusters based on pangneome graph
- --prefix		prefix for outut file [deafault: pangneome]
- --gfa1		create GFA1 formatted graph file []	
+ --no-cluster	do not generate clusters outputs [default: off]
+ --prefix	prefix for output file [default: pangenome]
+ --gfa1		create GFA1 formatted graph file [default: off]	
  
  General:
  -h|--help 	usage information

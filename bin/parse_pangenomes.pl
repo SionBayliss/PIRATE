@@ -187,7 +187,7 @@ for my $s(@AA_PER){
 		}else{
 		
 			# print to allele file if the cluster dose not contain a paralog.
-			print ALLELES "$out_line"
+			print ALLELES "$out_line";
 		
 		}
 					

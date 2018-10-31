@@ -63,23 +63,42 @@ unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){
 
 	pangenome_construction.pl -i /path/to/fasta -o /path/to/output/
 
-	-h|--help 		usage information
-	-m|--man		man page 
-	-i|--input		input fasta file [nucleotide/aa]
-	-o|--output		output directory [default: input directory]
-	-t|--threads		number of threads/cores used to use [default: 2]
-	-p|--perc		% identity threshold to use for pangenome construction [default: 98]
-	-s|--steps		% identity thresholds to use for pangenome construction [default: 50,60,70,80,90,95,98]
-	-l|--loci		file containing loci and genome as seperate columns [required for core extraction during cdhit]
-	-q|--quiet		switch off verbose
-	-cdl|--cdlow		cdhit lowest percentage id [default: 98]
-	-cds|--cdstep		cdhit step size [default: 0.5]
-	-f|--flat		mcl inflation value [default: 1.5]
-	-r|--retain		do not delete temp files
-	-n|--nucleotide		create pangenome on nucleotide sequence [default: amino acid]
-	-e|--evalue		e-value used for blast hit filtering [default: 1E-6]
-	-d|--diamond		use diamond instead of BLAST - incompatible with --nucleotide [default: off]
-	--hsp_prop		remove BLAST hsps that are < hsp_prop proportion of query length/query hsp length [default: 0]
+	Input/Output options:
+	-i|--input	input fasta file [nucleotide/aa]
+	-o|--output	output directory [default: input directory]
+	-l|--loci	file containing loci and genome as seperate columns 
+			[required for core extraction during cdhit]
+	
+	Clustering options:
+	-p|--perc	single % id threshold to use for pangenome 
+			construction [default: 98]
+	-s|--steps	multiple % id thresholds to use for pangenome 
+			construction, comma seperated 
+			[default: 50,60,70,80,90,95,98]
+	-n|--nucl	create pangenome on nucleotide sequence 
+			[default: amino acid]
+	
+	CDHIT options: 
+	-cdl|--cdlow	cdhit lowest percentage id [default: 98]
+	-cds|--cdstep	cdhit step size [default: 0.5]
+	--cdhit-core	extract core families during cdhit clustering 
+			[default: off]
+	
+	BLAST options:
+	-e|--evalue	e-value used for blast hit filtering [default: 1E-6]
+	-d|--diamond	use diamond instead of BLAST - incompatible 
+			with --nucleotide [default: off]
+	--hsp_prop	remove BLAST hsps that are < hsp_prop proportion
+			of query length/query hsp length [default: 0]
+	
+	mcl options:
+	-f|--flat	mcl inflation value [default: 1.5]
+	
+	General options:
+	-r|--retain	do not delete temp files
+	-t|--threads	number of threads/cores used to use [default: 2]
+	-q|--quiet	switch off verbose
+	--help 	usage information
 
 =cut
 
@@ -111,25 +130,32 @@ my $hsp_prop_length = 0;
 my $diamond = 0;
 
 my $exit_status = 1; 
+my $cdhit_core = 0;
 
 GetOptions(
 
 	'help|?' 	=> \$help,
+	'quiet'	=> \$quiet,
+	'retain' => \$retain,
+	
 	'input=s' 	=> \$input_file,
 	'output=s'	=> \$output_dir,
+	'loci=s' 		=> \$loci_list,
+	
 	'threads=i'	=> \$threads,
 	'steps=s'	=> \$steps,
 	'perc=s'	=> \$perc,
+	
 	'cdlow|cdl=i' => \$cd_low,
 	'cdstep|cds=f' => \$cd_step,
+	'cdhit-core' => \$cdhit_core,
+	
 	'flat=f' 	=> \$inflation_value,
-	'loci=s' 		=> \$loci_list,
-	'quiet'		=> \$quiet,
-	'retain' => \$retain,
-	'nucleotide' => \$nucleotide,
 	'evalue=f' => \$evalue,
 	'hsp_prop=f' => \$hsp_prop_length,
-	'diamond' => \$diamond
+	'diamond' => \$diamond,
+
+	'nucleotide' => \$nucleotide,
 	
 ) or pod2usage(1);
 pod2usage(1) if $help;
@@ -209,16 +235,21 @@ if( $loci_list ne '' ){
 
 # user feedback
 if ($quiet == 0 ){
-	print "Creating pangenome on nucleotide % identity.\n" if $nucleotide == 1;
-	print "Creating pangenome on amino acid % identity.\n" if $nucleotide == 0;
-	print "Input directory:\t$input_dir\n";
-	print "Output directory:\t$output_dir\n";
-	print "Number of input files: $no_files\n";
-	print "Threshold(s): @thresholds\n";
-	print "MCL inflation value: $inflation_value\n";
-	print "Homology test cutoff: $evalue\n";
-	print "Loci file contains $no_loci loci from $no_genomes genomes.\n" if $loci_list ne '';
-	print "\n";
+	print "------------------------\n\nOptions:\n\n";
+	print " - WARNING: cannot extract core loci during cdhit clustering unless loci list is provided!\n" if ( ($cdhit_core == 1) && ($loci_list eq '') );
+
+	print " - Creating pangenome on nucleotide % identity.\n" if $nucleotide == 1;
+	print " - Creating pangenome on amino acid % identity using BLAST.\n" if ( ($nucleotide == 0) && ($diamond == 0) );
+	print " - Creating pangenome on amino acid % identity using DIAMOND.\n" if ( ($nucleotide == 0) && ($diamond == 1) );
+	print " - Input directory:\t$input_dir\n";
+	print " - Output directory:\t$output_dir\n";
+	print " - Number of input files: $no_files\n";
+	print " - Threshold(s): @thresholds\n";
+	print " - MCL inflation value: $inflation_value\n";
+	print " - Homology test cutoff: $evalue\n";
+	print " - Loci file contains $no_loci loci from $no_genomes genomes.\n" if $loci_list ne '';
+	print " - Extracting core loci during cdhit clustering\n" if ( ($cdhit_core == 1) && ($loci_list ne '') );
+	print "\n------------------------\n";
 }
 
 # make mcl temp dir
@@ -365,7 +396,7 @@ for my $file( @files ){
 			`mv $output_dir/$sample.temp2.fasta $output_dir/$sample.temp.fasta`;
 		
 			# Sanity check
-			die "Number of samples in $output_dir/$sample.temp.fasta ($no_included) does not match number of included loci($sample_check).\n" if $sample_check != $no_included;
+			die "Number of samples in $output_dir/$sample.temp.fasta ($no_included) does not match number of included loci ($sample_check).\n" if $sample_check != $no_included;
 		
 		}
 		
@@ -459,7 +490,9 @@ for my $file( @files ){
 		}close CLUSTER;
 		
 		# Identify core loci (dosage of one per genome).
-		if( $loci_list ne '' ){
+		if( ( $loci_list ne '' ) && ( $cdhit_core == 1 ) ){
+		
+			#print " - Extracting core loci...\n" unless $quiet == 1;
 			
 			# variables
 			my %cluster_genomes = ();
@@ -580,7 +613,7 @@ for my $file( @files ){
 	die "number of sequences clustered via cd-hit ($total_clusters) does not match number of input sequences ($no_sequences)" if $total_clusters != $no_sequences;
 	
 	# User feedback
-	print "\n - $core_cluster_no core loci (",(($core_cluster_no/$total_clusters)*100), "%)\n" unless $quiet == 1;
+	print "\n - $core_cluster_no core loci (",(($core_cluster_no/$total_clusters)*100), "%)\n" if ( ($quiet == 0) && ($cdhit_core == 1) );
 	print " - $final_loci_no non-core loci (",(($final_loci_no/$total_clusters)*100), "%)\n" unless $quiet == 1;
 	
 	# clear variables 

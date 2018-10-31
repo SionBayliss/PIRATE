@@ -13,9 +13,9 @@ my $threads = $ARGV[3];
 sub process_family { # Process hashes of alleles in decending order of threshold.
 	
 	# sub-function parameters
-    my %genomes = %{(shift)};
-    my %alleles = %{(shift)};
-    my %loci_info = %{(shift)};
+	my %genomes = %{(shift)};
+	my %alleles = %{(shift)};
+	my %loci_info = %{(shift)};
 
 	# find number of unique genomes in family.
 	my @genomes = keys(%genomes);
@@ -240,7 +240,7 @@ my $split_total = 0;
 open my $oloci, ">$output_dir/split_paralog_loci.tab" or die "$output_dir/split_paralog_loci.tab";
 
 open LOCI, "$output_dir/paralog_loci.sorted" or die "$output_dir/paralog_loci.sorted does not exist\n";
-print " - identifying and seperating core clusters\n";
+print " - identifying and separating core clusters\n";
 while ( <LOCI> ){
 	
 	my $line = $_;

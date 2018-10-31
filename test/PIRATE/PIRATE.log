@@ -1,0 +1,182 @@
+
+-------------------------------
+
+PIRATE input options:
+ - Input Directory = /home/sbayliss/Desktop/github/PIRATE/test
+ - Output directory = /home/sbayliss/Desktop/github/PIRATE/test/PIRATE
+ - PIRATE will run using 2 cores
+ - 4 files in input directory.
+ - PIRATE will be run on 50,75,98 amino acid % identity thresholds.
+ - PIRATE will be run on feature annotated as CDS
+
+-------------------------------
+
+Standardising and checking input files:
+ - 4 gff files passed QC and will be analysed by PIRATE - completed in: 1s
+
+-------------------------------
+
+ - creating co-ordinate files - completed in: 0s
+ - creating genome loci list: - completed in: 0s
+
+-------------------------------
+
+Extracting pangenome sequences:
+
+ - completed in: 68s
+
+-------------------------------
+
+Constructing pangenome sequences:
+
+------------------------
+
+Options:
+
+ - Creating pangenome on amino acid % identity using BLAST.
+ - Input directory:	/home/sbayliss/Desktop/github/PIRATE/test/PIRATE
+ - Output directory:	/home/sbayliss/Desktop/github/PIRATE/test/PIRATE/pangenome_iterations
+ - Number of input files: 1
+ - Threshold(s): 50 75 98
+ - MCL inflation value: 1.5
+ - Homology test cutoff: 1E-6
+ - Loci file contains 15 loci from 4 genomes.
+
+------------------------
+ - Opening pan_sequences
+ - /home/sbayliss/Desktop/github/PIRATE/test/PIRATE/pan_sequences.fasta contains 14 sequences.
+ - Passing 15 loci to cd-hit at 100%  
+ - Passing 15 loci to cd-hit at 99.5%  
+ - Passing 15 loci to cd-hit at 99%  
+ - Passing 15 loci to cd-hit at 98.5%  
+ - Passing 15 loci to cd-hit at 98%  
+ - completed in 0 secs
+ - 15 non-core loci (100%)
+
+ - 7 representative loci passed to blast.
+
+ - running all-vs-all blastp on pan_sequences
+ - completed in 0 secs
+
+ - running mcl on pan_sequences at 50    
+ - 5 clusters at 50 % - completed in 0 secs
+ - running mcl on pan_sequences at 75    
+ - 5 clusters at 75 % - completed in 0 secs
+ - running mcl on pan_sequences at 98    
+ - 7 clusters at 98 % - completed in 1 secs
+
+ - reinflating clusters for pan_sequences
+ - Finished
+
+ - completed in: 2s
+
+-------------------------------
+
+Parsing pangenome files:
+
+Processing 50% - 2 paralogous gene clusters.
+Processing 75% - 2 paralogous gene clusters.
+Processing 98% - 1 paralogous gene clusters.
+
+2 paralog containing gene clusters detected.
+4 genomes processed.
+
+ - completed in: 0s
+
+-------------------------------
+
+Checking for inconsistent clustering:
+Round - 50
+Round - 75
+Round - 98
+
+0 clusters are contained in 0 linked assignment ambiguities.
+  - completed in: 0s
+
+-------------------------------
+
+Identifing paralogous clusters:
+ - completed in: 0s
+
+Classifing paralogous clusters:
+ - 9 loci contained in 2 clusters containing paralogs
+ - identifying paralogs
+ - 0% complete      - 100% complete     
+ - concatenating output files
+ - completed in: 0s
+
+-------------------------------
+
+Split paralogous clusters:
+
+ - 2 families to split.
+ - sorting loci list
+ - identifying and seperating core clusters
+ - 2 of 2 paralog families found in loci list.
+ - 2 families split into 0 additional core/accessory alleles - 2 total
+
+-------------------------------
+
+Linking clusters between thresholds:
+ - parsing co-ordinate files for product info
+ - parsing paralog file
+ - sorting loci file /home/sbayliss/Desktop/github/PIRATE/test/PIRATE/loci_list.tab
+ - 2 clusters to exclude and 3 clusters to process.
+ - linking clusters - printed 0 (0.00 %) - linking clusters - printed 2 (100%)           
+ - sorting loci file /home/sbayliss/Desktop/github/PIRATE/test/PIRATE/split_paralog_loci.tab
+ - 0 clusters to exclude and 2 clusters to process.
+ - linking clusters - printed 0 (0.00 %) - linking clusters - printed 1 (100%)           
+ - 5 clusters in output file.
+
+-------------------------------
+
+ - 4 samples found in file headers
+ - 5 genes of 5 total genes were present in 4 isolates
+ - 1 gene clusters filtered due to dosage >1.1. These WILL NOT APPEAR in outputs.
+ - 5 clusters from 4 genomes (dosage threshold <= 1.1) used for graphing.
+ - 5 syntenic blocks after first pass.
+ - 0 reversed blocks were printed to pangenome.reversed.tsv file.
+ - 0 reciprocal links in 0 blocks.
+ - 5 connected blocks were printed to *.connected_blocks file.
+
+-------------------------------
+
+Creating binary tree
+ - parsing gene cluster file
+ - printing binary fasta
+ - running fasttree
+
+-------------------------------
+
+Printing summary figures
+ - completed in: 5s
+
+-------------------------------
+
+Summary of pangenome clusters:
+
+# 5 gene families in 4 genomes.
+# 1 contain greater than one allele at the thresholds analysed.
+# 1 contain fission/fusion events.
+# 0 contain duplication/loss.
+
+%isolates	#clusters	>1 allele	fission/fusion	multicopy
+0-10%	0	0	0	0
+10-25%	2	0	0	0
+25-50%	0	0	0	0
+50-75%	1	0	1	0
+75-90%	0	0	0	0
+90-95%	0	0	0	0
+95-100%	2	1	0	0
+
+-------------------------------
+
+PIRATE completed in 76s
+
+Q: What’s orange and sounds like a parrot?
+A: A carrot.
+
+YARR!
+
+-------------------------------
+

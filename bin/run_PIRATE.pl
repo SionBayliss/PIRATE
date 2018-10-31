@@ -339,7 +339,7 @@ my $sort_check = system( "sort -t \"\t\" -k2,2 -k3,3 < $pirate_dir/cluster_allel
 die " - ERROR: failed to sort alleles.\n" if $?;
 system( "mv $pirate_dir/cluster_alleles.temp.tab $pirate_dir/cluster_alleles.tab" );
 
-# check for paralogs and erroneous clusters (inconsistent clustering between iterations).
+# check for paralogs and erroneous clusters (inconsistent clustering between iterations) - ##### unnecessary
 print "Checking for inconsistent clustering:\n";
 $time_start = time();
 chdir("$pirate_dir") or die "$!";
@@ -436,6 +436,16 @@ if ( $para_off == 0 ){
 }
 print "\n-------------------------------\n\n";
 
+# sort gene_families file on pangenome graph
+system( "perl $script_path/pangenome_graph_update.pl -i $pirate_dir/PIRATE.gene_families.tsv -gff $pirate_dir/modified_gffs/ -o $pirate_dir/ --gfa --dosage 1.1");
+if ($?){
+	print " - ERROR: pangenome_graph failed.\n" if $?; 
+}else{
+	system( "perl $script_path/sort_on_clusters.pl -i $pirate_dir/PIRATE.gene_families.tsv -c $pirate_dir/pangenome.order.tsv -s -o $pirate_dir/PIRATE.gene_families.ordered.tsv");
+	print " - ERROR: failed to sort PIRATE.gene_families.ordered.tsv.\n" if $?;
+}
+print "\n-------------------------------\n\n";
+
 # create binary fasta file for fastree
 if (`command -v fasttree;`){
 
@@ -467,6 +477,14 @@ if ( $r_plots ne '' ){
 
 }
 
+
+# print summary of gene families
+print "Summary of pangenome clusters:\n\n";
+system( "perl $script_path/table_summary.pl -i $pirate_dir/PIRATE.gene_families.tsv | tee $pirate_dir/PIRATE.pangenome_summary.txt" );
+print " - ERROR: could not create PIRATE.pangenome_summary.txt\n" if $?;
+print "\n-------------------------------\n\n";
+
+
 # [optional] align all gene sequences and produce alignment
 if ( $align == 1 ){
 	
@@ -486,12 +504,6 @@ if ( $align == 1 ){
 	
 	print "\n-------------------------------\n\n";
 }
-
-# print summary of gene families
-print "Summary of pangenome clusters:\n\n";
-system( "perl $script_path/table_summary.pl -i $pirate_dir/PIRATE.gene_families.tsv | tee $pirate_dir/PIRATE.pangenome_summary.txt" );
-print " - ERROR: could not create PIRATE.pangenome_summary.txt\n" if $?;
-print "\n-------------------------------\n\n";
 
 # tidy up unwanted files
 if ($retain < 2){

@@ -1,0 +1,13 @@
+# 5 gene families in 4 genomes.
+# 1 contain greater than one allele at the thresholds analysed.
+# 1 contain fission/fusion events.
+# 0 contain duplication/loss.
+
+%isolates	#clusters	>1 allele	fission/fusion	multicopy
+0-10%	0	0	0	0
+10-25%	2	0	0	0
+25-50%	0	0	0	0
+50-75%	1	0	1	0
+75-90%	0	0	0	0
+90-95%	0	0	0	0
+95-100%	2	1	0	0
