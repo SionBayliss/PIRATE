@@ -116,7 +116,8 @@ my %loci_genome; # loci in genome.
 my @headers = ();
 my @genomes = ();
 my $total_genomes = 0;
-my $no_headers = 0; 
+my $no_headers = 0;
+my $idx = 19; 
 
 # Parse all groups and exclude gene families that do not meet threshold requirements
 open GC, "$input_file" or die "$!";
@@ -127,10 +128,12 @@ while(<GC>){
 	
 	if(/^allele_name\t/){
 		
+		$idx = 20 if $line =~ /\tno_loci\t/;
+		
 		@headers = split (/\t/, $line, -1 );
 		$no_headers = scalar(@headers);
 		
-		@genomes = @headers[19.. ($no_headers-1) ];
+		@genomes = @headers[$idx.. ($no_headers-1) ];
 		$total_genomes = scalar(@genomes);		
 		
 	}else{
@@ -153,7 +156,7 @@ while(<GC>){
 			if ( ($dosage_threshold == 0) || ($dosage <= $dosage_threshold) ){
 			
 				# Store all loci for group
-				for my $idx ( 19..$#l ){
+				for my $idx ( $idx..$#l ){
 			
 					my $entry = $l[$idx];
 					my $entry_genome = $headers[ $idx ];

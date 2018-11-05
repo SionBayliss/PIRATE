@@ -19,7 +19,7 @@ Options:
  - Passing 15 loci to cd-hit at 99%  
  - Passing 15 loci to cd-hit at 98.5%  
  - Passing 15 loci to cd-hit at 98%  
- - completed in 0 secs
+ - completed in 1 secs
  - 15 non-core loci (100%)
 
  - 7 representative loci passed to blast.
@@ -32,7 +32,7 @@ Options:
  - running mcl on pan_sequences at 75    
  - 5 clusters at 75 % - completed in 0 secs
  - running mcl on pan_sequences at 98    
- - 7 clusters at 98 % - completed in 1 secs
+ - 7 clusters at 98 % - completed in 0 secs
 
  - reinflating clusters for pan_sequences
  - Finished

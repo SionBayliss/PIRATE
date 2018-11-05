@@ -70,6 +70,7 @@ while(<C>){
 }close C;
 
 # parse file and store in array - match clusters in cluster file.
+my $idx = 19;
 open IN, $input or die " - ERROR: $input would not open\n";
 open OUTPUT, ">$output" or die " - ERROR: $output would not open\n"; 
 open TEMP, ">$output.temp" or die " - ERROR: $output.temp would not open\n"; 
@@ -81,8 +82,10 @@ while(<IN>){
 	my @v = split(/\t/, $line, -1);
 	
 	if (/^allele/){
+		
+		$idx = 20 if $line =~ /\tno_loci\t/;
 	
-		print OUTPUT join("\t", @v[0..18], "cluster", "cluster_order", @v[19..$#v]) . "\n";
+		print OUTPUT join("\t", @v[0..18], "cluster", "cluster_order", @v[$idx..$#v]) . "\n";
 	
 	}else{	
 
@@ -93,7 +96,7 @@ while(<IN>){
 		die " - ERROR: no cluster matching $group" if !$cluster_a{$group}; 
 		
 		# print line with sorting variables added.
-		print TEMP join("\t", @v[0..18], $cluster_a{$group}, $cluster_b{$group}, @v[19..$#v]), "\n"; 
+		print TEMP join("\t", @v[0..18], $cluster_a{$group}, $cluster_b{$group}, @v[$idx..$#v]), "\n"; 
 	
 	}
 	

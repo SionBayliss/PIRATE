@@ -18,6 +18,7 @@ my $count = 0;
 # Parse cluster file - one line per gene cluster (family name is taken as cluster name). 
 print " - parsing gene cluster file\n";
 open ROUND, $input_file or die " - ERROR: could not open file $input_file\n";
+my $idx = 19;
 while(<ROUND>){
 
 	++$count; 
@@ -27,8 +28,10 @@ while(<ROUND>){
 		
 	if(/^allele_name\t/){ # Header line.
 	
+		$idx = 20 if $line =~ /\tno_loci\t/;
+		
 		@headers = split("\t", $line, -1);
-		@genomes = @headers[19..$#headers];
+		@genomes = @headers[$idx..$#headers];
 		
 	}else{ # Info line.
 	
@@ -36,7 +39,7 @@ while(<ROUND>){
 		my @line = split( /\t/ , $line, -1);
 		
 		# store cluster name and presence of a loci per genome.
-		for my $i (19..$#line){
+		for my $i ($idx..$#line){
 		
 			if( $line[$i] eq "" ){
 				push @{ $bin_seq{$headers[$i]} }, "C";

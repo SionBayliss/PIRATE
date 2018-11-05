@@ -334,33 +334,6 @@ print "$parse_results";
 print "\n - completed in: ", time() - $time_start,"s\n";
 print "\n-------------------------------\n\n";
 
-# sort non-paralogous alleles file 
-my $sort_check = system( "sort -t \"\t\" -k2,2 -k3,3 < $pirate_dir/cluster_alleles.tab > $pirate_dir/cluster_alleles.temp.tab" );
-die " - ERROR: failed to sort alleles.\n" if $?;
-system( "mv $pirate_dir/cluster_alleles.temp.tab $pirate_dir/cluster_alleles.tab" );
-
-# check for paralogs and erroneous clusters (inconsistent clustering between iterations) - ##### unnecessary
-print "Checking for inconsistent clustering:\n";
-$time_start = time();
-chdir("$pirate_dir") or die "$!";
-system( "perl $script_path/check_paralogs.pl $pirate_dir/loci_list.tab $steps $pirate_dir" ); 
-die " - ERROR: check_paralogs.pl failed\n" if $?;
-print " - completed in: ", time() - $time_start,"s\n";
-print "\n-------------------------------\n\n";
-
-# Extract paralog and erroneous cluster genes and align them.
-print "Identifing paralogous clusters:\n";
-$time_start = time();
-system( "perl $script_path/aggregate_erroneous_families.pl $pirate_dir $thresholds[0] $script_path $threads" );
-die "- ERROR: aggregate_erroneous_families.pl failed\n" if $?;
-print " - completed in: ", time() - $time_start,"s\n";
-
-# check for erroneous clusters - redundant, included only as sanity check.
-my $no_erroneous = 0;
-$no_erroneous = `awk '{print \$2}' $pirate_dir/error_links_summary.tab | uniq | wc -l` if ( -f "$pirate_dir/error_links_summary.tab" );
-$no_erroneous = 0 if $no_erroneous eq "";
-die " - ERROR: some sequences clustered erroneously during pangenome construction\n" if $no_erroneous > 0;
-
 # [optional] Classify paralogs and split paralog families.  
 if ( $para_off == 0 ){
 
@@ -416,13 +389,13 @@ if ( $para_off == 0 ){
 	# Separate paralogous clusters if dosage == 1 per genome at any threshold.
 	print "Split paralogous clusters:\n\n";
 	$time_start = time();
-	system( "perl $script_path/split_paralogs.pl $pirate_dir/loci_paralog_catagories.tab $pirate_dir/loci_list.tab $pirate_dir/ $threads");
+	system( "perl $script_path/split_paralogs_runner.pl $pirate_dir/loci_paralog_catagories.tab $pirate_dir/loci_list.tab $pirate_dir/ $threads");
 	die " - ERROR: split_paralogs failed.\n" if $?;
 	print "\n-------------------------------\n\n";
 
 	# Make annotated output tables (families and alleles) 
 	print "Linking clusters between thresholds:\n";
-	system( "perl $script_path/link_clusters.pl -l $pirate_dir/loci_list.tab -l $pirate_dir/split_paralog_loci.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --paralogs $pirate_dir/loci_paralog_catagories.tab -e $pirate_dir/paralog_clusters.tab --parallel $threads");
+	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -l $pirate_dir/split_paralog_loci.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --paralogs $pirate_dir/loci_paralog_catagories.tab -e $pirate_dir/paralog_clusters.tab --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;
 	
 }else{
@@ -483,7 +456,6 @@ print "Summary of pangenome clusters:\n\n";
 system( "perl $script_path/table_summary.pl -i $pirate_dir/PIRATE.gene_families.tsv | tee $pirate_dir/PIRATE.pangenome_summary.txt" );
 print " - ERROR: could not create PIRATE.pangenome_summary.txt\n" if $?;
 print "\n-------------------------------\n\n";
-
 
 # [optional] align all gene sequences and produce alignment
 if ( $align == 1 ){

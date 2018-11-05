@@ -3,11 +3,25 @@
 use strict;
 use warnings;
 
+use Cwd 'abs_path';
+use File::Basename;
+
 # input/output
 my $paralog_cat = $ARGV[0];
 my $loci_list = $ARGV[1];
 my $output_dir = $ARGV[2];
 my $threads = $ARGV[3];
+
+# script path
+my $script_path = abs_path(dirname($0));
+
+# output file paths
+my $index_file = "$loci_list.idx";
+my $sub_loci_lists = "$output_dir/loci_list.paralog_sub"; 
+my $sub_split = "$output_dir/sub_split"; 
+my $temp_parallel = "$output_dir/paralog_split.parallel_tasks.tab"; 
+my $output_file = "$output_dir/split_paralog_loci.tab"; 
+my $log = "$output_dir/split_paralog_loci.log"; 
 
 # parse paralog list
 my %para_groups = ();
@@ -19,7 +33,6 @@ while (<PARA>){
 	
 	if (/^\S+\t(\S+)\t/){
 		$para_groups{$1} = 1;
-		##print "$1\n";
 	}
 	 
 }close PARA;
@@ -28,8 +41,11 @@ while (<PARA>){
 my $no_para_groups = scalar(keys(%para_groups));
 print " - $no_para_groups paralogous groups to split\n";
 
-####die here  and make empty file if no paralogs. 
-
+# make empty file and exit if no paralogs found. 
+if ( $no_para_groups == 0 ){
+	`echo -n "" > $output_file`;
+	exit;
+}
 
 # parse input file and store line numbers for all paralogs of interest
 my %para_lines = ();
@@ -43,20 +59,16 @@ while (<LOCI>){
 	chomp $line;
 	
 	if (/^\S+\t(\S+)\t/){
-		push(@{$para_lines{$1}}, $count); 
-		##print "$1\n";
+		push(@{$para_lines{$1}}, $count) if $para_groups{$1};
 	}
 	 
 }close LOCI;
 
-for 
-
 # feedback
 my $no_para_groups_check = scalar(keys(%para_lines));
-print " - number of paralogous groups ($no_para_groups) not equal to number found in loci file ($no_para_groups_check)\n" if ( $no_para_groups_check != $no_para_groups );
+print " - ERROR: number of paralogous groups ($no_para_groups) not equal to number found in loci file ($no_para_groups_check)\n" if ( $no_para_groups_check != $no_para_groups );
 
 # index loci list
-my $index_file = "$output_dir/loci_list.idx";
 open my $input, $loci_list or die " - ERROR: $loci_list would not open.\n";
 open(my $index, "+>", $index_file);
 build_index($input, $index);
@@ -75,31 +87,43 @@ for my $i ( 0..($no_para_groups-1) ){
 		$s_count = 0;
 	} 
 	push(@bins, $b_count); 
-	
-	print $b_count;
 }
-
-exit;
 
 # print loci for each group into --threads input file for split_paralogs
 my $f_count = 0;
 my $b_prev = 0;
+my @o_file = ();
+my @i_file = ();
+open TEMP, ">$temp_parallel" or die " - ERROR: could not open temporary file ($temp_parallel) for writing.\n";
 for my $k ( keys %para_lines ){
 	
 	# find bin for family
 	my $b_current = $bins[$f_count];
 	
-	# open new file if appropriate
-	if ( $b_current != $b_prev ){
-	
-		print "$b_current new\n";
-	}
 	# extract line numbers
 	my @lines = @{$para_lines{$k}};
 	
+	# open new file if appropriate
+	if ( $b_current != $b_prev ){
+		
+		close FILE unless $b_prev == 0;
+		
+		my $current_file = sprintf("%s%i.tab", "$sub_loci_lists", $b_current );
+		my $current_out = sprintf("%s%i.tab", "$sub_split", $b_current );
+		
+		# open temp loci list
+		open FILE, ">$current_file" or die " - ERROR: could not open temporary file ($current_file) for writing.\n";
+		
+		# print parallel command to temp file
+		print TEMP "$current_file\t$current_out\n";
+		push(@o_file, $current_out);
+		push(@i_file, $current_out);
+		
+	}
+	
 	# print lines to file
 	for my $l (@lines){
-		#print  line_with_index($input, $index, $l); # extract line (zero indexing accounted for in sub-function)
+		print FILE line_with_index($input, $index, $l); # extract line (zero indexing accounted for in sub-function)
 	} 
 	
 	# store current bin/file as previous
@@ -108,10 +132,38 @@ for my $k ( keys %para_lines ){
 	++$f_count;
 	
 }
+close FILE;
+close TEMP;
 
 # pass each file to split_paralogs in parallel
+`parallel -a $temp_parallel --jobs $threads --colsep '\t' perl $script_path/split_paralogs_update.pl $paralog_cat {1} {2} 1 > $log`;
+
+# parse log file for number of new groups
+my $new_groups = 0;
+my $split_groups = 0;
+open LOG, $log or die " - ERROR: could not open log file.\n";
+while(<LOG>){
+	
+	if (/(\d+) families split into (\d+) additional core\/accessory/){
+		$split_groups = $split_groups + $1;
+		$new_groups = $new_groups + $2;
+	}
+}
+
+# feedback
+my $total = $no_para_groups + $new_groups;
+print " - $split_groups paralogous groups split into $new_groups additional core/accessory alleles ($total total)\n";
 
 # concatenate output files
+my $cat_line = join(" ", @o_file);
+`cat $cat_line > $output_file`;
+
+# tidy up working files
+for (@o_file){ unlink($_) }; 
+for (@o_file){ unlink($_) }; 
+unlink($temp_parallel);
+unlink($log);
+unlink($index_file);
 
 # sub functions - from : https://docstore.mik.ua/orelly/perl4/cook/ch08_28.htm
 

@@ -143,6 +143,8 @@ while(<GC>){
 		# check all samples are in headers
 		my $found = 0;
 		my %checkhash = %shash;
+		
+		$index_column = 20 if $line =~ /\tno_loci\t/;
 
 		for my $i ($index_column..$#l){
 			

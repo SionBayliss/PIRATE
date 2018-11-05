@@ -115,6 +115,7 @@ my @idx = ();
 open IN, $input or die " - ERROR: could not open $input";
 my $total_families = 0;
 my $sub_families = 0;
+my $idx = 19;
 while(<IN>){
 	
 	my $line = $_;
@@ -126,13 +127,15 @@ while(<IN>){
 		
 		@headers = @vars;
 		
+		$idx = 20 if ($line=~/\tno_loci\t/);
+		
 		# check for samples
 		if ($list ne ""){
 			for (0..$#vars){
 				push(@idx, $_) if $include{$vars[$_]};
 			}
 		}else{
-			for (19..$#vars){ push(@idx, $_) }
+			for ($idx..$#vars){ push(@idx, $_) }
 		}
 		
 		# sanity check
@@ -188,7 +191,7 @@ while(<IN>){
 			if ( ($dosage_threshold == 0) || ($dosage <= $dosage_threshold) ){
 						
 				# loop through all loci for all genomes.
-				for my $i (19..$#vars){
+				for my $i ($idx..$#vars){
 		
 					my $lc = $vars[$i];
 					my @sub_lc = split(/[\(\)\:\;]+/, $lc);

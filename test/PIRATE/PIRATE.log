@@ -23,7 +23,7 @@ Standardising and checking input files:
 
 Extracting pangenome sequences:
 
- - completed in: 68s
+ - completed in: 51s
 
 -------------------------------
 
@@ -50,7 +50,7 @@ Options:
  - Passing 15 loci to cd-hit at 99%  
  - Passing 15 loci to cd-hit at 98.5%  
  - Passing 15 loci to cd-hit at 98%  
- - completed in 0 secs
+ - completed in 1 secs
  - 15 non-core loci (100%)
 
  - 7 representative loci passed to blast.
@@ -63,12 +63,12 @@ Options:
  - running mcl on pan_sequences at 75    
  - 5 clusters at 75 % - completed in 0 secs
  - running mcl on pan_sequences at 98    
- - 7 clusters at 98 % - completed in 1 secs
+ - 7 clusters at 98 % - completed in 0 secs
 
  - reinflating clusters for pan_sequences
  - Finished
 
- - completed in: 2s
+ - completed in: 1s
 
 -------------------------------
 
@@ -103,7 +103,7 @@ Classifing paralogous clusters:
  - identifying paralogs
  - 0% complete      - 100% complete     
  - concatenating output files
- - completed in: 0s
+ - completed in: 1s
 
 -------------------------------
 
@@ -111,7 +111,7 @@ Split paralogous clusters:
 
  - 2 families to split.
  - sorting loci list
- - identifying and seperating core clusters
+ - identifying and separating core clusters
  - 2 of 2 paralog families found in loci list.
  - 2 families split into 0 additional core/accessory alleles - 2 total
 
@@ -149,7 +149,7 @@ Creating binary tree
 -------------------------------
 
 Printing summary figures
- - completed in: 5s
+ - completed in: 4s
 
 -------------------------------
 
@@ -171,10 +171,10 @@ Summary of pangenome clusters:
 
 -------------------------------
 
-PIRATE completed in 76s
+PIRATE completed in 58s
 
-Q: What’s orange and sounds like a parrot?
-A: A carrot.
+Q: How did the pirate get his Jolly Roger so cheaply?
+A: He bought it on sail.
 
 YARR!
 

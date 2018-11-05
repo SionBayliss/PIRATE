@@ -1,0 +1,430 @@
+# PIRATE summary plots.
+
+# Identifies various files in the input directory and compiles a summary pdf
+# or optionally a folder of png files. 
+
+# basic dependencies
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# default theme
+plot_theme <- theme(plot.title = element_text(face = "bold",
+                                size = rel(1.2), hjust = 0.5),
+      text = element_text(),
+      panel.background = element_rect(fill = NA, colour = NA),
+      plot.background = element_rect(fill = NA, colour = NA),
+      panel.border = element_rect(fill = NA, colour = NA), 
+      axis.title = element_text(face = "bold",size = rel(1)),
+      axis.title.y = element_text(angle = 90, vjust = 2),
+      axis.title.x = element_text(vjust = -0.2),
+      axis.line = element_line(colour="black"),
+      panel.grid.major = element_line(colour="#f0f0f0"),
+      panel.grid.minor = element_blank(),
+      legend.key = element_rect(colour = NA),
+      legend.position = "bottom",
+      #legend.position = "none",
+      legend.direction = "horizontal",
+      legend.key.size= unit(0.2, "cm"),
+      #legend.margin = unit(0, "cm"),
+      legend.title = element_text(face="bold", size=rel(1)),
+      plot.margin = unit(c(10,5,5,5),"mm"),
+      strip.background = element_rect(colour = "#f0f0f0",fill = "#f0f0f0"),
+      strip.text = element_text(face = "bold")
+)
+
+scale_fill_custom <- function(...){
+  discrete_scale("fill","Publication",manual_pal(values = c("#bf4f16", "#386cb0", "#fdb462","#7fc97f","#662506","#a6cee3","#fb9a99","#984ea3","#ffff33")), ...)
+}
+
+scale_colour_custom <- function(...){
+  discrete_scale("colour","Publication",manual_pal(values = c("#bf4f16", "#386cb0", "#fdb462","#7fc97f","#662506","#a6cee3","#fb9a99","#984ea3","#ffff33")), ...)
+}
+
+# Inputs
+args = commandArgs(trailingOnly=TRUE)
+input_root <- args[1]
+
+## Identify appropriate files in input directory
+
+# PIRATE gene family summary file 
+P.alleles <- sprintf("%s/PIRATE.all_alleles.tsv", input_root)
+if( file.exists(P.alleles) ){
+  
+  allele_data <- read.delim(P.alleles, header = T, quote="", check.names=FALSE)
+  
+  # max genomes
+  mx_g <- max(allele_data$number_genomes)
+  
+  # Raw # clusters per threshold
+  no_families <- allele_data %>%
+    group_by(threshold) %>%
+    summarise(count = n())
+  
+  P.clusterno <- ggplot(no_families, aes(x=threshold, y=count))+ geom_line(size = 1, color="black")+
+    ggtitle("Number of Clusters per Threshold") +
+    ylab("#Clusters") + xlab("Threshold") +
+    plot_theme
+  #P.clusterno
+  
+  # Core (>95%) and accessory
+  no_core <- allele_data %>%
+    mutate(core = ifelse(number_genomes>(0.95*mx_g),"Core","Accessory")) %>%
+    group_by(threshold, core) %>%
+    summarise(count = n())
+
+  P.core <-ggplot(no_core, aes(x=threshold, y=count, group = core, colour=as.factor(core))) + geom_line(size=1) +
+    ggtitle("Core(>95%) versus accessory(<95%) alleles per threshold") +
+    ylab("#Clusters") + xlab("Threshold") +
+    plot_theme + 
+    scale_colour_manual(name="", values=c("#bf4f16", "#386cb0"))
+  #P.core
+  
+}else{ 
+  print("PIRATE.all_alleles.tsv not found in input directory")
+}
+  
+# Gene families file # 
+idx = 19
+P.families <- sprintf("%s/PIRATE.gene_families.tsv", input_root)
+P.families.ordered <- sprintf("%s/PIRATE.gene_families.ordered.tsv", input_root)
+if ( file.exists(P.families.ordered) ){
+  P.families <- P.families.ordered
+  idx = 21
+}
+if(file.exists(P.families)){
+  
+  family_data <- read.delim(P.families, header = T, quote="", check.names=FALSE)
+  
+  # max genomes
+  mx_g <- max(allele_data$number_genomes)
+  
+  # no_isolates 
+  no_isolates <- length(colnames(family_data))-idx
+  
+  # columns in proportion file
+  prop_cols <- no_isolates
+  if(no_isolates>10){prop_cols =  10} 
+  if(no_isolates>100){prop_cols = 100} 
+  
+  # Proportion presence/absence #
+  prop_families <- family_data %>% 
+    mutate(prop = number_genomes/mx_g) %>% # proportion of genomes
+    mutate(type = ifelse(alleles_at_maximum_threshold==1, "Stable", "Diverged")) %>%
+    ggplot(aes(x=prop, fill=type)) + geom_histogram(bins=prop_cols) +
+    ylab("#Genes") + xlab("Proportion") +
+    ggtitle("Frequency of gene presence/absence") +
+    plot_theme +
+    scale_fill_custom(name="Family Type")
+  #prop_families
+  
+  # % identity at lowest threshold #
+  #diverged_threshold <- family_data %>% 
+  #  mutate(type = ifelse(alleles_at_maximum_threshold==1, "Stable", "Diverged")) %>%
+  #  group_by(threshold, type) %>%
+  #  summarise(count = n()) %>%
+  #  ggplot(aes(x=as.factor(threshold), y=count, fill=type)) + geom_bar(stat="identity") +
+  #  ylab("Count") + xlab("Threshold") +
+  #  ggtitle("Percentage identity of gene family at lowest threshold")
+  #diverged_threshold
+  
+  # Truncated/multicopy families at each threshold 
+  ffm_threshold <- family_data %>% 
+    mutate(type = ifelse(number_fission_loci>0 & number_duplicated_loci>0, "Fission/Fusion+Multicopy",
+                         ifelse(number_fission_loci>0 ,"Fission/Fusion",
+                         ifelse(number_duplicated_loci>0, "Multicopy", "Single Copy")))) %>%
+    group_by(threshold, type) %>%
+    summarise(count = n()) %>%
+    ggplot(aes(x=as.factor(threshold), y=count, fill=type)) + geom_bar(stat="identity") +
+    ylab("Count") + xlab("Threshold") +
+    ggtitle("Percentage identity of gene family at lowest threshold") +
+    plot_theme +
+    scale_fill_custom(name="Gene Type")
+  #ffm_threshold
+  
+  # Alleles at maximum threshold 
+  max_threshold_v1 <- family_data %>% 
+    select(alleles_at_maximum_threshold) %>% 
+    mutate(f = "All Data")
+  max_threshold_v2 <- family_data %>% 
+    filter(alleles_at_maximum_threshold>1) %>%
+    select(alleles_at_maximum_threshold) %>% 
+    mutate(f = "Genes with > 1 allele")
+  max_threshold <- rbind(max_threshold_v1, max_threshold_v2) %>%
+    group_by(alleles_at_maximum_threshold, f) %>%
+    summarise(count = n())
+    
+  max_alleles <- ggplot(max_threshold, aes(x = alleles_at_maximum_threshold, y = count, fill=f)) + geom_bar(stat="identity", colour = "black") +
+    ylab("Count") + xlab("No. Alleles at Maximum Threshold") +
+    facet_wrap(~f, scales="free_y")+
+    ggtitle("Number of alleles at maximum %ID threshold") +
+    plot_theme +
+    theme(legend.position="none") +
+    scale_fill_manual(values=c("#bf4f16", "#386cb0"))
+  #max_alleles
+  
+}else{ 
+  print("PIRATE.gene_families.tsv not present in input directory")
+}
+
+P.unique <- sprintf("%s/PIRATE.unique_alleles.tsv", input_root)
+if( file.exists(P.unique) ){
+  
+  unique_data <- read.delim(P.unique, header = T, quote="", check.names=FALSE)
+  
+  # max genomes
+  mx_g <- max(unique_data$number_genomes)
+  
+  # Raw # clusters per threshold
+  no_unique <- unique_data %>%
+    group_by(threshold) %>%
+    summarise(count = n())
+  
+  plot_unique <-ggplot(no_unique, aes(x=threshold, y=count))+ geom_line(size=1)+
+    ggtitle("Unique alleles per threshold") +
+    ylab("#Clusters") + xlab("Threshold") +
+    plot_theme
+  #plot_unique
+  
+  # fit hockeystick model and find inflection point
+  if ( require('segmented') ) {
+
+    # linear model
+    out.lm <- lm(count~threshold, data=no_unique) # linear model
+    
+    # segemented hockey stick model
+    o <- segmented(out.lm, seg.Z = ~threshold, control=seg.control(display=FALSE)) # psi = c(90)
+    summary(o)
+    
+    # break points
+    break.point <- o$psi[2]
+    break.point.err <- o$psi[3]
+    break.point.errs <- c(break.point-break.point.err, break.point+break.point.err)
+    
+    # extract plottable data 
+    no_unique$fit <- broken.line(o)$fit
+    
+    # make label
+    unique_lab <- sprintf("Infection point:\t%.2f\nSTERR:\t\t\t%.2f", break.point, break.point.err)
+    
+    # find label position
+    lab_y <- max(no_unique$count)*0.85
+    lab_x <- min(no_unique$threshold)+5
+    
+    # plot breakpoint and model over points
+    plot_unique_segmented <- ggplot(no_unique, aes(x=threshold, y = count )) + geom_point() +
+      geom_line(aes(x = threshold, y = fit)) +
+      geom_vline(xintercept = break.point.errs, alpha = 0.2, colour = "firebrick", linetype = 1) +
+      geom_vline(xintercept = break.point, colour = "firebrick", alpha = 0.75) +
+      ggtitle("Unique alleles per threshold") +
+      ylab("# Clusters") + xlab("Threshold") +
+      annotate("label", x = lab_x, y = lab_y, label = unique_lab, hjust = 0) +
+      plot_theme
+   # plot_unique_segmented 
+
+    # repace plot_unique with segmented plot
+    plot_unique <- plot_unique_segmented
+    
+    # base graphics
+    #plot(no_unique$threshold,no_unique$count)
+    #plot(o,col="red",lty=2,add=TRUE)
+  
+  }
+  
+}else{ 
+  print("PIRATE.unique_alleles.tsv not found in input directory")
+}
+
+# [optional] tree based plots
+tree_file <- sprintf("%s/binary_presence_absence.nwk", input_root)
+if ( (require('ggtree')) & (require('phangorn')) ) {
+  
+  # check for optional tree file
+  if( !is.na(args[2]) ){
+    tree_file <- args[2]
+  }
+  
+  # check file exists
+  if ( file.exists(tree_file) ){
+  
+    # open tree 
+    tree <- read.tree(tree_file)
+    
+    # make all branches non-negative
+    tree$edge.length <- abs(tree$edge.length)
+    
+    # midpoint root
+    test_tree <- midpoint(tree)
+    if(is.binary.phylo(tree)){
+      tree <- midpoint(tree)
+    }
+    
+    # prepare tree plot 
+    raw.tree.plot <- ggtree(tree)
+    
+    # find limits of tree and add additional for text
+    #mn <- min(raw.tree.plot$data$x)
+    mx_raw <- max(raw.tree.plot$data$x) 
+    mx <- mx_raw + (max(raw.tree.plot$data$x)*0.3)
+    
+    # replot tree with limits
+    tree.plot <- ggtree(tree) + geom_tiplab(align=T, linesize = 0.5, size=1.75)
+    tree.plot
+    
+    # prepare count of presence absence per sample
+    all_samples <- family_data[(idx):length(colnames(family_data))]
+    cluster_counts <- all_samples %>% 
+      summarise_all(funs(length(all_samples[,1])-sum(.==""))) %>%
+      t()
+    cluster_counts_plot <- data.frame(id = rownames(cluster_counts), x = 0, xend = cluster_counts[,1])
+    
+    # using geom_segment
+    tree_bar <- facet_plot(tree.plot+xlim_tree(mx), panel='#Clusters', data=cluster_counts_plot, geom=geom_segment, aes(x=x, xend=xend, y=y, yend=y), size=3, colour= "firebrick") + theme_tree2() +
+      ggtitle("Number of gene families per sample") +
+      plot_theme
+    #tree_bar
+    
+    # find size of hard-core
+    #core <- sum(apply(all_samples, 1, function(x)sum(x == "")) == 0)
+    
+    # size of pangenome vs tree
+    #count_plot_core <- data.frame(id = rownames(cluster_counts), x = 0, xend = core, pangenome = "core")
+    #count_plot_accessory <- data.frame(id = rownames(cluster_counts), x = core, xend = core+cluster_counts, pangenome = "accessory")
+    #count_plots <- rbind(count_plot_core, count_plot_accessory)
+    
+    # using geom_segment (old)
+    #tree_bar <- facet_plot(tree.plot+xlim_tree(mx), panel='#Clusters', data=count_plots, geom=geom_segment, aes(x=x, xend=xend, y=y, yend=y, colour=pangenome), size=3) + theme_tree2() +
+    #  scale_colour_manual(name="", values=c("firebrick","firebrick"))+ # values=c("#386cb0","#ef3b2c")
+    #  ggtitle("Number of gene families per sample") +
+    #  plot_theme
+    #tree_bar
+    
+    # using barh from ggstance
+    #tree_bar <- facet_plot(tree.plot+xlim_tree(mx), panel='Genome Size', data=count_plots, geom=geom_barh, mapping = aes(x=values, fill=pangenome), stat="identity") + theme_tree2()    
+    #tree_bar
+    
+    # pangenome coloured on no_alleles at max threshold using geom_segment  
+    #tpos <- family_data %>% 
+    #  mutate(x = row_number()-1, xend = row_number(), fill = alleles_at_maximum_threshold) %>%
+    #  select(x, xend, fill)
+
+    #tsub <- family_data[,20:length(family_data[1,])]
+    #tsub[] <- lapply(tsub, function(x) levels(x)[x])
+    #w <- which(tsub != "", arr.ind = TRUE)
+    #tsub[w] <- names(tsub)[w[,"col"]]
+    
+    #tall <- cbind(tpos, tsub)
+    
+    # melt and reshape
+    #library(reshape2)
+    #annotation_data <- melt(tall, id=c("x","xend", "fill")) %>%
+    #  mutate(id = value) %>%
+    #  select(id, x, xend, fill) %>%
+    #  filter(id > "")
+
+    # make phandango-like plot
+  #  phan_tree <- facet_plot(tree.plot+xlim_tree(mx), panel='Pangenome', data=annotation_data,
+  #                     geom=geom_segment, aes(x=x, xend=xend, y=y, yend=y, colour=fill), size = 0.5, lineend = "square") #+
+  #    theme_tree2() +
+  #    scale_colour_gradient(low = "#386cb0",  high = "#ef3b2c") +
+  #    ggtitle("test")+
+  #    plot_theme()
+  #  phan_tree
+  
+  # create phandango plot using heatmap
+    
+  # make binary matrix (presence-absence)
+  hpos <- data.matrix(family_data[idx:length(family_data[1,])]) 
+  hpos[hpos==1] <- NA
+  hpos[hpos > 1] <- 1
+  
+  # replace binary with no_alleles
+  hpos2 <- matrix(data = rep(family_data$threshold, length(hpos[1,])),  ncol = length(hpos[1,]))
+  hpos_final <- hpos*hpos2
+  #hpos_max <- as.integer(4*sd(family_data$threshold)) # ?
+  hpos_max <- as.integer(max(family_data$threshold))
+  hpos_final[hpos_final >  hpos_max] <-   hpos_max
+  
+  # transpose
+  hpos_plot <- as.data.frame(t(hpos_final), stringsAsFactors=F)
+
+  # make phandango plot
+  phandango_allele <- gheatmap(tree.plot, hpos_plot, low="firebrick", high="darkblue", colnames = F, 
+           offset = mx_raw*1, width = 6, color=NA) +
+    theme(legend.position = "bottom") +
+    ggtitle("Pangenome cluster presence/absence") +
+    theme(plot.title = element_text(face = "bold", hjust = 0.5), 
+          legend.key.width = unit(1.2, "cm") )
+  #phandango_allele 
+  
+  }
+}
+
+# Prepare output pdf
+pdf(sprintf("%s/PIRATE_plots.pdf", input_root), width=12, height=6)
+  
+  if(file.exists(P.families)){
+    print(P.clusterno)
+    print(P.core)
+  }
+  if(file.exists(P.alleles)){
+    print(prop_families)
+    print(ffm_threshold)
+    print(max_alleles)
+  }
+  if(file.exists(P.unique)){
+    print(plot_unique)
+  }
+  if ( (require('ggtree')) & (require('phangorn')) & (file.exists(tree_file)) ) {
+    print(tree_bar)
+    print(phandango_allele)
+  }
+
+dev.off()
+
+### end ###
+
+
+
+
+# make list of plots
+#p_list <- NULL
+#list_c <- 0
+#if(file.exists(P.families)){
+#  p_list[[list_c+1]] <- P.clusterno
+#  p_list[[list_c+2]] <- P.core
+#  list_c <- list_c + 2
+#}
+#if(file.exists(P.alleles)){
+#  p_list[[list_c+1]] <- prop_families
+#  p_list[[list_c+2]] <- ffm_threshold
+#  p_list[[list_c+3]] <- max_alleles
+#  list_c <- list_c + 3
+#}
+#if(file.exists(P.unique)){
+#  p_list[[list_c+1]] <- plot_unique
+#  list_c <- list_c + 1
+#}
+#if ( (require('ggtree')) & (require('phangorn')) & (file.exists(tree_file)) ) {
+#  p_list[[list_c+1]] <- tree_bar
+#  p_list[[list_c+2]] <- phandango_allele
+#  list_c <- list_c + 2
+#}
+
+# print using ggsave 
+#ggsave("arrange2x2.pdf", marrangeGrob(grobs = l, nrow=2, ncol=2))
+
+# Individual Plots
+#tiff(sprintf("%s/PIRATE_Summary.core_accessory.tiff", output), width=10, height=5, res=100, units="in")
+#print(rs)
+#dev.off()
+
+# Individual Plots
+#tiff(sprintf("%s/PIRATE_Summary.core_accessory_diverse.tiff", output), width=10, height=5, res=100, units="in")
+#print(rp)
+#dev.off()
+
+# Individual Plots
+#tiff(sprintf("%s/PIRATE_Summary.prop_spectra.tiff", output), width=10, height=5, res=100, units="in")
+#plot(prop.plot)
+#dev.off()
