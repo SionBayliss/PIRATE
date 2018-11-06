@@ -94,9 +94,12 @@ while(<INPUT>){
 	
 	# get genome names
 	if(/^allele_name/){
+	
+		$idx = 20 if $line =~ /\tno_loci\t/;
+		$idx = 22 if $line =~ /\torder\t/ ;
 		
 		@headers = @line;
-		@samples = @headers[19..$#headers];
+		@samples = @headers[$idx..$#headers];
 		$no_samples  = scalar(@samples);
 		
 	}else{
@@ -129,7 +132,7 @@ while(<INPUT>){
 			my $a_count = 0;
 			my %present = ();
 			for my $i (0..$#samples){
-				if ( $line[$i+19] ne "" ){
+				if ( $line[$i+$idx] ne "" ){
 					++$a_count;
 					$present{$i} = 1;
 				}

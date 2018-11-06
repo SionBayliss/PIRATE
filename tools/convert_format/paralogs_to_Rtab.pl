@@ -117,7 +117,8 @@ while(<INPUT>){
 	if(/^allele_name/){
 		
 		# adjust for ordered output
-		$sample_idx = 22 if $line =~ /cluster\tsegment\torder/;
+		$idx = 20 if $line =~ /\tno_loci\t/;
+		$idx = 22 if $line =~ /\torder\t/;
 		
 		@headers = @line;
 		my @include = ();

@@ -1,10 +1,11 @@
+diamond binaries not found in system path.
 ------------------------
 
 Options:
 
  - Creating pangenome on amino acid % identity using BLAST.
- - Input directory:	/home/sbayliss/Desktop/github/PIRATE/test/PIRATE
- - Output directory:	/home/sbayliss/Desktop/github/PIRATE/test/PIRATE/pangenome_iterations
+ - Input directory:	/home/sbayliss/Desktop/github/PIRATE_UPDATE/test/PIRATE
+ - Output directory:	/home/sbayliss/Desktop/github/PIRATE_UPDATE/test/PIRATE/pangenome_iterations
  - Number of input files: 1
  - Threshold(s): 50 75 98
  - MCL inflation value: 1.5
@@ -13,7 +14,7 @@ Options:
 
 ------------------------
  - Opening pan_sequences
- - /home/sbayliss/Desktop/github/PIRATE/test/PIRATE/pan_sequences.fasta contains 14 sequences.
+ - /home/sbayliss/Desktop/github/PIRATE_UPDATE/test/PIRATE/pan_sequences.fasta contains 14 sequences.
  - Passing 15 loci to cd-hit at 100%  
  - Passing 15 loci to cd-hit at 99.5%  
  - Passing 15 loci to cd-hit at 99%  

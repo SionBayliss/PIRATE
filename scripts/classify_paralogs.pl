@@ -307,7 +307,7 @@ print "\n";
 # Concatenate outputs into one output file.
 my @errors = ();
 print " - concatenating output files\n" if $quiet == 0;;
-open OUTPUT, ">$output_dir/loci_paralog_catagories.tab" or die $!;
+open OUTPUT, ">$output_dir/loci_paralog_categories.tab" or die $!;
 for my $p ( sort keys %paralogs ){
 
 	if ( -f  "$working/$p.output" ) {

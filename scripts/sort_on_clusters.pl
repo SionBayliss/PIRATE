@@ -84,6 +84,7 @@ while(<IN>){
 	if (/^allele/){
 		
 		$idx = 20 if $line =~ /\tno_loci\t/;
+		$idx = 22 if $line =~ /\torder\t/ ;
 	
 		print OUTPUT join("\t", @v[0..18], "cluster", "cluster_order", @v[$idx..$#v]) . "\n";
 	

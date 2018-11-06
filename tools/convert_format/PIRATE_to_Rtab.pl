@@ -108,7 +108,7 @@ if ($list ne ''){
 my @headers = ();
 my @samples = ();
 my $no_samples = "";
-my $sample_idx = 19;
+my $idx = 19;
 
 my %prop_thresh = ();
 my %out_hash = ();
@@ -127,14 +127,15 @@ while(<INPUT>){
 	if(/^allele_name/){
 		
 		# adjust for ordered output
-		$sample_idx = 22 if $line =~ /cluster\tsegment\torder/;
+		$idx = 20 if $line =~ /\tno_loci\t/;
+		$idx = 22 if $line =~ /\torder\t/ ;
 		
 		@headers = @line;
 		my @include = ();
 		
 		# check for samples in list 
 		if ($list ne ''){
-			for my $t ( $sample_idx..$#headers ){ 
+			for my $t ( $idx..$#headers ){ 
 				if ($list{$headers[$t]}){
 					$list{$headers[$t]} = 2;
 					push(@include, $t);
@@ -143,7 +144,7 @@ while(<INPUT>){
 		
 		}else{
 			
-			for my $t ( $sample_idx..$#headers ){ push(@include, $t) }; 	
+			for my $t ( $idx..$#headers ){ push(@include, $t) }; 	
 		
 		}
  

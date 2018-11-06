@@ -153,7 +153,7 @@ for my $list_idx (0..$#loci_file){
 			# print parallel command to temp file
 			print TEMP "$current_file\t$current_out\n";
 			push(@o_file, $current_out);
-			push(@i_file, $current_out);
+			push(@i_file, $current_file);
 		
 		}
 	
@@ -173,9 +173,11 @@ for my $list_idx (0..$#loci_file){
 	close TEMP;
 	
 	# pass each file to link_clusters in parallel
-	my $args = "";
-	$args = "--all-alleles" if $all_alleles == 1;
-	`parallel -a $temp_parallel --jobs $threads --colsep '\t' perl $script_path/link_clusters_update.pl -l {1} -o {2} -c $coord_dir --paralogs $paralog_file --parallel 1 -t $aa_identities $args > $log`;
+	my @args = ();
+	push(@args, "--all-alleles") if $all_alleles == 1;
+	push(@args, "--paralogs $paralog_file") if $paralog_file ne "";
+	my $args = join(" ", @args);
+	`parallel -a $temp_parallel --jobs $threads --colsep '\t' perl $script_path/link_clusters.pl -l {1} -o {2} -c $coord_dir --parallel 1 -t $aa_identities $args > $log`;
 	
 	# tidy up working files
 	#for (@o_file){ unlink($_) }; 
@@ -190,7 +192,7 @@ for my $list_idx (0..$#loci_file){
 }
 
 # concatenate files for output
-my @exts = ("PIRATE.unique_alleles.tsv","PIRATE.gene_families.tsv");
+my @exts = ("PIRATE.unique_alleles.tsv","PIRATE.gene_families.tsv", "PIRATE.genomes_per_allele.tsv");
 push(@exts, "PIRATE.all_alleles.tsv") if $all_alleles == 1;
 for my $o (@exts){ 
 

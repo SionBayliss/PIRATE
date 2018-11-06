@@ -25,18 +25,16 @@ use File::Basename;
  -k|--pan-options	arguments to pass to pangenome_contruction	
  -n|--nucl	create pangenome from nucleotide sequences, 
  		only applies to CDS features [default: off]
+ --pan-off	don't run pangenome tool [assumes PIRATE has been previously 
+  		run in output folder]
 
  Paralog classification:
- --para-align	perform paralog alignment using mafft instead of BLAST 
- 		[default: off]
  --para-off	switch off paralog identification [default: off]
 
  Output:
  -a|--align	align all genes and produce a pangenome alignment 
  		[default: off]
  -r|--rplots	plot summaries using R [requires dependencies]
-  --pan-off	don't run pangenome tool [assumes previous files 
-  		are present in pangenome_iterations folder]
 
  Usage:
  -t|--threads	number of threads/cores used by PIRATE [default: 2]
@@ -321,9 +319,6 @@ else{
 
 }
 
-# clean up files from repeat runs in same directory 
-unlink "$pirate_dir/error_links_summary.tab" if -f "$pirate_dir/error_links_summary.tab";
-
 # parse pangenome files
 print "Parsing pangenome files:\n\n";
 $time_start = time();
@@ -332,7 +327,7 @@ my $parse_results = `perl $script_path/parse_pangenomes.pl $it_dir $steps $genom
 die " - ERROR: parse_pangenomes.pl failed.\n" if $?;
 print "$parse_results";
 print "\n - completed in: ", time() - $time_start,"s\n";
-print "\n-------------------------------\n\n";
+print "\n-------------------------------\n";
 
 # [optional] Classify paralogs and split paralog families.  
 if ( $para_off == 0 ){
@@ -389,13 +384,13 @@ if ( $para_off == 0 ){
 	# Separate paralogous clusters if dosage == 1 per genome at any threshold.
 	print "Split paralogous clusters:\n\n";
 	$time_start = time();
-	system( "perl $script_path/split_paralogs_runner.pl $pirate_dir/loci_paralog_catagories.tab $pirate_dir/loci_list.tab $pirate_dir/ $threads");
+	system( "perl $script_path/split_paralogs_runner.pl $pirate_dir/loci_paralog_categories.tab $pirate_dir/loci_list.tab $pirate_dir/ $threads");
 	die " - ERROR: split_paralogs failed.\n" if $?;
 	print "\n-------------------------------\n\n";
 
 	# Make annotated output tables (families and alleles) 
 	print "Linking clusters between thresholds:\n";
-	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -l $pirate_dir/split_paralog_loci.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --paralogs $pirate_dir/loci_paralog_catagories.tab -e $pirate_dir/paralog_clusters.tab --parallel $threads");
+	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -l $pirate_dir/split_paralog_loci.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --paralogs $pirate_dir/loci_paralog_categories.tab -e $pirate_dir/paralog_clusters.tab --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;
 	
 }else{
@@ -403,14 +398,14 @@ if ( $para_off == 0 ){
 	# Make annotated output tables (families and alleles) 
 	print "\n-------------------------------\n\n";
 	print "Linking clusters between thresholds:\n";
-	system( "perl $script_path/link_clusters.pl -l $pirate_dir/loci_list.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --parallel $threads");
+	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;
 
 }
 print "\n-------------------------------\n\n";
 
 # sort gene_families file on pangenome graph
-system( "perl $script_path/pangenome_graph_update.pl -i $pirate_dir/PIRATE.gene_families.tsv -gff $pirate_dir/modified_gffs/ -o $pirate_dir/ --gfa --dosage 1.1");
+system( "perl $script_path/pangenome_graph.pl -i $pirate_dir/PIRATE.gene_families.tsv -gff $pirate_dir/modified_gffs/ -o $pirate_dir/ --gfa --dosage 1.1");
 if ($?){
 	print " - ERROR: pangenome_graph failed.\n" if $?; 
 }else{
@@ -443,7 +438,7 @@ if ( $r_plots ne '' ){
 
 	print "Printing summary figures\n";
 	$time_start = time();
-	system( "Rscript $script_path/plot_summary.R $pirate_dir $pirate_dir >/dev/null 2>/dev/null" );
+	system( "Rscript $script_path/plot_summary.R $pirate_dir >/dev/null 2>/dev/null" );
 	print " - ERROR: plotting summary figures failed - are R dependencies installed?\n" if $?;
 	print " - completed in: ", time() - $time_start,"s\n";
 	print "\n-------------------------------\n\n";
@@ -482,9 +477,7 @@ if ($retain < 2){
 	
 	unlink "$pirate_dir/paralog_loci.sorted";
 	unlink "$pirate_dir/split_paralog_loci.tab";
-	unlink "$pirate_dir/error_links_summary.tab";
 	unlink "$pirate_dir/paralog_clusters.tab";
-	unlink "$pirate_dir/cluster_alleles.tab";
 	
 	unlink glob "$pirate_dir/paralog_working/*";
 	rmdir "$pirate_dir/paralog_working/";
@@ -498,7 +491,7 @@ if ($retain < 2){
 		unlink "$pirate_dir/loci_list.tab";
 		unlink "$pirate_dir/pan_sequences.fasta";
 		unlink "$pirate_dir/pangenome_log.txt";
-		unlink "$pirate_dir/loci_paralog_catagories.tab";
+		unlink "$pirate_dir/loci_paralog_categories.tab";
 	
 		unlink glob "$pirate_dir/co-ords/*.co-ords.tab";
 		rmdir "$pirate_dir/co-ords/";

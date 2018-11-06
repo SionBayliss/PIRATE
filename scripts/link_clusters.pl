@@ -24,32 +24,32 @@ $| = 1; # turn off buffering for real time feedback.
 # variables
 my @loci_file = ();
 my $aa_identities = "";
-my $output_dir = "";
+my $output_root = "";
 my $coord_dir = "";
 my $paralog_file = "";
 my @error_clusters = ();
 my $threads = 2;
+my $all_alleles = 0;
 my $help = 0;
-
 
 GetOptions(
 	'help|?' 	=> \$help,
 	'loci=s' 	=> \@loci_file,
 	'thresholds=s'	=> \$aa_identities,
-	'output=s'	=> \$output_dir,
+	'output=s'	=> \$output_root,
 	'coords=s' => \$coord_dir,
 	'paralogs=s' => \$paralog_file,
 	'exclude=s' => \@error_clusters,
 	'parallel' => \$threads,
+	'all-alleles' => \$all_alleles,
 ) or pod2usage(2);
 pod2usage(1) if $help;
 
 # file check
 pod2usage(1) unless @loci_file;
 pod2usage(1) unless $aa_identities;
-pod2usage(1) unless $output_dir;
+pod2usage(1) unless $output_root;
 pod2usage(1) unless $coord_dir;
-#pod2usage(1) unless $paralog_file;
 
 # Parse all co-ordinate files for loci annotation info. 
 print " - parsing co-ordinate files for product info\n";
@@ -58,12 +58,12 @@ my @coords = grep{/\.co-ords.tab/} readdir(DIR);
 close DIR;
 
 my %info_hash;
-my @genome_headers = ();
+my @g_headers = ();
 for my $file(@coords){
 	
 	my $genome = $file;
 	$genome =~ s/\.co-ords\.tab//g;
-	push(@genome_headers, $genome);
+	push(@g_headers, $genome);
 	
 	open CO, "$coord_dir/$file" or die $!;
 	while(<CO>){
@@ -83,8 +83,9 @@ for my $file(@coords){
 			
 		}
 	}close CO;
-}
 
+}
+my @genome_headers = sort (@g_headers);
 
 # Sort AA identities - these must correspond to the names of folders in input DIR. 
 my @AA_PER = sort {$a<=>$b} ( split(/,/ , $aa_identities ));
@@ -112,12 +113,15 @@ if ( $paralog_file ne "" ){
 	
 }
 
+# open file containing number of genomes per allele
+open my $genomes_per_allele, sprintf(">%s.PIRATE.genomes_per_allele.tsv", $output_root) or die $!;
 
 # sub-routines
 sub link_clusters {
+
 	my %genomes = %{(shift)};
-    my %cluster_loci = %{(shift)};
-    my %round_clusters = %{(shift)};
+      my %cluster_loci = %{(shift)};
+      my %round_clusters = %{(shift)};
 
 	my $no_genomes = keys(%genomes);
 	my @thresholds = sort {$a<=>$b} keys (%cluster_loci);
@@ -140,7 +144,7 @@ sub link_clusters {
 		# Original (lowest AA%) cluster names are to use as headers and linked cluster identifiers. 
 		# Print connections to .connections.summary file.
 		for my $cluster_id (sort keys %{$cluster_loci{$threshold}} ) {
-
+		
 			# Pick first isolate in the new cluster as a representative.	
 			my @cluster_loci = sort keys( %{$cluster_loci{$threshold}{$cluster_id}} );
 			my $example_locus = $cluster_loci[0];
@@ -224,13 +228,10 @@ sub print_summaries {
 
 	# get variables
 	my $curr_group = ${(shift)}; # group name
-	#my @genome_headers = @{(shift)}; # ordered headers for output
-    my %cluster_loci = %{(shift)}; # info on loci per threshold
-    my %loci_genomes = %{(shift)}; # genome for each loci
-    #my %para_info = %{(shift)}; # truncation group for loci (if any)
+    	my %cluster_loci = %{(shift)}; # info on loci per threshold
+    	my %loci_genomes = %{(shift)}; # genome for each loci
 	my @unique_alleles = sort(@{(shift)}); # unique alleles
-	#my %info_hash = %{(shift)}; # info on product, gene name and gene length (bp)
-	
+
 	# output file handles
 	my $family_out = ${(shift)};
 	my $unique_out = ${(shift)};
@@ -250,210 +251,247 @@ sub print_summaries {
 		my $threshold = $thresholds[$round-1]; # current threshold
 
 		for my $cluster_id (sort keys %{$cluster_loci{$threshold}} ) {
+		
+			# check if all alleles are to be printed or just unique alleles
+			if (  ( $unique{$cluster_id} ) || ( $all_alleles == 1 ) ){
 
-			# store loci info per genome.
-			my %allele_info = (); # loci stored by increasing count of loci (truncation groups renumbered)
-			my %truncation_groups = (); # loci stored by trunctaion group
-			my $loci_count = 0;
-			my %no_truncated_loci = ();
-			for my $current_loci ( keys( %{$cluster_loci{$threshold}{$cluster_id}} ) ){
+				# store loci info per genome.
+				my %allele_info = (); # loci stored by increasing count of loci (truncation groups renumbered)
+				my %truncation_groups = (); # loci stored by trunctaion group
+				my $loci_count = 0;
+				my %no_truncated_loci = ();
+				for my $current_loci ( keys( %{$cluster_loci{$threshold}{$cluster_id}} ) ){
 			
-					# genome
-					my $g = $loci_genomes{$current_loci};
+						# genome
+						my $g = $loci_genomes{$current_loci};
 					
-					# store gene group - fission genes are clustered together.
-					if ( $para_info{$current_loci} ) {
+						# store gene group - fission genes are clustered together.
+						if ( $para_info{$current_loci} ) {
 					
-						$no_truncated_loci{$g}++; 
+							$no_truncated_loci{$g}++; 
 					
-						my $tg = $para_info{$current_loci};
+							my $tg = $para_info{$current_loci};
 						
-						if ( $truncation_groups{$g}{$tg} ) {
-							my $l_count = $truncation_groups{$g}{$tg};
-							$allele_info{$g}{$l_count}{$current_loci} = 1;
-							$truncation_groups{$g}{$tg} = $l_count;
+							if ( $truncation_groups{$g}{$tg} ) {
+								my $l_count = $truncation_groups{$g}{$tg};
+								$allele_info{$g}{$l_count}{$current_loci} = 1;
+								$truncation_groups{$g}{$tg} = $l_count;
+							}else{
+								$loci_count++;
+								$allele_info{$g}{$loci_count}{$current_loci} = 1;
+								$truncation_groups{$g}{$tg} = $loci_count;
+							}
+						
 						}else{
 							$loci_count++;
-							$allele_info{$g}{$loci_count}{$current_loci} = 1;
-							$truncation_groups{$g}{$tg} = $loci_count;
-						}
-						
-					}else{
-						$loci_count++;
-						$allele_info{$g}{$loci_count}{$current_loci} = 1;	
-					}									
+							$allele_info{$g}{$loci_count}{$current_loci} = 1;	
+						}									
 			
-			}
+				}
 			
-			# store info per genome
-			my $min_dose = "";
-			my $max_dose = "";
-			my $total_groups = 0;
-			my %loci_store = ();
-			my $genomes_inc_fission_loci = 0;
-			my $genomes_inc_duplications = 0;
-			my $no_fission_loci = 0;
-			my $no_duplicated_loci = 0;
+				# store info per genome
+				my $min_dose = "";
+				my $max_dose = "";
+				my $total_groups = 0;
+				my %loci_store = ();
+				my $genomes_inc_fission_loci = 0;
+				my $genomes_inc_duplications = 0;
+				my $no_fission_loci = 0;
+				my $no_duplicated_loci = 0;
+				my $no_loci = 0;
 			
-			for my $g (keys %allele_info){
+				for my $g (keys %allele_info){
 			
-				# Store max/min dose per allele
-				my $dose = keys( %{$allele_info{$g}} );
-				if( $min_dose eq "" ){
-					$min_dose = $dose;
-					$max_dose = $dose;
-				}				
-				$max_dose = $dose if $max_dose < $dose;
-				$min_dose = $dose if $min_dose > $dose;
+					# Store max/min dose per allele
+					my $dose = keys( %{$allele_info{$g}} );
+					if( $min_dose eq "" ){
+						$min_dose = $dose;
+						$max_dose = $dose;
+					}				
+					$max_dose = $dose if $max_dose < $dose;
+					$min_dose = $dose if $min_dose > $dose;
 				
-				# total truncation groups
-				$total_groups += $dose;
+					# total truncation groups
+					$total_groups += $dose;
 												
-				# prepare output line for genome.
-				my @g_out = ();
-				for my $lc ( keys %{$allele_info{$g}} ){
-					my @loci_out = keys(%{$allele_info{$g}{$lc}});
-					if ( scalar(@loci_out) > 1 ){
-						push(@g_out, sprintf("\(%s\)", join(":", sort(@loci_out))));
+					# prepare output line for genome.
+					my @g_out = ();
+					my $no_fission_temp = 0;
+					for my $lc ( keys %{$allele_info{$g}} ){
+						my @loci_out = keys(%{$allele_info{$g}{$lc}});
+						if ( scalar(@loci_out) > 1 ){
+							push(@g_out, sprintf("\(%s\)", join(":", sort(@loci_out))));
+							$no_fission_temp++;
+						}else{
+							push(@g_out, $loci_out[0]);	
+						}
+					}
+				
+					# check if allele contains duplications
+					$genomes_inc_duplications++ if scalar(@g_out) > 1;
+					$no_duplicated_loci += (scalar(@g_out)-1);
+					$no_loci += (scalar(@g_out));
+				
+					# check if allele contains truncations
+					$genomes_inc_fission_loci++ if ($no_fission_temp > 0);
+					$no_fission_loci += $no_fission_temp;
+					#if ( $no_truncated_loci{$g} ){
+					#	my $no_t = $no_truncated_loci{$g};
+					#	$genomes_inc_fission_loci++ if $no_t > 0;
+					#	$no_fission_loci += $no_t;
+					#}
+				
+					# store joined output for printing
+					$loci_store{$g} = join(";", sort(@g_out));
+				
+				} 
+			
+				# data for output line (ordered)
+				my $group_name = $curr_group;
+				my $threshold = $threshold;
+				my $no_genomes = keys(%allele_info);
+				my $average_dose = $total_groups / $no_genomes;
+				$average_dose = sprintf( "%.2f", $total_groups / $no_genomes) if abs($average_dose-int($average_dose)) > 0;
+			
+				# Find product, gene name and length info for allele.
+				my @lengths = ();
+				my %product_info = ();
+				my %name_info = ();
+				for my $current_loci ( keys( %{$cluster_loci{$threshold}{$cluster_id}} ) ){
+			
+					if(!$info_hash{$current_loci}){
+						print " - Error - loci not found = $_\n";
 					}else{
-						push(@g_out, $loci_out[0]);	
+				
+						my @vals = split(/_-_/, $info_hash{$current_loci});
+					
+						push( @lengths, $vals[2]);
+						$product_info{$vals[1]}++;
+						$name_info{$vals[0]}++;
+					
+					}				
+				}
+				
+				# Prepare consensus gene name and list
+				my @g_names=();
+				my $top_gene="NA";
+				for my $g(sort { $name_info{$b} <=> $name_info{$a} } keys %name_info){
+					if($g ne ""){
+						push(@g_names,"$g\($name_info{$g}\)" );
+						$top_gene = $g if $top_gene eq "NA";
+					}else{
+						push(@g_names,"NA\($name_info{$g}\)" );
 					}
 				}
-				
-				# check if allele contains duplications
-				$genomes_inc_duplications++ if scalar(@g_out) > 1;
-				$no_duplicated_loci += (scalar(@g_out)-1);
-				
-				# check if allele contains truncations
-				if ( $no_truncated_loci{$g} ){
-					my $no_t = $no_truncated_loci{$g};
-					$genomes_inc_fission_loci++ if $no_t > 0;
-					$no_fission_loci += $no_t;
-				}
-				
-				# store joined output for printing
-				$loci_store{$g} = join(";", sort(@g_out));
-				
-			} 
-			
-			# data for output line (ordered)
-			my $allele_name = $cluster_id;
-			my $group_name = $curr_group;
-			my $threshold = $threshold;
-			my $no_genomes = keys(%allele_info);
-			my $average_dose = $total_groups / $no_genomes;
-			$average_dose = sprintf( "%.2f", $total_groups / $no_genomes) if abs($average_dose-int($average_dose)) > 0;
-			
-			# Find product, gene name and length info for allele.
-			my @lengths = ();
-			my %product_info = ();
-			my %name_info = ();
-			for my $current_loci ( keys( %{$cluster_loci{$threshold}{$cluster_id}} ) ){
-			
-				if(!$info_hash{$current_loci}){
-					print " - Error - loci not found = $_\n";
-				}else{
-				
-					my @vals = split(/_-_/, $info_hash{$current_loci});
-					
-					push( @lengths, $vals[2]);
-					$product_info{$vals[1]}++;
-					$name_info{$vals[0]}++;
-					
-				}				
-			}
-				
-			# Prepare consensus gene name and list
-			my @g_names=();
-			my $top_gene="NA";
-			for my $g(sort { $name_info{$b} <=> $name_info{$a} } keys %name_info){
-				if($g ne ""){
-					push(@g_names,"$g\($name_info{$g}\)" );
-					$top_gene = $g if $top_gene eq "NA";
-				}else{
-					push(@g_names,"NA\($name_info{$g}\)" );
-				}
-			}
-			my $genes=join(":", @g_names);
+				my $genes = join(":", @g_names);
 		
-			# prepare consensus product name and list
-			my @product = ();
-			my $top_product="NA";
-			# $key (sort { $hash{$b} <=> $hash{$a} } keys %hash) {
-			for my $g(sort { $product_info{$b} <=> $product_info{$a} } keys %product_info){
-				if($g ne ""){
-					push(@product,"$g\($product_info{$g}\)" );
-					$top_product=$g if $top_product eq "NA";
-				}else{
-					push(@product,"NA\($product_info{$g}\)" );
+				# prepare consensus product name and list
+				my @product = ();
+				my $top_product="NA";
+				# $key (sort { $hash{$b} <=> $hash{$a} } keys %hash) {
+				for my $g(sort { $product_info{$b} <=> $product_info{$a} } keys %product_info){
+					if($g ne ""){
+						push(@product,"$g\($product_info{$g}\)" );
+						$top_product=$g if $top_product eq "NA";
+					}else{
+						push(@product,"NA\($product_info{$g}\)" );
+					}
 				}
-			}
-			my $products = join(":", @product);
+				my $products = join(":", @product);
 		
-			# Get mean/min/max gene lengths.
-			my $min_l = "";
-			my $max_l = "";
-			my $mean_l = "";
+				# Get mean/min/max gene lengths.
+				my $min_l = "NA";
+				my $max_l = "NA";
+				my $mean_l = "NA";
 		
-			if(scalar(@lengths) == 0){
-				$mean_l = $lengths[0];
-				$min_l = $lengths[0];
-				$max_l = $lengths[0];
+				if(scalar(@lengths) == 0){
+					$mean_l = $lengths[0];
+					$min_l = $lengths[0];
+					$max_l = $lengths[0];
+				}else{
+					$mean_l = sum(@lengths)/scalar(@lengths);
+					$min_l = min(@lengths);
+					$max_l = max(@lengths);
+				}
+			
+				# Count number of alleles at highest iteration. 
+				my $max_threshold = $thresholds[$#thresholds];
+				my $alleles_at_max_t = scalar(keys(%{$cluster_loci{$max_threshold}}));
+			
+				# prepare loci per genome
+				my $out_loci = "";
+				for my $g (@genome_headers){
+					if ( $loci_store{$g} ){ 
+						$out_loci = "$out_loci\t$loci_store{$g}";
+					}else{
+						$out_loci = "$out_loci\t";
+					}
+				}
+			
+				# Prepare output line
+				my $out_line = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%.02f%s\n", 
+					$cluster_id, $group_name, $top_gene, $top_product, $threshold,$alleles_at_max_t, $no_genomes, 
+					$average_dose, $min_dose, $max_dose, $genomes_inc_fission_loci, $genomes_inc_duplications, 
+					$no_fission_loci, $no_duplicated_loci, $no_loci, $products, $genes, $min_l, $max_l, $mean_l, $out_loci );
+			
+				# Print to gene family file.
+				if ( $cluster_id eq $unique_alleles[0] ){
+					print $family_out "$out_line";
+				}
+			
+				# Print to unique allele file.
+				if ( $unique{$cluster_id} ){
+					print $unique_out "$out_line";
+				}
+			
+				# print to file containing all alleles
+				print $all_out "$out_line" if ( $all_alleles == 1 );
+				
+				# print file containing number of genomes per allele
+				print $genomes_per_allele sprintf( "%s\t%s\t%s\t%i\n", $cluster_id, $curr_group, $threshold, $no_genomes );
+			
 			}else{
-				$mean_l = sum(@lengths)/scalar(@lengths);
-				$min_l = min(@lengths);
-				$max_l = max(@lengths);
-			}
 			
-			# Count number of alleles at highest iteration. 
-			my $max_threshold = $thresholds[$#thresholds];
-			my $alleles_at_max_t = scalar(keys(%{$cluster_loci{$max_threshold}}));
+				# store allele/cluster/threshold/no_genomes
+				my %temp_g_store = ();
+				for my $current_loci ( keys( %{$cluster_loci{$threshold}{$cluster_id}} ) ){
 			
-			# prepare loci per genome
-			my $out_loci = "";
-			for my $g (@genome_headers){
-				if ( $loci_store{$g} ){ 
-					$out_loci = "$out_loci\t$loci_store{$g}";
-				}else{
-					$out_loci = "$out_loci\t";
+						# genome
+						my $g = $loci_genomes{$current_loci};
+						
+						# store
+						$temp_g_store{$g} = 1;
+						
 				}
-			}
-			
-			# Prepare output line
-			my $out_line = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s%s\n", 
-				$allele_name, $group_name, $top_gene, $top_product, $threshold,$alleles_at_max_t, $no_genomes, 
-				$average_dose, $min_dose, $max_dose, $genomes_inc_fission_loci, $genomes_inc_duplications, 
-				$no_fission_loci, $no_duplicated_loci, $products, $genes, $min_l, $max_l, $mean_l, $out_loci );
-			
-			# Print to appropriate files.
-			if ( $allele_name eq $unique_alleles[0] ){
-				print $family_out "$out_line";
-			}
-			
-			if ( $unique{$allele_name} ){
-				print $unique_out "$out_line";
-			}
-			
-			# print to file containing all alleles
-			print $all_out "$out_line";
-			
+				
+				# print to file
+				print $genomes_per_allele sprintf( "%s\t%s\t%s\t%i\n", $cluster_id, $curr_group, $threshold, scalar(keys(%temp_g_store)));
+				
+			}				
 		}
 	}
 }
 
 # open output files. 
-open my $family_out, ">$output_dir/PIRATE.gene_families.tsv" or die $!;
-open my $unique_out, ">$output_dir/PIRATE.unique_alleles.tsv" or die $!;
-open my $all_out, ">$output_dir/PIRATE.all_alleles.tsv" or die $!;
+open my $family_out, sprintf(">%s.PIRATE.gene_families.tsv", $output_root) or die $!;
+open my $unique_out, sprintf(">%s.PIRATE.unique_alleles.tsv", $output_root) or die $!;
 
 # Headers
-my $header = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", 
+my $header = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", 
 				"allele_name", "cluster_family", "consensus_gene_name", "consensus_product", "threshold", 
 				"alleles_at_maximum_threshold", "number_genomes", "average_dose", "min_dose", "max_dose",
 				"genomes_containing_fissions", "genomes_containing_duplications", "number_fission_loci",
-				"number_duplicated_loci", "products", "gene_names", "min_length(bp)", "max_length(bp)", 
+				"number_duplicated_loci", "no_loci", "products", "gene_names", "min_length(bp)", "max_length(bp)", 
 				"average_length(bp)", join("\t", @genome_headers) );
-foreach ($family_out, $unique_out, $all_out){ print $_ $header } ;
+foreach ($family_out, $unique_out){ print $_ $header } ;
+
+# all alleles
+my $all_out = "";
+if ($all_alleles == 1){
+	open my $fh, sprintf(">%s.PIRATE.all_alleles.tsv", $output_root) or die $!;
+	$all_out = $fh;
+	print $all_out $header;
+}
 		
 # variables
 my $max_threshold = $AA_PER[$#AA_PER];
@@ -480,33 +518,33 @@ for my $list_idx (0..$#loci_file){
 	my $format_no = length(`head -1 $loci_list | awk '{print \$2}'`) - 1;
 	
 	# sort loci list on group. (use n option to -k2,2 to speed up sorting. WARNING - does not work with family names ending _\d) 
-	print `awk \'{gsub("^g","",\$2); print \$0}\' $loci_list | LC_ALL=C sort -k2,2 --parallel=$threads | awk -v OFS='\t' '\$2="g"\$2 {print \$0}' > $output_dir/temp_loci.sorted`;
+	#print `awk \'{gsub("^g","",\$2); print \$0}\' $loci_list | LC_ALL=C sort -k2,2 --parallel=$threads | awk -v OFS='\t' '\$2="g"\$2 {print \$0}' > $output_root.temp_loci.sorted`;
 	
 	# count entries. 
-	my $u_groups = `awk '{ a[\$2]++ } END { for (n in a) print n }' < $output_dir/temp_loci.sorted | wc -l`;
-	$u_groups =~ s/\n//g;
+	#my $u_groups = `awk '{ a[\$2]++ } END { for (n in a) print n }' < $output_root.temp_loci.sorted | wc -l`;
+	#$u_groups =~ s/\n//g;
 	
 	# parse groups to ignore (if any).
-	my %err_clusters;
-	if ( defined($error_clusters[$list_idx]) ){
-		open ERR, $error_clusters[$list_idx] or die " - ERROR: could not open $error_clusters[$list_idx]\n";
-		while(<ERR>){
-			if(/^(\S+)/){
-				$err_clusters{$1} = 1;
-			}
-		}
-	}
+	#my %err_clusters;
+	#if ( defined($error_clusters[$list_idx]) ){
+	#	open ERR, $error_clusters[$list_idx] or die " - ERROR: could not open $error_clusters[$list_idx]\n";
+	#	while(<ERR>){
+	#		if(/^(\S+)/){
+	#			$err_clusters{$1} = 1;
+	#		}
+	#	}
+	#}
 	
 	# number of erroneous clusters to exclude
-	my $no_erroneous = scalar(keys(%err_clusters));
-	my $max_clusters = $u_groups - $no_erroneous;
-	print " - $no_erroneous clusters to exclude and $max_clusters clusters to process.\n";
+	#my $no_erroneous = scalar(keys(%err_clusters));
+	#my $max_clusters = $u_groups - $no_erroneous;
+	#print " - $max_clusters clusters to process.\n";
 
 	# process all loci in file
-	print " - linking clusters - printed 0 (0.00 %)";
+	print " - linking clusters - printed 0";
 	my $cluster_count = 0;
 	my $cluster_processed = 0;
-	open LOCI, "$output_dir/temp_loci.sorted" or die "$output_dir/temp_loci.sorted does not exist\n";
+	open LOCI, "$loci_list" or die "$loci_list does not exist\n";
 	while (<LOCI>){
 	
 		my $line = $_;
@@ -521,7 +559,7 @@ for my $list_idx (0..$#loci_file){
 			++$cluster_count;
 		
 			# do not process clusters to exclude
-			if( ($cluster_count > 1) && (!$err_clusters{$curr_group}) ){
+			if( $cluster_count > 1 ){
 			
 				++$total_clusters;
 				++$cluster_processed; 
@@ -558,8 +596,8 @@ for my $list_idx (0..$#loci_file){
 					
 				# feedback every 100 clusters. 
 				if ( ($cluster_processed %100) == 0 ){
-					my $perc_processed = sprintf( "%.2f", ($cluster_processed/$max_clusters)*100 );
-					print "\r - linking clusters - printed $cluster_processed ($perc_processed%)      ";
+					#my $perc_processed = sprintf( "%.2f", ($cluster_processed/$max_clusters)*100 );
+					print "\r - linking clusters - printed $cluster_processed     ";# ($perc_processed%)      ";
 				}
 					
 				
@@ -585,44 +623,42 @@ for my $list_idx (0..$#loci_file){
 	
 	}close LOCI;
 	
-	# Process final cluster
-	if( !$err_clusters{$curr_group} ){
-			
-		++$total_clusters;
+	# process final cluster
+	++$total_clusters;
 
-		# check for divergence before processing i.e. if there is ony one group at highest threshold then no splits
-		if( keys ( %{$cluster_loci{$max_threshold}} ) > 1 ){
+	# check for divergence before processing i.e. if there is ony one group at highest threshold then no splits
+	if( keys ( %{$cluster_loci{$max_threshold}} ) > 1 ){
 
-			# link clusters
-			my ($r1, $r2, $r3, $r4, $r5) = link_clusters(\%genomes, \%cluster_loci, \%round_clusters);
-	
-			# store maximum number of splits
-			$max_split_val = $r1 if $r1 > $max_split_val;
-		
-			my %cluster_links = %$r2;
-			my %splits = %$r3;
-			my %split_count = %$r4;
-			@unique_alleles = @$r5;
-		
-			# store splits for diversity signature
-			$split_store {$curr_group} = \%split_count;
-									
-			# create newick
-			#### to do.
-		
-		}else{
-	
-			# Print only allele at highest threshold to unique alleles 
-			@unique_alleles =  keys( %{$cluster_loci{$max_threshold}} );				
+		# link clusters
+		my ($r1, $r2, $r3, $r4, $r5) = link_clusters(\%genomes, \%cluster_loci, \%round_clusters);
 
-		}
+		# store maximum number of splits
+		$max_split_val = $r1 if $r1 > $max_split_val;
 	
-		print_summaries(\$curr_group, \%cluster_loci, \%loci_genomes, 
-					\@unique_alleles, \$family_out, \$unique_out, \$all_out);
+		my %cluster_links = %$r2;
+		my %splits = %$r3;
+		my %split_count = %$r4;
+		@unique_alleles = @$r5;
 	
-		# feedback 
-		print "\r - linking clusters - printed $cluster_processed (100%)           \n";
+		# store splits for diversity signature
+		$split_store {$curr_group} = \%split_count;
+								
+		# create newick
+		#### to do.
+	
+	}else{
+
+		# Print only allele at highest threshold to unique alleles 
+		@unique_alleles =  keys( %{$cluster_loci{$max_threshold}} );				
+
 	}
+
+	print_summaries(\$curr_group, \%cluster_loci, \%loci_genomes, 
+				\@unique_alleles, \$family_out, \$unique_out, \$all_out);
+
+	# feedback 
+	print "\r - linking clusters - printed $cluster_processed (100%)           \n";
+
 }
 
 # create diversity signature file - diversity signature is the number of splits per round.
@@ -633,8 +669,8 @@ for my $g(keys %split_store ){
 	my @sig_vals = ();
 	for my $i ( 0..($#AA_PER-1) ) {
 		my $t = $AA_PER[$i];
-		my $sig_formatted = sprintf("%*d", $no_sigfigs, $split_store{$g}{$t} );
-		push(@sig_vals, $sig_formatted );
+		#my $sig_formatted = sprintf("%*d", $no_sigfigs, $split_store{$g}{$t} );
+		#push(@sig_vals, $sig_formatted );
 	}
 	
 	# Print to file	
@@ -648,6 +684,6 @@ for my $g(keys %split_store ){
 print " - $total_clusters clusters in output file.\n";
 
 # clean up
-unlink "$output_dir/temp_loci.sorted";
+#unlink "$output_root.temp_loci.sorted";
 
 exit

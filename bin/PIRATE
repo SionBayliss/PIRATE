@@ -11,7 +11,8 @@ use File::Basename;
 
 # path to executing script
 my $script_path = abs_path(dirname($0));
-
+$script_path = "$script_path/../scripts/";
+ 
 # command line options
 my $input_dir = '';
 my $output_dir = '';
@@ -48,8 +49,8 @@ if ($help == 1){
 }
 
 # check for test state
-$input_dir = "$script_path/../test/" if $test == 1;
-$input_dir = "$script_path/../test/" if $test_n == 1;
+$input_dir = "$script_path/../test/" if ( ($test == 1) || ($test_n == 1) );
+$output_dir = "$script_path/../test/PIRATE/" if ( ($test == 1) || ($test_n == 1) );
 
 # check input directory exists
 if ( $input_dir eq '' ){

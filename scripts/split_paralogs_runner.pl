@@ -117,7 +117,7 @@ for my $k ( keys %para_lines ){
 		# print parallel command to temp file
 		print TEMP "$current_file\t$current_out\n";
 		push(@o_file, $current_out);
-		push(@i_file, $current_out);
+		push(@i_file, $current_file);
 		
 	}
 	
@@ -136,7 +136,7 @@ close FILE;
 close TEMP;
 
 # pass each file to split_paralogs in parallel
-`parallel -a $temp_parallel --jobs $threads --colsep '\t' perl $script_path/split_paralogs_update.pl $paralog_cat {1} {2} 1 > $log`;
+`parallel -a $temp_parallel --jobs $threads --colsep '\t' perl $script_path/split_paralogs.pl $paralog_cat {1} {2} 1 > $log`;
 
 # parse log file for number of new groups
 my $new_groups = 0;
@@ -159,7 +159,7 @@ my $cat_line = join(" ", @o_file);
 `cat $cat_line > $output_file`;
 
 # tidy up working files
-for (@o_file){ unlink($_) }; 
+for (@i_file){ unlink($_) }; 
 for (@o_file){ unlink($_) }; 
 unlink($temp_parallel);
 unlink($log);

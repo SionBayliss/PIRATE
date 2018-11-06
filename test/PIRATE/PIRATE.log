@@ -1,9 +1,11 @@
 
+ - WARNING: cannot find diamond binaries, cannot use --diamond command.
+
 -------------------------------
 
 PIRATE input options:
- - Input Directory = /home/sbayliss/Desktop/github/PIRATE/test
- - Output directory = /home/sbayliss/Desktop/github/PIRATE/test/PIRATE
+ - Input Directory = /home/sbayliss/Desktop/github/PIRATE_UPDATE/test
+ - Output directory = /home/sbayliss/Desktop/github/PIRATE_UPDATE/test/PIRATE
  - PIRATE will run using 2 cores
  - 4 files in input directory.
  - PIRATE will be run on 50,75,98 amino acid % identity thresholds.
@@ -23,19 +25,20 @@ Standardising and checking input files:
 
 Extracting pangenome sequences:
 
- - completed in: 51s
+ - completed in: 54s
 
 -------------------------------
 
 Constructing pangenome sequences:
 
+diamond binaries not found in system path.
 ------------------------
 
 Options:
 
  - Creating pangenome on amino acid % identity using BLAST.
- - Input directory:	/home/sbayliss/Desktop/github/PIRATE/test/PIRATE
- - Output directory:	/home/sbayliss/Desktop/github/PIRATE/test/PIRATE/pangenome_iterations
+ - Input directory:	/home/sbayliss/Desktop/github/PIRATE_UPDATE/test/PIRATE
+ - Output directory:	/home/sbayliss/Desktop/github/PIRATE_UPDATE/test/PIRATE/pangenome_iterations
  - Number of input files: 1
  - Threshold(s): 50 75 98
  - MCL inflation value: 1.5
@@ -44,7 +47,7 @@ Options:
 
 ------------------------
  - Opening pan_sequences
- - /home/sbayliss/Desktop/github/PIRATE/test/PIRATE/pan_sequences.fasta contains 14 sequences.
+ - /home/sbayliss/Desktop/github/PIRATE_UPDATE/test/PIRATE/pan_sequences.fasta contains 14 sequences.
  - Passing 15 loci to cd-hit at 100%  
  - Passing 15 loci to cd-hit at 99.5%  
  - Passing 15 loci to cd-hit at 99%  
@@ -85,48 +88,30 @@ Processing 98% - 1 paralogous gene clusters.
 
 -------------------------------
 
-Checking for inconsistent clustering:
-Round - 50
-Round - 75
-Round - 98
-
-0 clusters are contained in 0 linked assignment ambiguities.
-  - completed in: 0s
-
--------------------------------
-
-Identifing paralogous clusters:
- - completed in: 0s
 
 Classifing paralogous clusters:
  - 9 loci contained in 2 clusters containing paralogs
  - identifying paralogs
  - 0% complete      - 100% complete     
  - concatenating output files
- - completed in: 1s
+ - completed in: 0s
 
 -------------------------------
 
 Split paralogous clusters:
 
- - 2 families to split.
- - sorting loci list
- - identifying and separating core clusters
- - 2 of 2 paralog families found in loci list.
- - 2 families split into 0 additional core/accessory alleles - 2 total
+ - 2 paralogous groups to split
+ - 0 paralogous groups split into 0 additional core/accessory alleles (2 total)
 
 -------------------------------
 
 Linking clusters between thresholds:
- - parsing co-ordinate files for product info
- - parsing paralog file
- - sorting loci file /home/sbayliss/Desktop/github/PIRATE/test/PIRATE/loci_list.tab
- - 2 clusters to exclude and 3 clusters to process.
- - linking clusters - printed 0 (0.00 %) - linking clusters - printed 2 (100%)           
- - sorting loci file /home/sbayliss/Desktop/github/PIRATE/test/PIRATE/split_paralog_loci.tab
- - 0 clusters to exclude and 2 clusters to process.
- - linking clusters - printed 0 (0.00 %) - linking clusters - printed 1 (100%)           
- - 5 clusters in output file.
+ - subsetting loci file for parallel - /home/sbayliss/Desktop/github/PIRATE_UPDATE/test/PIRATE/loci_list.tab
+ - 2 clusters to exclude
+ - 3 gene families to process
+ - subsetting loci file for parallel - /home/sbayliss/Desktop/github/PIRATE_UPDATE/test/PIRATE/split_paralog_loci.tab
+ - 0 clusters to exclude
+ - 2 gene families to process
 
 -------------------------------
 
@@ -149,7 +134,8 @@ Creating binary tree
 -------------------------------
 
 Printing summary figures
- - completed in: 4s
+ - ERROR: plotting summary figures failed - are R dependencies installed?
+ - completed in: 0s
 
 -------------------------------
 
@@ -171,7 +157,7 @@ Summary of pangenome clusters:
 
 -------------------------------
 
-PIRATE completed in 58s
+PIRATE completed in 57s
 
 Q: How did the pirate get his Jolly Roger so cheaply?
 A: He bought it on sail.

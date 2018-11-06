@@ -129,6 +129,7 @@ while(<GC>){
 	if(/^allele_name\t/){
 		
 		$idx = 20 if $line =~ /\tno_loci\t/;
+		$idx = 22 if $line =~ /\torder\t/ ;
 		
 		@headers = split (/\t/, $line, -1 );
 		$no_headers = scalar(@headers);

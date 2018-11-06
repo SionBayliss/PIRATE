@@ -44,6 +44,7 @@ open OUTPUT, ">$output" or die " - ERROR: could not open output file\n";
 
 # parse PIRATE cluster file.
 my $count = 0;
+my $idx = 19;
 open CLUSTERS, $input or die $!;
 while(<CLUSTERS>){
 	
@@ -56,8 +57,11 @@ while(<CLUSTERS>){
 	
 	if (/^allele/){
 	
+		$idx = 20 if $line =~ /\tno_loci\t/;
+		$idx = 22 if $line =~ /\torder\t/ ;
+	
 		# get sample headers
-		my @samples = @vars[19..$#vars]; 
+		my @samples = @vars[$idx..$#vars]; 
 		
 		# make roary headers
 		my @r_headers = ("Gene", "Non-unique Gene name", "Annotation", "No. isolates", "No. sequences", "Avg sequences per isolate", "Genome Fragment",	"Order within Fragment", "Accessory Fragment", "Accessory Order with Fragment", "QC", "Min group size nuc", "Max group size nuc", "Avg group size nuc");
@@ -70,7 +74,7 @@ while(<CLUSTERS>){
 		$count++;
 	
 		# remove additional characters from genome columns
-		for my $v (19..$#vars){
+		for my $v ($idx..$#vars){
 			$vars[$v] =~ s/\(|\)//g;
 			$vars[$v] =~ s/:/;/g; 
 		}
@@ -79,7 +83,7 @@ while(<CLUSTERS>){
 		my @out_vars = ( "$vars[0]--$vars[1]", $vars[2], $vars[3], $vars[6], "0", $vars[7], "$count", "$count", "0", "", "", $vars[16], $vars[17], $vars[18]);
 		
 		# join and print outputs
-		print OUTPUT "\"", join("\",\"", @out_vars, @vars[19..$#vars])."\"\n";
+		print OUTPUT "\"", join("\",\"", @out_vars, @vars[$idx..$#vars])."\"\n";
 		
 	}
 	

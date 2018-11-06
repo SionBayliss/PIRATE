@@ -22,7 +22,7 @@ my $gff_path = $ARGV[1];
 my $outdir = $ARGV[2];
 
 # Set output file.
-open TEST, ">$outdir/loci_paralog_catagories.tab" or die $!;
+open TEST, ">$outdir/loci_paralog_categories.tab" or die $!;
 open DOSE, ">$outdir/multicopy_dosage.tab" or die $!;
 
 # Parse GFFs to get all locus tags and their location within the assembly.
