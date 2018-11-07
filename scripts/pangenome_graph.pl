@@ -128,7 +128,7 @@ while(<IN>){
 		@headers = @vars;
 		
 		$idx = 20 if $line =~ /\tno_loci\t/;
-		$idx = 22 if $line =~ /\torder\t/ ;
+		$idx = 22 if $line =~ /\tcluster_order\t/;
 		
 		# check for samples
 		if ($list ne ""){

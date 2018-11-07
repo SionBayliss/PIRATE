@@ -31,7 +31,6 @@ use Text::Wrap;
  			[default: N]
  
  General Options:
- -c|--column	index column for start of isolate headers [default: 19]	
  -h|--help		usage information
  -q|--quiet		verbose off
  
@@ -57,7 +56,7 @@ my $fasta_dir = '';
 my $output_file = '';
 my $gff_file = '';
 my $gap_character = "N";
-my $index_column = 19;
+my $idx = 19;
 
 GetOptions(
 
@@ -71,7 +70,7 @@ GetOptions(
 	'dosage=f'	=> \$dosage_threshold,
 	'n-character=s'	=> \$gap_character,
 	'list=s' => \$list,
-	'column=i' => \$index_column,
+	'column=i' => \$idx,
 			
 ) or pod2usage(1);
 pod2usage(1) if $help;
@@ -140,13 +139,15 @@ while(<GC>){
 		
 		@headers = @l;
 		
+		# adjust index column for output version/type
+		$idx = 20 if $line =~ /\tno_loci\t/;
+		$idx = 22 if $line =~ /\tcluster_order\t/;
+		
 		# check all samples are in headers
 		my $found = 0;
 		my %checkhash = %shash;
 		
-		$index_column = 20 if $line =~ /\tno_loci\t/;
-
-		for my $i ($index_column..$#l){
+		for my $i ($idx..$#l){
 			
 			if ( $list ne "" ){
 				if ( $shash{$headers[$i]} ){
@@ -180,8 +181,6 @@ while(<GC>){
 				
 		# define group values
 		my $group = $l[1];
-
-	
 		my $product = $l[3];
 		my $gene = $l[2];
 
@@ -204,10 +203,10 @@ while(<GC>){
 			$loci_product {$group} = $product;					
 		
 			# Store all loci for group
-			for my $idx ( @header_idx ){
+			for my $idx_col ( @header_idx ){
 			
-				my $entry = $l[$idx];
-				$entry_genome = $headers[ $idx ];
+				my $entry = $l[$idx_col];
+				$entry_genome = $headers[ $idx_col ];
 				
 				unless( $entry eq "" ){
 				

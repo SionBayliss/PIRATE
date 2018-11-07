@@ -25,7 +25,6 @@ use Cwd 'abs_path';
  
  General:
  -h|--help 		usage information
- -c|--column 	index column [default: 19]
  
 =cut
 
@@ -38,8 +37,6 @@ my $list = "";
 my $field = "ID";
 my $feature = "CDS";
 
-my $index_column = 19;
-
 my $help = 0;
 
 GetOptions(
@@ -51,7 +48,6 @@ GetOptions(
 	'output=s'  => \$output,
 	
 	'feature=s' => \$feature,
-	'column=i'  => \$index_column,
 	
 	'field=s'   => \$field,
 	'list=s' => \$list,
@@ -181,6 +177,7 @@ for my $s ( 0..$#sample_list ){
 # open output 
 open OUT, ">$output" or die " - ERROR: could not open $output for writing\n";
 
+my $idx = 19;
 my @headers = ();
 my @header_idx = ();
 open IN, $input or die " - ERROR: could not open $input\n";
@@ -195,11 +192,15 @@ while (<IN>){
 		
 		@headers = @vars;
 		
+		# check for correct index column
+		$idx = 20 if $line =~ /\tno_loci\t/;
+		$idx = 22 if $line =~ /\tcluster_order\t/ ;
+		
 		# check all samples are in headers
 		my $found = 0;
 		my %checkhash = %sample_hash;
 		my @header_out = ();
-		for my $i ($index_column..$#vars){
+		for my $i ($idx..$#vars){
 			
 			if ($sample_hash{$headers[$i]}){
 			 	++$found; 
@@ -217,7 +218,7 @@ while (<IN>){
 		
 		# print header line
 		my $h_out = join("\t", @header_out);
-		my $line_start = join( "\t", @vars[0..($index_column-1)] );
+		my $line_start = join( "\t", @vars[0..($idx-1)] );
 		print OUT "$line_start\t$h_out\n";
 		
 	}else{
@@ -308,7 +309,7 @@ while (<IN>){
 		
 		# make outline
 		my $loci_out = join("\t", @genome_out);
-		my $line_start = join( "\t", @vars[0..($index_column-1)] );
+		my $line_start = join( "\t", @vars[0..($idx-1)] );
 		
 		# print to file
 		if ($g_count>0){

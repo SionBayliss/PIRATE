@@ -128,8 +128,9 @@ while(<GC>){
 	
 	if(/^allele_name\t/){
 		
+		# select index colum for input type/version
 		$idx = 20 if $line =~ /\tno_loci\t/;
-		$idx = 22 if $line =~ /\torder\t/ ;
+		$idx = 22 if $line =~ /\tcluster_order\t/;
 		
 		@headers = split (/\t/, $line, -1 );
 		$no_headers = scalar(@headers);

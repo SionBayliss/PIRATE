@@ -14,7 +14,7 @@ use Pod::Usage;
  Input-Output:	
  -i|--input			input PIRATE.gene_families.tsv file [required]
  -o|--output		path to output file [required]
- -c|--clusters   		path to *.ordder.tsv file containing graph clusterings [required]
+ -c|--clusters   		path to *.order.tsv file containing graph clusterings [required]
  
  Filter options:
  -s|--sort-genomes      sort on number of genomes [default: off]
@@ -84,9 +84,8 @@ while(<IN>){
 	if (/^allele/){
 		
 		$idx = 20 if $line =~ /\tno_loci\t/;
-		$idx = 22 if $line =~ /\torder\t/ ;
 	
-		print OUTPUT join("\t", @v[0..18], "cluster", "cluster_order", @v[$idx..$#v]) . "\n";
+		print OUTPUT join("\t", @v[0..($idx-1)], "cluster", "cluster_order", @v[$idx..$#v]) . "\n";
 	
 	}else{	
 
@@ -97,7 +96,7 @@ while(<IN>){
 		die " - ERROR: no cluster matching $group" if !$cluster_a{$group}; 
 		
 		# print line with sorting variables added.
-		print TEMP join("\t", @v[0..18], $cluster_a{$group}, $cluster_b{$group}, @v[$idx..$#v]), "\n"; 
+		print TEMP join("\t", @v[0..($idx-1)], $cluster_a{$group}, $cluster_b{$group}, @v[$idx..$#v]), "\n"; 
 	
 	}
 	
@@ -109,9 +108,9 @@ close TEMP;
 # sort file
 my $tab = "\t";
 if ($sort_on_genomeNo) {
-	`sort -t'$tab' -n -k20,20 -k7,7r -k21,21 < $output.temp >> $output`;
+	`sort -t'$tab' -n -k21,21 -k7,7r -k22,22 < $output.temp >> $output`;
 }else{
-	`sort -t'$tab' -n -k20,20 -k21,21 < $output.temp >> $output`;
+	`sort -t'$tab' -n -k21,21 -k22,22 < $output.temp >> $output`;
 }
 unlink("$output.temp");
 

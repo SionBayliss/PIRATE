@@ -42,9 +42,6 @@ use Pod::Usage;
  
 =cut
 
-# genome name column index
-my $idx = 19;
-
 # command line options
 my $input = ''; 
 my $output_file = '';
@@ -128,7 +125,7 @@ while(<INPUT>){
 		
 		# adjust for ordered output
 		$idx = 20 if $line =~ /\tno_loci\t/;
-		$idx = 22 if $line =~ /\torder\t/ ;
+		$idx = 22 if $line =~ /\tcluster_order\t/ ;
 		
 		@headers = @line;
 		my @include = ();

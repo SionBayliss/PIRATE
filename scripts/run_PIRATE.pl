@@ -396,7 +396,6 @@ if ( $para_off == 0 ){
 }else{
 
 	# Make annotated output tables (families and alleles) 
-	print "\n-------------------------------\n\n";
 	print "Linking clusters between thresholds:\n";
 	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;

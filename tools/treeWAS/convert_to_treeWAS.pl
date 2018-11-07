@@ -89,11 +89,12 @@ while(<INPUT>){
 	# get genome names
 	if(/^allele_name/){
 		
+		# use correct index for version/file type
 		$idx = 20 if $line =~ /\tno_loci\t/;
-		$idx = 22 if $line =~ /\torder\t/ ;
+		$idx = 22 if $line =~ /\tcluster_order\t/ ;
 		
 		@headers = @line;
-		@samples = @headers[19..$#headers];
+		@samples = @headers[$idx..$#headers];
 		$no_samples  = scalar(@samples);
 		
 	}else{

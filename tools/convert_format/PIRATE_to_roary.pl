@@ -58,7 +58,7 @@ while(<CLUSTERS>){
 	if (/^allele/){
 	
 		$idx = 20 if $line =~ /\tno_loci\t/;
-		$idx = 22 if $line =~ /\torder\t/ ;
+		$idx = 22 if $line =~ /\tcluster_order\t/ ;
 	
 		# get sample headers
 		my @samples = @vars[$idx..$#vars]; 
@@ -79,8 +79,16 @@ while(<CLUSTERS>){
 			$vars[$v] =~ s/:/;/g; 
 		}
 		
+		# use order variable for Genome Fragment / Order within fragment
+		my $gf = "NA";
+		my $owf = "NA";
+		if ($idx == 22){
+			$gf = $vars[20];
+			$owf = $vars[21];
+		}
+		
 		# print appropriate variables
-		my @out_vars = ( "$vars[0]--$vars[1]", $vars[2], $vars[3], $vars[6], "0", $vars[7], "$count", "$count", "0", "", "", $vars[16], $vars[17], $vars[18]);
+		my @out_vars = ( "$vars[0]--$vars[1]", $vars[2], $vars[3], $vars[6], "0", $vars[7], $gf, $owf, "NA", "NA", "", $vars[16], $vars[17], $vars[18]);
 		
 		# join and print outputs
 		print OUTPUT "\"", join("\",\"", @out_vars, @vars[$idx..$#vars])."\"\n";

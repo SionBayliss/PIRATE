@@ -96,7 +96,7 @@ if ($list ne ''){
 }
 
 # parse input file.
-my $sample_idx = 19;
+my $idx = 19;
 
 my @headers = ();
 my @samples = ();
@@ -116,23 +116,23 @@ while(<INPUT>){
 	# get genome names
 	if(/^allele_name/){
 		
-		# adjust for ordered output
+		# adjust for ordered/versioned output
 		$idx = 20 if $line =~ /\tno_loci\t/;
-		$idx = 22 if $line =~ /\torder\t/;
+		$idx = 22 if $line =~ /\tcluster_order\t/;
 		
 		@headers = @line;
 		my @include = ();
 		
 		# check for samples in list 
 		if ($list ne ''){
-			for my $t ( $sample_idx..$#headers ){ 
+			for my $t ( $idx..$#headers ){ 
 				if ($list{$headers[$t]}){
 					$list{$headers[$t]} = 2;
 					push(@include, $t);
 				}
 			}
 		}else{			
-			for my $t ( $sample_idx..$#headers ){ push(@include, $t) }; 	
+			for my $t ( $idx..$#headers ){ push(@include, $t) }; 	
 		}
  
 		# list missing samples
@@ -169,7 +169,7 @@ while(<INPUT>){
 		# count variants 
 		my $a_count = 0;
 		my @outline = ();
-		for my $i ($sample_idx..$#line){
+		for my $i ($idx..$#line){
 		
 			my $val = $line[$i];
 			

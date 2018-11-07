@@ -96,7 +96,7 @@ while(<INPUT>){
 	if(/^allele_name/){
 	
 		$idx = 20 if $line =~ /\tno_loci\t/;
-		$idx = 22 if $line =~ /\torder\t/ ;
+		$idx = 22 if $line =~ /\tcluster_order\t/ ;
 		
 		@headers = @line;
 		@samples = @headers[$idx..$#headers];
@@ -200,6 +200,7 @@ while(<INPUT>){
 }close INPUT;
 
 # feedback
+print " - isolates: ", scalar(@samples), "\n";
 print " - family freq. thresholds: $family_freq_l - $family_freq_h\n";
 print " - allele freq. thresholds: $l_threshold - $h_threshold\n";
 print " - $no_included of $gene_count alleles were included from $no_families families\n";
