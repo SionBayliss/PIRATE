@@ -104,6 +104,7 @@ my @samples = ();
 my $no_included = 0;
 my $count = 0;
 my $no_samples = 0;
+my @include = ();
 
 open INPUT, $input or die "Input file did not open.\n";
 while(<INPUT>){
@@ -120,10 +121,8 @@ while(<INPUT>){
 		$idx = 20 if $line =~ /\tno_loci\t/;
 		$idx = 22 if $line =~ /\tcluster_order\t/;
 		
-		@headers = @line;
-		my @include = ();
-		
 		# check for samples in list 
+		@headers = @line;
 		if ($list ne ''){
 			for my $t ( $idx..$#headers ){ 
 				if ($list{$headers[$t]}){
@@ -169,7 +168,7 @@ while(<INPUT>){
 		# count variants 
 		my $a_count = 0;
 		my @outline = ();
-		for my $i (@samples){
+		for my $val (@include){
 		
 			my $val = $line[$i];
 			
