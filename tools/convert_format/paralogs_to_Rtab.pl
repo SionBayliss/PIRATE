@@ -170,8 +170,6 @@ while(<INPUT>){
 		my @outline = ();
 		for my $val (@include){
 		
-			my $val = $line[$i];
-			
 			# store appropriate variant
 			my $var_count = 0;
 			if ($type eq "ff"){
