@@ -169,7 +169,7 @@ while(<INPUT>){
 		# count variants 
 		my $a_count = 0;
 		my @outline = ();
-		for my $i ($idx..$#line){
+		for my $i (@samples){
 		
 			my $val = $line[$i];
 			

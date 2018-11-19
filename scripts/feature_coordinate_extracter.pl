@@ -125,10 +125,14 @@ while(<INPUT>){
 			}
 			
 			# RAST gffs
-			if( $line_array[8] =~ /Name=([^;]+);/  ){
-				$product = $1;
-			}elsif( $line_array[8] =~ /Name=(.+)*/ ){
-				$product = $1;
+			if ( $product eq "" ){
+			
+				if( $line_array[8] =~ /Name=([^;]+);/  ){
+					$product = $1;
+				}elsif( $line_array[8] =~ /Name=(.+)*/ ){
+					$product = $1;
+				}
+				
 			}
 		
 			# store feature co-ordinates.

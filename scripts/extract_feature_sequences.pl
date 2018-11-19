@@ -149,6 +149,7 @@ while(<COORDS>){
 		
 		# process if present
 		if ( $present == 1 ){	
+		
 			# Prepare for output
 			my $seq = substr($contig_hash{$contig}, $start-1, $len); # account for zero indexing
 		

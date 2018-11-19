@@ -126,6 +126,8 @@ my @headers = ();
 my @header_idx = ();
 my @header_out = ();
 
+my @group_order = ();
+
 # Parse multigene/paralog clusters - store in groups hash.
 open GC, "$input_file" or die "$!";
 while(<GC>){
@@ -198,6 +200,8 @@ while(<GC>){
 		# filter on thresholds
 		if ( ($per_genomes >= $threshold) && ( $dosage <= $dosage_threshold ) ){
 		
+			push(@group_order, $group);
+			
 			# product info for gff
 			$loci_gene {$group} = $gene;
 			$loci_product {$group} = $product;					
@@ -251,7 +255,7 @@ $inc = 1 if $inc == 0;
 my $g_count = 0;
 my $alignment_length = 0;
 my @gff_out = ();
-for my $file ( sort keys %group_list ){
+for my $file ( @group_order ){
 
 	++$g_count;
 

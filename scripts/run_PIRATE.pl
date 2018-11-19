@@ -92,7 +92,7 @@ GetOptions(
 	'para-align' => \$para_align,
 	
 	'align' => \$align,
-	'rplot'		=> \$r_plots,
+	'rplots'		=> \$r_plots,
 	'pan-off'		=> \$pan_off,
 	
 	'threads=i'	=> \$threads,
@@ -166,7 +166,7 @@ if( $quiet == 0 ){
 my $genic = 0;
 $genic = 1 if $features eq "CDS";
 $nucleotide = 1 if $genic == 0; 
-print " - PIRATE will be run on feature annotated as $features\n";
+print " - PIRATE will be run on features annotated as $features\n";
 
 # set pangenome construction options
 my @pargs = ();
@@ -460,11 +460,14 @@ if ( $align == 1 ){
 	push(@align_args, "-n") if $nucleotide == 1;
 	my $align_args_in = join(" ", @align_args);
 	
-	system( "perl $script_path/align_feature_sequences.pl -i $pirate_dir/PIRATE.gene_families.tsv -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads $align_args_in");
+	my $aln_file  = "$pirate_dir/PIRATE.gene_families.tsv";
+	$aln_file = "$pirate_dir/PIRATE.gene_families.ordered.tsv" if -f "$pirate_dir/PIRATE.gene_families.ordered.tsv";
+	
+	system( "perl $script_path/align_feature_sequences.pl -i $aln_file -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads $align_args_in");
 	print "\n - ERROR: aligning pangenome sequences failed - is mafft in PATH?\n" if $?;
 	
 	unless($?){
-		system("perl $script_path/create_pangenome_alignment.pl -i $pirate_dir/PIRATE.gene_families.tsv -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
+		system("perl $script_path/create_pangenome_alignment.pl -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
 		print "\n - ERROR: creating pangenome concatenate failed\n" if $?;
 	}
 	
