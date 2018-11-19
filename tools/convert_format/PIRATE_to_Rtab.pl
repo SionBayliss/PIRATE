@@ -110,6 +110,7 @@ my $idx = 19;
 my %prop_thresh = ();
 my %out_hash = ();
 my %exclude = ();
+my @include = ();
 
 my $gene_count = 0;
 open INPUT, $input or die "Input file did not open.\n";
@@ -118,7 +119,7 @@ while(<INPUT>){
 	my $line=$_;
 	chomp $line;
 	
-	my @line = split(/\t/, $line);
+	my @line = split(/\t/, $line, -1);
 	
 	# get genome names
 	if(/^allele_name/){
@@ -127,10 +128,8 @@ while(<INPUT>){
 		$idx = 20 if $line =~ /\tno_loci\t/;
 		$idx = 22 if $line =~ /\tcluster_order\t/ ;
 		
-		@headers = @line;
-		my @include = ();
-		
 		# check for samples in list 
+		@headers = @line;	
 		if ($list ne ''){
 			for my $t ( $idx..$#headers ){ 
 				if ($list{$headers[$t]}){
@@ -177,7 +176,7 @@ while(<INPUT>){
 		
 		# store presence/absence
 		my $a_count = 0;
-		for my $i ($idx..$#line){
+		for my $i (@include){
 			$out_hash{$a_name}{$headers[$i]} = 1 if $line[$i] ne "";
 			++$a_count if $line[$i] ne "";
 		}

@@ -18,9 +18,9 @@ use Pod::Usage;
  			d - duplication) [required]		
  
  Filtering options:
- -l|--freq-low		min snp frequency to include in output 
+ --freq-low		min snp frequency to include in output 
 			[default: 0.00]
- -h|--freq-high		max snp frequency to include in output 
+ --freq-high		max snp frequency to include in output 
 			[default: 1.00]
  -s|--samples		tab delimited list of samples to include in output 
  			[default: off]			
@@ -55,8 +55,8 @@ GetOptions(
 	'output=s'	=> \$output,
 	'type=s' => \$type,
 	
-	'low=f' => \$l_threshold,
-	'high=f' => \$h_threshold,
+	'freq-low=f' => \$l_threshold,
+	'freq-high=f' => \$h_threshold,
 	
 	'binary' => \$binary,
 	
@@ -168,7 +168,9 @@ while(<INPUT>){
 		# count variants 
 		my $a_count = 0;
 		my @outline = ();
-		for my $val (@include){
+		for my $i (@include){
+					
+			my $val = $line[$i];
 		
 			# store appropriate variant
 			my $var_count = 0;
@@ -184,7 +186,7 @@ while(<INPUT>){
 						
 			# make output line
 			if ($var_count > 0){
-			
+
 				# increment if > 0 present 
 				++$a_count;
 				
