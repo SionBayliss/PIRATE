@@ -52,7 +52,7 @@ while(<INPUT>){
 		$store = 1;
 		push(@output_array, $line);
 
-	}elsif ( $line =~ /^>(.+)/ ){ # store previous sequence in output array.
+	}elsif ( $line =~ /^>(\S+)/ ){ # store previous sequence in output array.
 		
 		$header = $1;
 	

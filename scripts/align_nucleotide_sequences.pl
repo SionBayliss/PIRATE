@@ -61,9 +61,9 @@ else{
 
 	# check number of iterations is suitable for the number of sequences
 	if ( $ecount > 10000 ){ # 60000 is maximum
-		`mafft --retree 2 --leavegappyregion --adjustdirection --quiet --op 1.5 --ep 0.2 --lop -4 --lep -1 --lexp -0.2 $input > $output.temp`; 
+		`mafft --retree 2 --leavegappyregion --quiet --op 1.5 --ep 0.2 --lop -4 --lep -1 --lexp -0.2 $input > $output.temp`;  # --adjustdirection
 	}else{
-		`mafft --auto --leavegappyregion --adjustdirection --quiet --op 1.5 --ep 0.2 --lop -4 --lep -1 --lexp -0.2 --maxiterate 10 $input > $output.temp`; 
+		`mafft --auto --leavegappyregion --quiet --op 1.5 --ep 0.2 --lop -4 --lep -1 --lexp -0.2 --maxiterate 10 $input > $output.temp`;  # --adjustdirection
 	}
 	print " - ERROR: mafft did not complete\n" if $?; 
 

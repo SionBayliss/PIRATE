@@ -23,7 +23,7 @@ use File::Basename;
  -f|--features	choose features to use for pangenome construction. 
  		Multiple may be entered, seperated by a comma [default: CDS]
  -k|--pan-options	arguments to pass to pangenome_contruction	
- -n|--nucl	create pangenome from nucleotide sequences, 
+ -n|--nucleotide	create pangenome from nucleotide sequences, 
  		only applies to CDS features [default: off]
  --pan-off	don't run pangenome tool [assumes PIRATE has been previously 
   		run in output folder]
@@ -86,7 +86,7 @@ GetOptions(
 	'steps=s'	=> \$steps,
 	'features=s' => \$features,
 	'k|pan-options=s' => \$pan_options,
-	'nucl'	=> \$nucleotide,
+	'nucleotide' => \$nucleotide,
 
 	'para-off' => \$para_off,
 	'para-align' => \$para_align,
@@ -371,7 +371,7 @@ if ( $para_off == 0 ){
 		my @para_args = ();
 		push(@para_args, "--nucleotide") if $nucleotide == 1;
 		push(@para_args, "-k") if $retain == 2;
-		my $para_args_cmd = join("", @para_args);
+		my $para_args_cmd = join(" ", @para_args);
 		
 		system("perl $script_path/classify_paralogs.pl -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --threads $threads $para_args_cmd");
 		die " - ERROR: identify_paralogs.pl failed.\n" if $?;
@@ -467,8 +467,14 @@ if ( $align == 1 ){
 	print "\n - ERROR: aligning pangenome sequences failed - is mafft in PATH?\n" if $?;
 	
 	unless($?){
+	
+		print "Creating full pangenome alignment:\n";
 		system("perl $script_path/create_pangenome_alignment.pl -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
 		print "\n - ERROR: creating pangenome concatenate failed\n" if $?;
+		
+		print "Creating core alignment:\n";
+		system("perl $script_path/create_pangenome_alignment.pl -t 95 -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/core_alignment.fasta -g $pirate_dir/core_alignment.gff");
+		print "\n - ERROR: creating core concatenate failed\n" if $?;
 	}
 	
 	print "\n-------------------------------\n\n";

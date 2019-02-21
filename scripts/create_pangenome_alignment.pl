@@ -31,6 +31,9 @@ use Text::Wrap;
  			[default: N]
  
  General Options:
+ -m|--multi-include	include a representative loci (longest) for multi 
+ 			copy loci [default : off] 
+ -c|--count-global	use global isolate count (default: subset)
  -h|--help		usage information
  -q|--quiet		verbose off
  
@@ -57,6 +60,8 @@ my $output_file = '';
 my $gff_file = '';
 my $gap_character = "N";
 my $idx = 19;
+my $global_no = 0;
+my $exclude_multiple = 1;
 
 GetOptions(
 
@@ -71,6 +76,8 @@ GetOptions(
 	'n-character=s'	=> \$gap_character,
 	'list=s' => \$list,
 	'column=i' => \$idx,
+	'count-global' => \$global_no,
+	'multi-include' => \$exclude_multiple,
 			
 ) or pod2usage(1);
 pod2usage(1) if $help;
@@ -86,7 +93,7 @@ my $input_dir = dirname(abs_path($input_file));
 $output_file = "$input_dir/PangenomeAlignment.fas" if $output_file eq '';
 $output_file = abs_path($output_file);
 
-# chack gff directory exists.
+# check gff directory exists.
 die " - Error: fasta directory not found.\n" unless -d "$fasta_dir";
 
 # [optional] parse list
@@ -167,7 +174,10 @@ while(<GC>){
 			 
 		} 		
 		
-		$total_genomes = scalar(@header_out);	
+		# calc total number of genomes
+		$total_genomes = scalar(@header_out);
+		$total_genomes = scalar(@headers) - $idx if $global_no == 1; # [optional] use global
+			
 		@samples = @header_out if $list eq "";
 		
 		# feedback
@@ -195,6 +205,11 @@ while(<GC>){
 		for my $idx ( @header_idx ){
 			++$no_genomes if $l[$idx] ne "";
 		}
+		
+		# [optional] switch to global count
+		$no_genomes = $l[6] if $global_no == 1;
+		
+		# calculate % genomes
 		my $per_genomes = ($no_genomes / $total_genomes) * 100;
 		
 		# filter on thresholds
@@ -297,6 +312,7 @@ for my $file ( @group_order ){
 	}close FILE;
 	
 	# Find longest sequence per genome in file.
+	my %seq_count = ();
 	my %max_genome = ();
 	for my $loci ( keys %l_store ){
 	
@@ -308,7 +324,10 @@ for my $file ( @group_order ){
 			}elsif( $l_store{$max_genome{$gc}} < $l_store{$loci} ) {
 				$max_genome{$gc} = $loci;
 			}
-	
+			
+			# count sequences per isolate
+			$seq_count {$gc} ++;
+				
 	}
 	
 	# optionally store gff info
@@ -322,11 +341,19 @@ for my $file ( @group_order ){
 	for my $g ( @header_out ){
 		
 		my $seq = "";
-		
+			
+		# loci missing (Ns or gap char)
 		if ( !$max_genome{$g} ){
 			$seq = join ( "", ($gap_character x $l_raw) );	
 			$seq =~ s/\\//g;
-		}else{
+		}
+		# exclude isolate for multile sequences (dashes)
+		elsif ( ($seq_count{$g} > 1) && ($exclude_multiple == 1) ){
+			$seq = join ( "", ("-" x $l_raw) );
+			$seq =~ s/\\//g;
+		}	
+		# add sequence (longest if multiple are present and not excluded)
+		else{
 			$seq = $seq_store{$max_genome{$g}};
 		}
 		

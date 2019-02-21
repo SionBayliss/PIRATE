@@ -11,7 +11,7 @@ use Cwd 'abs_path';
 
 =head1  SYNOPSIS
 
- subsample_outputs.pl -i /path/to/PIRATE.*.tsv -g /path/to/gff_directory/ 
+ subsample_outputs.pl -i /path/to/PIRATE.*.tsv -g /path/to/gff_directory/  -o /path/to/output_file
 
  Input-Output:	
  -i|--input		input PIRATE.gene_families.tsv file [required]
@@ -21,7 +21,7 @@ use Cwd 'abs_path';
  Options
  --feature		feature type to include [default: CDS]
  --field		replace locus tag with value from field [default: off] 
- -l|--list		list of isolates to include in output [default: off]
+ --list		list of isolates to include in output [default: off]
  
  General:
  -h|--help 		usage information
