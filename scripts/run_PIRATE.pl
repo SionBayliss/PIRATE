@@ -26,7 +26,7 @@ use File::Basename;
  -n|--nucleotide	create pangenome from nucleotide sequences, 
  		only applies to CDS features [default: off]
  --pan-off	don't run pangenome tool [assumes PIRATE has been previously 
-  		run in output folder]
+  		run and resulting files are present in output folder]
 
  Paralog classification:
  --para-off	switch off paralog identification [default: off]
@@ -293,7 +293,7 @@ if ( $pan_off == 0 ){
 	$time_start = time();
 	print "Constructing pangenome sequences:\n\n";
 	`echo -n "" > $pirate_dir/fail_test.txt`;
-	system(	"perl $script_path/pangenome_construction.pl -i $pirate_dir/pan_sequences.fasta -o $it_dir -l $genome2loci -t $threads -s $steps $panargs 2>$pirate_dir/fail_test.txt | tee $log_file" );
+	system( "perl $script_path/pangenome_construction.pl -i $pirate_dir/pan_sequences.fasta -o $it_dir -l $genome2loci -t $threads -s $steps $panargs 2>$pirate_dir/fail_test.txt | tee $log_file" );
 	if ( -s "$pirate_dir/fail_test.txt" ){
 		die " - ERROR: pangenome_construction.pl failed - error logged at $pirate_dir/fail_test.txt\n";
 	}else{

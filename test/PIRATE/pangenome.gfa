@@ -1,0 +1,8 @@
+S	g01	A	RC:i:4
+S	g02	A	RC:i:3
+S	g03	A	RC:i:1
+S	g04	A	RC:i:1
+S	g05	A	RC:i:4
+L	g01	-	g04	+	0M
+L	g02	+	g01	-	0M
+L	g03	+	g01	-	0M

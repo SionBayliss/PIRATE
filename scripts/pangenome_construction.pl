@@ -81,8 +81,8 @@ unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){
 	CDHIT options: 
 	-cdl|--cdlow	cdhit lowest percentage id [default: 98]
 	-cds|--cdstep	cdhit step size [default: 0.5]
-	--cdhit-core	extract core families during cdhit clustering 
-			[default: off]
+	--cdcore-off	don't extract core families during cdhit clustering 
+			[default: on]
 	
 	BLAST options:
 	-e|--evalue	e-value used for blast hit filtering [default: 1E-6]
@@ -130,7 +130,8 @@ my $hsp_prop_length = 0;
 my $diamond = 0;
 
 my $exit_status = 1; 
-my $cdhit_core = 0;
+my $core_off = 0;
+my $cdhit_core = 1;
 
 GetOptions(
 
@@ -148,7 +149,7 @@ GetOptions(
 	
 	'cdlow|cdl=i' => \$cd_low,
 	'cdstep|cds=f' => \$cd_step,
-	'cdhit-core' => \$cdhit_core,
+	'cdcore-off' => \$core_off,
 	
 	'flat=f' 	=> \$inflation_value,
 	'evalue=f' => \$evalue,
@@ -160,6 +161,9 @@ GetOptions(
 ) or pod2usage(1);
 pod2usage(1) if $help;
 #pod2usage(-verbose => 2) if $man;
+
+# set cdhit core options
+$cdhit_core = 0 if $core_off == 1;
 
 # expand input and output files/directories
 $input_file = abs_path($input_file);
@@ -675,7 +679,8 @@ for my $file( @files ){
 	# ensure blast output has all representative sequences vs themselves (short sequences maybe removed on e-value).
 	open BLAST_OUT, "$blast_out" or die $!;
 	open BLAST_TEMP, ">$blast_out.temp" or die $!;
-	my $av_bit = ""; # average bit score of same-same blast results for dataset.
+	#my $av_bit = ""; # average bit score of same-same blast results for dataset.
+	my $min_bit = ""; # minimum bit score of same-same blast results for dataset.
 	while (<BLAST_OUT>){
 	
 		my $line = $_;
@@ -684,12 +689,20 @@ for my $file( @files ){
 		# identify same-same lines
 		if( $line[0] eq $line[1] ){
 		
-			$rep { $line[0] } = 2; # do not print placeholder line
+			# don't print same same line - they are added later using placeholder values
+			$rep { $line[0] } = 1; # print placeholder line
 			
-			$av_bit = $line[11] if $av_bit eq "";
-			$av_bit = ($av_bit + $line[11]) / 2;
+			$min_bit = $line[11] if $min_bit eq "";
+			$min_bit = $line[11] if $line[11] < $min_bit; 
 			
-			print BLAST_TEMP "$line";
+			# removed - used to use average and print existing lines
+			
+			#$rep { $line[0] } = 2; # do not print placeholder line
+			
+			#$av_bit = $line[11] if $av_bit eq "";
+			#$av_bit = ($av_bit + $line[11]) / 2;
+			
+			#print BLAST_TEMP "$line";
 		}
 		# [optional] filter on hsp percentage length < hsp_prop_length removed.
 		elsif( $hsp_prop_length > 0 ){
@@ -724,12 +737,12 @@ for my $file( @files ){
 	# replace original file.
 	`mv $blast_out.temp $blast_out`;
 	
-	# Add missing representative sequences.
+	# Add same-same hits for each representative sequence - this ensures none are lost by filtering/MCL.
 	open BLAST_OUT, ">>$blast_out" or die $!;
 	for my $rloci ( keys %rep ){
 
 		if ( $rep{$rloci} == 1){
-			print BLAST_OUT "$rloci	$rloci	100.00	100	0	0	1	100	1	100	0.0e+00	$av_bit\n";
+			print BLAST_OUT "$rloci	$rloci	100.00	100	0	0	1	100	1	100	0.0e+00	$min_bit\n"; # used to be av_bit
 		} 
 		
 	}

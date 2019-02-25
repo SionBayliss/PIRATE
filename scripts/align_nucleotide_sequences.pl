@@ -79,7 +79,7 @@ else{
 		
 		if($line =~ /^>(\S+)/){
 		
-			# check initial ids atch file - mafft with --adjustdirection will prepend a _R_ at the beginning of the header if it changed the orientation of the sequence
+			# check initial ids match file - mafft with --adjustdirection will prepend a _R_ at the beginning of the header if it changed the orientation of the sequence
 			my $id = $1; # header id
 	        	my $initial_id = $initial_ids[$count]; # original id in input file
         		my $id_out = ""; # output id

@@ -188,49 +188,49 @@ if( file.exists(P.unique) ){
   #plot_unique
   
   # fit hockeystick model and find inflection point
-  if ( require('segmented') ) {
-
-    # linear model
-    out.lm <- lm(count~threshold, data=no_unique) # linear model
-    
-    # segemented hockey stick model
-    o <- segmented(out.lm, seg.Z = ~threshold, control=seg.control(display=FALSE)) # psi = c(90)
-    summary(o)
-    
-    # break points
-    break.point <- o$psi[2]
-    break.point.err <- o$psi[3]
-    break.point.errs <- c(break.point-break.point.err, break.point+break.point.err)
-    
-    # extract plottable data 
-    no_unique$fit <- broken.line(o)$fit
-    
-    # make label
-    unique_lab <- sprintf("Inflection point:\t%.2f\nSTERR:\t\t\t%.2f", break.point, break.point.err)
-    
-    # find label position
-    lab_y <- max(no_unique$count)*0.85
-    lab_x <- min(no_unique$threshold)+5
-    
-    # plot breakpoint and model over points
-    plot_unique_segmented <- ggplot(no_unique, aes(x=threshold, y = count )) + geom_point() +
-      geom_line(aes(x = threshold, y = fit)) +
-      geom_vline(xintercept = break.point.errs, alpha = 0.2, colour = "firebrick", linetype = 1) +
-      geom_vline(xintercept = break.point, colour = "firebrick", alpha = 0.75) +
-      ggtitle("Unique alleles per threshold") +
-      ylab("# Clusters") + xlab("Threshold") +
-      annotate("label", x = lab_x, y = lab_y, label = unique_lab, hjust = 0) +
-      plot_theme
-   # plot_unique_segmented 
-
-    # repace plot_unique with segmented plot
-    plot_unique <- plot_unique_segmented
-    
-    # base graphics
-    #plot(no_unique$threshold,no_unique$count)
-    #plot(o,col="red",lty=2,add=TRUE)
-  
-  }
+  # if ( require('segmented') ) {
+  # 
+  #   # linear model
+  #   out.lm <- lm(count~threshold, data=no_unique) # linear model
+  #   
+  #   # segemented hockey stick model
+  #   o <- segmented(out.lm, seg.Z = ~threshold, control=seg.control(display=FALSE)) # psi = c(90)
+  #   summary(o)
+  #   
+  #   # break points
+  #   break.point <- o$psi[2]
+  #   break.point.err <- o$psi[3]
+  #   break.point.errs <- c(break.point-break.point.err, break.point+break.point.err)
+  #   
+  #   # extract plottable data 
+  #   no_unique$fit <- broken.line(o)$fit
+  #   
+  #   # make label
+  #   unique_lab <- sprintf("Inflection point:\t%.2f\nSTERR:\t\t\t%.2f", break.point, break.point.err)
+  #   
+  #   # find label position
+  #   lab_y <- max(no_unique$count)*0.85
+  #   lab_x <- min(no_unique$threshold)+5
+  #   
+  #   # plot breakpoint and model over points
+  #   plot_unique_segmented <- ggplot(no_unique, aes(x=threshold, y = count )) + geom_point() +
+  #     geom_line(aes(x = threshold, y = fit)) +
+  #     geom_vline(xintercept = break.point.errs, alpha = 0.2, colour = "firebrick", linetype = 1) +
+  #     geom_vline(xintercept = break.point, colour = "firebrick", alpha = 0.75) +
+  #     ggtitle("Unique alleles per threshold") +
+  #     ylab("# Clusters") + xlab("Threshold") +
+  #     annotate("label", x = lab_x, y = lab_y, label = unique_lab, hjust = 0) +
+  #     plot_theme
+  #  # plot_unique_segmented 
+  # 
+  #   # repace plot_unique with segmented plot
+  #   plot_unique <- plot_unique_segmented
+  #   
+  #   # base graphics
+  #   #plot(no_unique$threshold,no_unique$count)
+  #   #plot(o,col="red",lty=2,add=TRUE)
+  # 
+  # }
   
 }else{ 
   print("PIRATE.unique_alleles.tsv not found in input directory")
