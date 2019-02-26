@@ -71,6 +71,7 @@ open OUTFILE, ">$output_file" or die "ERROR: Could not open $output_file\n";
 # variables
 my $include = 0;
 my %contig_hash;
+my %contig_hash_temp;
 my $contig_id = "";
 my $count = 0;
 
@@ -94,7 +95,8 @@ while(<INPUT>){
 			$contig_id = $1;		
 		}
 		# sequence is stored in hash.
-		elsif($line =~ /^([ATGCNatcgn]+)*/){
+		elsif($line =~ /^([ATGCNatcgn]+)$/){
+		#elsif($line =~ /(\S+)/){
 
 			# sanity check - each contig should have id
 			die "Contig has no header" if $contig_id eq "" ;
@@ -103,12 +105,15 @@ while(<INPUT>){
 			my $seq = $1;
 			$seq = uc($seq);
 	
+			# store as array
+			push @{$contig_hash_temp{$contig_id}}, $seq;
+				
 			# concatenate sequence if it is already present in the hash.
-			if(!$contig_hash{$contig_id}){
-				$contig_hash{$contig_id}=$seq;
-			}else{
-				$contig_hash{$contig_id}=$contig_hash{$contig_id}.$seq;
-			}
+			#if(!$contig_hash{$contig_id}){
+				#$contig_hash{$contig_id}=$seq;
+			#}else{
+				#$contig_hash{$contig_id}=$contig_hash{$contig_id}.$seq;
+			#}
 			
 		}else{
 			print "Warning: unexpected characters in line $count for sample $sample\n";
@@ -116,6 +121,12 @@ while(<INPUT>){
 	}
 	
 }close INPUT;
+
+# convert array to scalar 
+for my $k ( keys %contig_hash_temp ){
+	$contig_hash{$k} = join("", @{$contig_hash_temp{$k}});
+}
+%contig_hash_temp = ();
 
 #Parse co-ordinate file.
 open COORDS, "$pirate_dir/co-ords/$sample.co-ords.tab" or die "ERROR: Could not open $pirate_dir/co-ords/$sample.co-ords.tab";

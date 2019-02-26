@@ -10,53 +10,6 @@ use Pod::Usage;
 use Cwd 'abs_path';
 use File::Basename;
 
-# check dependencies - no version check.
-my $cd_hit_bin = "";
-my $cd_hit_est_bin = "";
-
-my $dep_err = 0;
-my $diamond_err = 0;
-my $cdhit_check = 0;
-
-# two alternative cd-hit invocations
-if( (`command -v cdhit;`) && (`command -v cdhit-est;`) ){ 
-	$cd_hit_bin = "cdhit";
-	$cd_hit_est_bin = "cdhit-est";
-	$cdhit_check = 1; 
-}
-if( (`command -v cd-hit;`) && (`command -v cd-hit-est;`) ){ 
-	$cd_hit_bin = "cd-hit";
-	$cd_hit_est_bin = "cd-hit-est";
-	$cdhit_check = 1; 
-}
-print "cd-hit binary not found in system path.\n" if $cdhit_check == 0;
-$dep_err = 1 if $cdhit_check == 0;
-
-unless( `command -v blastp;` ){ 
-	$dep_err = 1;
-	print "blastp binary not found in system path.\n";
-}
-unless( `command -v blastn;` ){ 
-	$dep_err = 1;
-	print "blastn binary not found in system path.\n";
-}
-unless( `command -v makeblastdb;` ){ 
-	$dep_err = 1;
-	print "makeblastdb binary not found in system path.\n";
-}
-unless( `command -v mcl;` ){ 
-	$dep_err = 1;
-	print "mcl binary not found in system path.\n";
-}
-unless( `command -v mcxdeblast;` ){ 
-	$dep_err = 1;
-	print "mcxdeblast binary not found in system path.\n";
-}
-unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){ 
-	print "diamond binaries not found in system path.\n";
-	$diamond_err = 1;
-}
-
 # Version
 
 =head1  SYNOPSIS
@@ -64,7 +17,7 @@ unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){
 	pangenome_construction.pl -i /path/to/fasta -o /path/to/output/
 
 	Input/Output options:
-	-i|--input	input fasta file [nucleotide/aa]
+	-i|--input	input fasta file [required]
 	-o|--output	output directory [default: input directory]
 	-l|--loci	file containing loci and genome as seperate columns 
 			[required for core extraction during cdhit]
@@ -79,9 +32,9 @@ unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){
 			[default: amino acid]
 	
 	CDHIT options: 
-	-cdl|--cdlow	cdhit lowest percentage id [default: 98]
-	-cds|--cdstep	cdhit step size [default: 0.5]
-	--cdcore-off	don't extract core families during cdhit clustering 
+	--cd-low	cdhit lowest percentage id [default: 98]
+	--cd-step	cdhit step size [default: 0.5]
+	--cd-core-off	don't extract core families during cdhit clustering 
 			[default: on]
 	
 	BLAST options:
@@ -91,14 +44,14 @@ unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){
 	--hsp_prop	remove BLAST hsps that are < hsp_prop proportion
 			of query length/query hsp length [default: 0]
 	
-	mcl options:
-	-f|--flat	mcl inflation value [default: 1.5]
+	MCL options:
+	-f|--flat	MCL inflation value [default: 1.5]
 	
 	General options:
 	-r|--retain	do not delete temp files
 	-t|--threads	number of threads/cores used to use [default: 2]
 	-q|--quiet	switch off verbose
-	--help 	usage information
+	-h|--help 	usage information
 
 =cut
 
@@ -147,9 +100,9 @@ GetOptions(
 	'steps=s'	=> \$steps,
 	'perc=s'	=> \$perc,
 	
-	'cdlow|cdl=i' => \$cd_low,
-	'cdstep|cds=f' => \$cd_step,
-	'cdcore-off' => \$core_off,
+	'cd-low=i' => \$cd_low,
+	'cd-step=f' => \$cd_step,
+	'cd-core-off' => \$core_off,
 	
 	'flat=f' 	=> \$inflation_value,
 	'evalue=f' => \$evalue,
@@ -160,7 +113,55 @@ GetOptions(
 	
 ) or pod2usage(1);
 pod2usage(1) if $help;
-#pod2usage(-verbose => 2) if $man;
+pod2usage if $input_file eq '';
+
+# check dependencies - no version check.
+my $cd_hit_bin = "";
+my $cd_hit_est_bin = "";
+
+my $dep_err = 0;
+my $diamond_err = 0;
+my $cdhit_check = 0;
+
+# two alternative cd-hit invocations
+if( (`command -v cdhit;`) && (`command -v cdhit-est;`) ){ 
+	$cd_hit_bin = "cdhit";
+	$cd_hit_est_bin = "cdhit-est";
+	$cdhit_check = 1; 
+}
+if( (`command -v cd-hit;`) && (`command -v cd-hit-est;`) ){ 
+	$cd_hit_bin = "cd-hit";
+	$cd_hit_est_bin = "cd-hit-est";
+	$cdhit_check = 1; 
+}
+print "cd-hit binary not found in system path.\n" if $cdhit_check == 0;
+$dep_err = 1 if $cdhit_check == 0;
+
+unless( `command -v blastp;` ){ 
+	$dep_err = 1;
+	print "blastp binary not found in system path.\n";
+}
+unless( `command -v blastn;` ){ 
+	$dep_err = 1;
+	print "blastn binary not found in system path.\n";
+}
+unless( `command -v makeblastdb;` ){ 
+	$dep_err = 1;
+	print "makeblastdb binary not found in system path.\n";
+}
+unless( `command -v mcl;` ){ 
+	$dep_err = 1;
+	print "mcl binary not found in system path.\n";
+}
+unless( `command -v mcxdeblast;` ){ 
+	$dep_err = 1;
+	print "mcxdeblast binary not found in system path.\n";
+}
+unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){ 
+	print "diamond binaries not found in system path.\n";
+	$diamond_err = 1;
+}
+die " - ERROR: dependecies missing.\n" if $dep_err == 1;
 
 # set cdhit core options
 $cdhit_core = 0 if $core_off == 1;
@@ -251,6 +252,7 @@ if ($quiet == 0 ){
 	print " - Threshold(s): @thresholds\n";
 	print " - MCL inflation value: $inflation_value\n";
 	print " - Homology test cutoff: $evalue\n";
+	print " - Recipocal length cutoff: $hsp_prop_length\n" if $hsp_prop_length > 0;
 	print " - Loci file contains $no_loci loci from $no_genomes genomes.\n" if $loci_list ne '';
 	print " - Extracting core loci during cdhit clustering\n" if ( ($cdhit_core == 1) && ($loci_list ne '') );
 	print "\n------------------------\n";
@@ -338,9 +340,10 @@ for my $file( @files ){
 	open TEMP, ">$output_dir/$sample.all_sequences.fasta" or die $!;
 	print TEMP join("\n", @seq_out[@idx]);
 	
-	# number of sequences in file.
+	# sanity checks - number of sequences in file.
 	my $no_sequences = scalar ( @seq_out );
-	die " - Error: Number of sequences ($no_sequences) do not match number of headers ($seq_count)\n" if $seq_count != $no_sequences;
+	die " - ERROR: No sequences in input fasta file.\n" if $seq_count == 0;
+	die " - ERROR: Number of sequences ($no_sequences) do not match number of headers ($seq_count)\n" if $seq_count != $no_sequences;
 	
 	# cluster variables using CD-Hit.
 	my %cluster_hash = ();

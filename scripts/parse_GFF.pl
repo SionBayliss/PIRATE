@@ -73,12 +73,27 @@ while(<INPUT>){
 		
 		# check all characters are as expected.
 		$line=uc($line);
-
-		if($line !~ /[ATCGN]+/){
-			die " - WARNING: $in_file - contig $header contains non-ATCGN characters\n";
-		}else{
-			push(@fasta_line, "$line");
+		
+		# convert non-ATCG characters to Ns
+		if($line !~ /^[ATCGN]+$/){
+			
+			# feedback
+			print " - WARNING: $in_file - contig $header contains non-ATCGN characters - replacing with Ns\n";
+			
+			# remove whitespace
+			$line =~ s/\s+//g;
+			
+			# find and convert non-ATCG
+			my $rep_chars = $line;
+			$rep_chars =~ s/[ATGCN]+//g;
+			for my $i ( split(//, $rep_chars ) ){
+				$line =~ s/$i/N/g;
+			} 
+			
 		}
+		
+		# add to array
+		push(@fasta_line, "$line");
 		
 	}elsif ( (/locus_tag=\S+/) || (/ID=\S+/) ){ # name loci after file
 	

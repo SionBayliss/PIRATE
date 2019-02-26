@@ -1,6 +1,0 @@
-block_number	number_isolates	number_clusters_in_block	clusters_in_block	number_upstream_link	number_downstream_links	upstream_blocks	downstream_blocks	upstream_links	downstream_links	description
-1	4	1	1	2	g01	4	5,3	g04	g03,g02	multiconnector
-2	4	1	0	0	g05					multiconnector
-3	3	1	0	1	g02		1		g01	multiconnector
-4	1	1	1	0	g04	1		g01		multiconnector
-5	1	1	0	1	g03		1		g01	multiconnector

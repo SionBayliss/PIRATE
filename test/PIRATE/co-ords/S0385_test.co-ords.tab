@@ -1,5 +1,0 @@
-Name	Gene	Start	End	Length	Type	Strand	Contig	Product
-S0385_test_00001		136144	136596	453	CDS	Forward	S0385	drug efflux system protein MdtG
-S0385_test_00002		136641	137387	747	CDS	Forward	S0385	putative 3-hydroxyphenylpropionic transporter MhpT
-S0385_test_00003	iucA_1	137377	139113	1737	CDS	Forward	S0385	N(2)-citryl-N(6)-acetyl-N(6)-hydroxylysine synthase
-S0385_test_00004	mnhF1	968839	969132	294	CDS	Reverse	S0385	Na(+)/H(+) antiporter subunit F1

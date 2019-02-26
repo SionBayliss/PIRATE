@@ -15,24 +15,23 @@ use File::Basename;
  PIRATE input/output:
  -i|--input 	input directory containing gffs [mandatory]
  -o|--output 	output directory in which to create PIRATE folder 
- 		[default: input_dir]
+ 		[default: input_dir/PIRATE]
 
  Global:
- -s|--steps	AA % thresholds to use for pangenome construction
+ -s|--steps	% identity thresholds to use for pangenome construction
   		[default: 50,60,70,80,90,95,98]
  -f|--features	choose features to use for pangenome construction. 
  		Multiple may be entered, seperated by a comma [default: CDS]
- -k|--pan-options	arguments to pass to pangenome_contruction	
- -n|--nucleotide	create pangenome from nucleotide sequences, 
- 		only applies to CDS features [default: off]
- --pan-off	don't run pangenome tool [assumes PIRATE has been previously 
+ -n|--nucl	CDS are not translated to AA sequence [default: off]
+ --pan-opt	additional arguments to pass to pangenome_contruction	
+ --pan-off	don't run pangenome tool [assumes PIRATE has been previously
   		run and resulting files are present in output folder]
 
  Paralog classification:
  --para-off	switch off paralog identification [default: off]
 
  Output:
- -a|--align	align all genes and produce a pangenome alignment 
+ -a|--align	align all genes and produce core/pangenome alignments 
  		[default: off]
  -r|--rplots	plot summaries using R [requires dependencies]
 
@@ -40,7 +39,7 @@ use File::Basename;
  -t|--threads	number of threads/cores used by PIRATE [default: 2]
  -q|--quiet	switch off verbose
  -z		retain intermediate files [0 = none, 1 = retain pangenome 
- 		files (default and PIRATE can be re-run), 2 = all]  
+ 		files (default - re-run using --pan-off), 2 = all]  
  -c|--check	check installation and run on example files
  -h|--help 	usage information
  
@@ -85,8 +84,8 @@ GetOptions(
 
 	'steps=s'	=> \$steps,
 	'features=s' => \$features,
-	'k|pan-options=s' => \$pan_options,
-	'nucleotide' => \$nucleotide,
+	'k|pan-opt=s' => \$pan_options,
+	'nucl' => \$nucleotide,
 
 	'para-off' => \$para_off,
 	'para-align' => \$para_align,
@@ -208,7 +207,7 @@ if ( $pan_off == 0 ){
 	# clear existing gffs
 	unlink glob "$gff_dir/*.gff";
 	`echo -n "" > $pirate_dir/gff_parser_log.txt`;
-	`ls $input_dir/*.gff | parallel -j $threads perl $script_path/parse_GFF.pl {} $gff_dir | tee $pirate_dir/gff_parser_log.txt`;
+	`ls $input_dir/*.gff | parallel -j $threads \"perl $script_path/parse_GFF.pl {} $gff_dir >> $pirate_dir/gff_parser_log.txt 2>> $pirate_dir/gff_parser_log.txt\"`;
 
 	# check number of successfully standardised gff files
 	opendir(DIR, $gff_dir);
@@ -233,7 +232,7 @@ if ( $pan_off == 0 ){
 	$time_start = time();
 	my $coords_dir = "$pirate_dir/co-ords";
 	unless( -d "$coords_dir" ){ unless ( mkdir "$coords_dir" ) { die "\n - ERROR: could not make PIRATE co-ords directory in $pirate_dir\n" } };
-	`cat $pirate_dir/genome_list.txt | parallel -j $threads perl $script_path/feature_coordinate_extracter.pl --input $gff_dir/{}.gff -o $coords_dir/{}.co-ords.tab -f $features`;
+	`cat $pirate_dir/genome_list.txt | parallel -j $threads \"perl $script_path/feature_coordinate_extracter.pl --input $gff_dir/{}.gff -o $coords_dir/{}.co-ords.tab -f $features >> $pirate_dir/gff_parser_log.txt 2>> $pirate_dir/gff_parser_log.txt\"`;
 	die "\n - ERROR: feature co-ordinate extraction failed\n" if $?;
 	print " - completed in: ", time() - $time_start,"s\n";
 
@@ -274,9 +273,9 @@ if ( $pan_off == 0 ){
 	my $e_args = join(" ", @extract_args); 
 
 	# extract sequences.
-	`cat $pirate_dir/genome_list.txt | parallel -k -j $threads perl $script_path/extract_feature_sequences.pl -s {} -d $pirate_dir -o $pirate_dir/genome_multifastas/{}.fasta $e_args`;
+	`cat $pirate_dir/genome_list.txt | parallel -k -j $threads \"perl $script_path/extract_feature_sequences.pl -s {} -d $pirate_dir -o $pirate_dir/genome_multifastas/{}.fasta $e_args >> $pirate_dir/gff_parser_log.txt 2>> $pirate_dir/gff_parser_log.txt\"`;
 	die " - ERROR: extract_feature_sequences.pl failed\n" if $?;
-
+	
 	my $panseq_file = "$pirate_dir/pan_sequences.fasta";
 	`cat $pirate_dir/genome_list.txt | xargs -I {} cat $pirate_dir/genome_multifastas/{}.fasta > $pirate_dir/pan_sequences.fasta`;
 	
@@ -301,6 +300,9 @@ if ( $pan_off == 0 ){
 	}
 	print " - completed in: ", time() - $time_start,"s\n";
 	print "\n-------------------------------\n\n";
+	
+	# clean up
+	unlink "$pirate_dir/gff_parser_log.txt" if -z "$pirate_dir/gff_parser_log.txt";
 	
 }
 # skip pangenome construction and use previous files.
