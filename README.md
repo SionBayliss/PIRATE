@@ -6,7 +6,13 @@ PIRATE is implemented in Perl and is freely available under an GNU GPL 3 open so
 
 **Contact**: s.bayliss (AT) bath.ac.uk
 
-### Dependencies 
+#### Additional Details
+The [PIRATE wiki](https://github.com/SionBayliss/PIRATE/wiki) contains additional information on the methodology and outputs. 
+
+#### Referencing
+An application note is in preparation/submission.
+
+## Dependencies 
 |software|version|required|
 |---|:---:|:---:|
 mcl|14.137|y
@@ -23,7 +29,7 @@ dplyr \(R\)|0.7.0|n
 bioconductor-ggtree \(R\)|1.8.2|n
 phangorn \(R\)|2.2.0|n 
 
-### Installation
+## Installation
 PIRATE was developed and tested using Ubuntu 14.04 and 16.04. It has a number or required and optional dependencies that are simple to install. More options for installation on other systems and package managers is planned.
 
 #### Conda
@@ -66,9 +72,9 @@ biocLite("ggtree")
 PIRATE accepts GFF3 annotation files containing matching nucleotide sequence at the end of the file. This is the format produced by [Prokka](http://www.vicbioinformatics.com/software.prokka.shtml). PIRATE will verify and discard files that do not follow the accepted GFF3 format and do not have a .gff extension before running. GFF3 files obtained from other sources, such as RAST or the NCBI, may sometime cause problems as they may not adhere to the accepted format. It is recommended that the nucleotide FASTA is downloaded (use ncbi-genome-download) and annotated with Prokka. If this is not possible to do so, for instance you wish to retain the reference genome naming scheme, then it is recommended that you check the fasta header matches the first field in the annotation and that the file contains locus_tag and or ID fields. 
 
 ### Locus Tags/IDs
-PIRATE renames locus_tag and ID to adhere to a standardised format (name of genome[underscore]locus number). The previous nomenclature is retained in the modified GFF3 files present in the "modified\_gffs" directory under previous_ID and previous_locustag fields. The old nomenclature can be transferred to the output files using the subsample_outputs.pl script and the field of interest e.g. --prev_locustag.       
+PIRATE renames locus_tag and ID to adhere to a standardised format (name of genome[underscore]locus number). The previous nomenclature is retained in the modified GFF3 files present in the "modified\_gffs" directory under previous_ID and previous_locustag fields. The old nomenclature can be transferred to the output files using the subsample_outputs.pl script and the field of interest e.g. --prev_locustag.
 
-# Usage
+## Usage
 
 The core functionality of PIRATE is invoked using the ```PIRATE``` command. A number of additional scripts are provided (in the scripts and tools directories) for converting or analysing the outputs.
 
@@ -102,7 +108,7 @@ The core functionality of PIRATE is invoked using the ```PIRATE``` command. A nu
  -t|--threads	number of threads/cores used by PIRATE [default: 2]
  -q|--quiet	    switch off verbose
  -z		        retain intermediate files [0 = none, 1 = retain pangenome 
- 		        files (default - re-run using --pan-off), 2 = all]  
+ 		        files (default - re-run using --pan-off), 2 = all]
  -c|--check	    check installation and run on example files
  -h|--help 	    usage information
  
@@ -130,7 +136,7 @@ PIRATE -i /path/to/gff/files/ -n
 ```
 Run PIRATE tRNA and rRNA features in input GFF3 files (-f). By default, this will run on nucleotides rather than amino acids.
 ```
-PIRATE -i /path/to/gff/files/ -f "rRNA,tRNA"  
+PIRATE -i /path/to/gff/files/ -f "rRNA,tRNA"
 ```
 
 ### Advanced examples
@@ -163,7 +169,7 @@ PIRATE allows for more fine-scale control of the parameters used for pangenome c
     MCL options:
     -f|--flat       mcl inflation value [default: 1.5]
 ```
-Create a pangenome using diamond (faster) rather than BLAST for homology searching (-k and --diamond).  
+Create a pangenome using diamond (faster) rather than BLAST for homology searching (-k and --diamond).
 ```
 PIRATE -i /path/to/gff/files/ -k "--diamond"
 ```
