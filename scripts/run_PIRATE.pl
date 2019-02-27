@@ -470,11 +470,11 @@ if ( $align == 1 ){
 	
 	unless($?){
 	
-		print "Creating full pangenome alignment:\n";
+		print "\nCreating full pangenome alignment:\n";
 		system("perl $script_path/create_pangenome_alignment.pl -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
 		print "\n - ERROR: creating pangenome concatenate failed\n" if $?;
 		
-		print "Creating core alignment:\n";
+		print "\nCreating core alignment:\n";
 		system("perl $script_path/create_pangenome_alignment.pl -t 95 -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/core_alignment.fasta -g $pirate_dir/core_alignment.gff");
 		print "\n - ERROR: creating core concatenate failed\n" if $?;
 	}

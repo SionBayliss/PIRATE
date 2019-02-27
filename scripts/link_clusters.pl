@@ -478,7 +478,7 @@ open my $unique_out, sprintf(">%s.PIRATE.unique_alleles.tsv", $output_root) or d
 
 # Headers
 my $header = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", 
-				"allele_name", "cluster_family", "consensus_gene_name", "consensus_product", "threshold", 
+				"allele_name", "gene_family", "consensus_gene_name", "consensus_product", "threshold", 
 				"alleles_at_maximum_threshold", "number_genomes", "average_dose", "min_dose", "max_dose",
 				"genomes_containing_fissions", "genomes_containing_duplications", "number_fission_loci",
 				"number_duplicated_loci", "no_loci", "products", "gene_names", "min_length(bp)", "max_length(bp)", 
