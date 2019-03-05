@@ -26,7 +26,7 @@ diamond|0.9.14|n
 R|3.4.1|n
 ggplot2 \(R\)|2.2.1|n 
 dplyr \(R\)|0.7.0|n 
-bioconductor-ggtree \(R\)|1.8.2|n
+bioconductor-ggtree \(R\)|1.14.4|n
 phangorn \(R\)|2.2.0|n 
 
 ## Installation
@@ -39,7 +39,7 @@ Installation using conda has been tested on Ubuntu 16.04.
 conda install -c sionbayliss pirate 
 
 # optional dependencies for plotting figures in R
-conda install r==3.5.1 r-ggplot2==3.1.0 r-dplyr==0.7.6 bioconductor-ggtree==1.12.7 r-phangorn==2.4.0 r-gridextra
+conda install r==3.5.1 r-ggplot2==3.1.0 r-dplyr==0.7.6 bioconductor-ggtree==1.14.4 r-phangorn==2.4.0 r-gridextra
 ```
 #### Ubuntu 14.04/16.04
 
