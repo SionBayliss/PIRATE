@@ -259,28 +259,33 @@ while(<F>){
 	my $start = $l[7];
 	my $end = $l[8];
 	
-	# Store start and end of alignment.
-	$sstart {$q} {$s} = $start;	
-	$send {$q} {$s} = $end;
+	# exclude blast hits below %id threshold
+	if ( ($pident/100) >= $threshold){
+		
+		# Store start and end of alignment.
+		$sstart {$q} {$s} = $start;	
+		$send {$q} {$s} = $end;
 	
-	# Identify minimum percentage length of pairwise blast. 
-	if (!$min_l_match {$s} {$q}){
+		# Identify minimum percentage length of pairwise blast. 
+		if (!$min_l_match {$s} {$q}){
 	
-		$min_l_match {$s} {$q} = $qcov;
-		$min_l_match {$q} {$s} = $qcov;
+			$min_l_match {$s} {$q} = $qcov;
+			$min_l_match {$q} {$s} = $qcov;
 		
-		$min_pident {$q} {$s} = $pident;
-		$min_pident {$s} {$q} = $pident;
+			$min_pident {$q} {$s} = $pident;
+			$min_pident {$s} {$q} = $pident;
 		
 		
-	}elsif( $min_l_match {$s} {$q} > $qcov ){
+		}elsif( $min_l_match {$s} {$q} > $qcov ){
 	
-		$min_l_match {$s} {$q} = $qcov;
-		$min_l_match {$q} {$s} = $qcov;
+			$min_l_match {$s} {$q} = $qcov;
+			$min_l_match {$q} {$s} = $qcov;
 		
-		$min_pident {$q} {$s} = $pident;
-		$min_pident {$s} {$q} = $pident;
+			$min_pident {$q} {$s} = $pident;
+			$min_pident {$s} {$q} = $pident;
 		
+		}
+	
 	}
 	
 }close F;
@@ -377,7 +382,7 @@ for my $genome ( sort keys %genome_clusters ){
 				# set ref sequence for loci_1
 				$longest_rep = $cluster_representatives{$ref_idx};
 				$longest_rep_l = $seq_length{$longest_rep};
-		
+				
 				# check for additional non-overlapping sequences.
 				my %sep = ();
 				my $sep_count = 0;
@@ -424,7 +429,7 @@ for my $genome ( sort keys %genome_clusters ){
 				
 						my $l_cluster_ex = $cluster_numbers {$add};
 						print OUTPUT "$add\t$group\t$genome\t0\t1\t$ff_group\t$l_cluster_ex\n";
-				
+
 						# do not reprocess
 						$exclude_list {$add} = 1;
 					}	

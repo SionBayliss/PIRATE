@@ -17,7 +17,7 @@ use Pod::Usage;
  -f|--fasta		multi-fasta file containing all sequences for analysis [required] 
  --threshold		threshold to use for identifying the seed cluster [required]
  -o|--output		output directory [required] 
- -l|--length		minimum length match for cdhit clustering [default: 0.8] 
+ -l|--length		minimum length match for cdhit clustering [default: 0.99] 
  -m|--max		maximum number sequences that can be in one fission/fusion cluster per isolate [default: 3]
  -k|--keep 		keep all temporary files [default: off]
  -n|--nucleotide	use blastn [default: blastp]
