@@ -37,7 +37,7 @@ my $cluster_loci = "";
 my $input_fasta = "";
 my $output_dir = "";
 my $threshold = "";
-my $length = 0.8;
+my $length = 0.99;
 
 my $n = "";
 my $n_max = 3;
