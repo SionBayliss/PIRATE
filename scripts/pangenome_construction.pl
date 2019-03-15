@@ -41,7 +41,7 @@ use File::Basename;
 	-e|--evalue	e-value used for blast hit filtering [default: 1E-6]
 	-d|--diamond	use diamond instead of BLAST - incompatible 
 			with --nucleotide [default: off]
-	--hsp_prop	remove BLAST hsps that are < hsp_prop proportion
+	--hsp-prop	remove BLAST hsps that are < hsp_prop proportion
 			of query length/query hsp length [default: 0]
 	
 	MCL options:
@@ -106,7 +106,7 @@ GetOptions(
 	
 	'flat=f' 	=> \$inflation_value,
 	'evalue=f' => \$evalue,
-	'hsp_prop=f' => \$hsp_prop_length,
+	'hsp-prop=f' => \$hsp_prop_length,
 	'diamond' => \$diamond,
 
 	'nucleotide' => \$nucleotide,
@@ -639,14 +639,18 @@ for my $file( @files ){
 
 		if ( $diamond == 1 ){
 		
-			print "\n - running all-vs-all diamond on $sample\n" if $quiet == 0;
-			`diamond makedb --in $blast_in --db $output_dir/$sample.diamond_db`;
+			print "\n - running all-vs-all DIAMOND on $sample\n" if $quiet == 0;
+			`diamond makedb --in $blast_in --db $output_dir/$sample.diamond_db 2>/dev/null`;
 			
 			# split file and run in parallel 
 			#`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "diamond blastp -d $output_dir/$sample.diamond_db --masking 0 --evalue 1E-6 --max-hsps 1 --threads 1 --outfmt 6 --more-sensitive --max-target-seqs 0" > $blast_out 2>/dev/null`; # --evalue 10
 			
+			# output format
+			my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore";
+			$outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen" if $hsp_prop_length > 0;
+			
 			# run as one file (faster than parallel)
-			`diamond blastp -q $blast_in -d $output_dir/$sample.diamond_db -c 1 --masking 0 --evalue $evalue --max-hsps 1 --threads $threads --outfmt 6 --more-sensitive --max-target-seqs 0 > $blast_out 2>/dev/null`;
+			`diamond blastp -q $blast_in -d $output_dir/$sample.diamond_db -c 1 --masking 0 --evalue $evalue --max-hsps 1 --threads $threads --outfmt $outfmt --more-sensitive --max-target-seqs 0 > $blast_out 2>/dev/null`;
 			
 			# error check
 			die "diamond blastp failed.\n" if $?;
@@ -654,7 +658,7 @@ for my $file( @files ){
 		}
 		else{
 		
-			print "\n - running all-vs-all blastp on $sample\n" if $quiet == 0;
+			print "\n - running all-vs-all BLASTP on $sample\n" if $quiet == 0;
 			
 			# mask sequences using segmasker
 			#`segmasker -in $blast_in -infmt fasta -outfmt maskinfo_asn1_bin -out $mask_file`;	
@@ -663,27 +667,35 @@ for my $file( @files ){
 			# make db
 			`makeblastdb -in $blast_in -dbtype prot`;
 			
+			# output format
+			my $outfmt = "\'6\'";
+			$outfmt = "\'6 std qlen slen\'" if $hsp_prop_length > 0;
+			
 			# run blastp
-			`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "blastp -max_hsps 1 -outfmt 6 -num_threads 1 -max_target_seqs 10000 -evalue $evalue -query - -db $blast_in" > $blast_out`;
+			`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "blastp -max_hsps 1 -outfmt $outfmt -num_threads 1 -max_target_seqs 10000 -evalue $evalue -query - -db $blast_in" > $blast_out`;
 			die "blastp failed.\n" if $?;
 			
 		}
 	
 	}else{
 	
-		print "\n - running all-vs-all blastn on $sample\n" if $quiet == 0;
+		# output format
+		my $outfmt = "\'6\'";
+		$outfmt = "\'6 std qlen slen\'" if $hsp_prop_length > 0;
+	
+		print "\n - running all-vs-all BLASTN on $sample\n" if $quiet == 0;
 		`makeblastdb -in $blast_in -dbtype nucl`;
-		`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe blastn -task "blastn" -outfmt 6 -num_threads 1 -dust no -evalue $evalue -max_target_seqs 10000 -max_hsps 1 -query - -db $blast_in > $blast_out`;
+		`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "blastn -task \"blastn\" -outfmt $outfmt -num_threads 1 -dust no -evalue $evalue -max_target_seqs 10000 -max_hsps 1 -query - -db $blast_in" > $blast_out`;
 		die "blastn failed.\n" if $?; 
 		
 	}
 	time_update();
-
+	
 	# ensure blast output has all representative sequences vs themselves (short sequences maybe removed on e-value).
 	open BLAST_OUT, "$blast_out" or die $!;
 	open BLAST_TEMP, ">$blast_out.temp" or die $!;
 	#my $av_bit = ""; # average bit score of same-same blast results for dataset.
-	my $min_bit = ""; # minimum bit score of same-same blast results for dataset.
+	my $max_bit = ""; # minimum bit score of same-same blast results for dataset.
 	while (<BLAST_OUT>){
 	
 		my $line = $_;
@@ -695,22 +707,25 @@ for my $file( @files ){
 			# don't print same same line - they are added later using placeholder values
 			$rep { $line[0] } = 1; # print placeholder line
 			
-			$min_bit = $line[11] if $min_bit eq "";
-			$min_bit = $line[11] if $line[11] < $min_bit; 
+			# find max bit score
+			$max_bit = $line[11] if $max_bit eq "";
+			$max_bit = $line[11] if $line[11] < $max_bit; 
+			
+			# check for all same-same representative sequences  
+			$rep { $line[0] } = 2; # do not print placeholder line
+			
+			# print line 
+			print BLAST_TEMP "$line";
 			
 			# removed - used to use average and print existing lines
-			
-			#$rep { $line[0] } = 2; # do not print placeholder line
-			
 			#$av_bit = $line[11] if $av_bit eq "";
 			#$av_bit = ($av_bit + $line[11]) / 2;
-			
-			#print BLAST_TEMP "$line";
+		
 		}
-		# [optional] filter on hsp percentage length < hsp_prop_length removed.
+		# [optional] filter on hsp length hsp percentage length < hsp_prop_length removed.
 		elsif( $hsp_prop_length > 0 ){
 		
-			my $q_len = $line[3];
+			my $q_len = $line[12];
 			my $q_hsp_len = ($line[7] - $line[6]) + 1;
 			my $s_hsp_len = ($line[9] - $line[8]) + 1;
 			
@@ -745,7 +760,10 @@ for my $file( @files ){
 	for my $rloci ( keys %rep ){
 
 		if ( $rep{$rloci} == 1){
-			print BLAST_OUT "$rloci	$rloci	100.00	100	0	0	1	100	1	100	0.0e+00	$min_bit\n"; # used to be av_bit
+		
+			# uses a placeholder value for a same-same sequence - previously used av_bit/max bit
+			print BLAST_OUT "$rloci	$rloci	100	1234	0	0	1	1234	1	1234	0	2335\n";
+			#print BLAST_OUT "$rloci	$rloci	100.00	100	0	0	1	100	1	100	0.0e+00	$max_bit\n";
 		} 
 		
 	}
@@ -805,7 +823,7 @@ for my $file( @files ){
 				
 			}close CLUSTERS;
 			
-			# check for clusters fom previous iteration
+			# check for clusters from previous iteration
 			die " - ERROR: no clusters in $ct_file\n" if $cluster_no == 0;
 			
 			# make empty file for filtered blast results.
