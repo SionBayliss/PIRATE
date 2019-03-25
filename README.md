@@ -243,4 +243,46 @@ PIRATE.gene_families.tsv and PIRATE.unique_alleles.tsv share the same file forma
 
 21-22/ **synteny_cluster/synteny_cluster_order** - The syntenic cluster the gene_family has been assigned to and the corresponding order within the cluster. NOTE: these columns are only present in PIRATE.gene_families.tsv.  
 
-23+/ **genome_names**- one column per genome which contains the gene family. Rows contain the locus tags of each loci per genome. Loci encased in brackets and separated by a colon have been assigned as as fusion cluster by PIRATE (e.g. (example_001:example_002) )
+23+/ **genome_names** - one column per genome which contains the gene family. Rows contain the locus tags of each loci per genome. Loci encased in brackets and separated by a colon have been assigned as as fusion cluster by PIRATE (e.g. (example_001:example_002) )
+
+## Support Scripts
+A number of support scripts have been supplied to subset, rename and convert the outputs of PIRATE into other common formats. Support scripts can be found in the tools directory. 
+
+#### Subset Outputs
+Subsample PIRATE.gene_families.ordered.tsv file and rename loci in output. Allows for recalculation of number of genomes gene_families are present in PIRATE.gene_families.ordered.tsv using only a subset of samples (NOTE: currently this will not recalculate the number of duplications/fission-fusion genes). Also, by default, PIRATE will rename locus tags to a standardised scheme in order to make ensure inputs are comparable and unique. This script allows for renaming of locus tags with additional fields from the original files or with original locus_tag info (prev_locustag in modified_gffs directory).
+```
+# subsample output using list of samples (one per line)
+subsample_outputs.pl -i /path/to/PIRATE.gene_families.tsv -g /path/to/PIRATE/modified_gffs/  -o /path/to/output_file.tsv
+-l /path/to/list_of_genomes.txt
+
+# rename with original locus tag form input files
+subsample_outputs.pl -i /path/to/PIRATE.gene_families.tsv -g /path/to/PIRATE/modified_gffs/  -o /path/to/output_file.tsv
+--field "prev_locustag"
+```
+#### Subset alignments
+Recreate gene alignments and allow filtering for genomes, alleles or genes of interest. Output can be filtered on genomes (--list-genomes), alleles (--list-alleles, requires a PIRATE.unique_alleles.tsv as input) and/or percentage of samples (-t|--threshold). Samples with multiple sequences are by default replaced with a single sequences of ?s. This can be modified with --multi-include or -r|--rep-include. NOTE: this only subsets the fasta files, it does not realign sequences.  
+```
+subset_alignments.pl -i /path/to/PIRATE.gene_families.tab[PIRATE.unique_alleles.tsv] -f /path/to/PIRATE/feature_sequences/ -o ./path/to/output_directory/
+```
+
+#### Unique gene sequences
+Identify unique gene sequences for gene alignments, analogous to the output from BIGSdb. Creates a fasta and a presence/absence matrix.
+```
+unique_sequences.pl -i /path/to/gene.fas -p /path/to/PIRATE.gene_families.tab -o /path/to/output_dir/
+```
+
+#### Convert to roary file
+Convert PIRATE file format into gene_presence_absence.csv file format from [roary](https://sanger-pathogens.github.io/Roary/). Allows PIRATE outputs for be made compatible to useful downstream analysis tools that deal with the outputs from roary (e.g. [phandango](https://jameshadfield.github.io/phandango/#/)/[scoary](https://github.com/AdmiralenOla/Scoary)). Also allow the clustering from PIRATE to be used in the excellent visualisation tools from [PanX](https://github.com/neherlab/pan-genome-visualization/). 
+```
+PIRATE_to_roary.pl -i /path/to/PIRATE.*.tsv/ -o /path/to/output_file.csv
+```
+#### Convert to binary presence-absence or count
+Convert to a binary presence/absence table for each allele/gene_family. Allows filtering by threshold (-t), sample list (-l), family frequence (--family-low/high) and allele frequency (--low/--high). A similar script allows this functionality for fission/fusion and duplications (-t|--type ff or d). 
+```
+# gene/allele presence-absence
+PIRATE_to_Rtab.pl -i /path/to/PIRATE.*.tsv/ -o /path/to/output_file.tsv
+
+# paralog presence-absence
+PIRATE_to_Rtab.pl -i /path/to/PIRATE.*.tsv/ -o /path/to/output_file.tsv
+```
+

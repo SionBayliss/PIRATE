@@ -642,13 +642,13 @@ for my $file( @files ){
 			print "\n - running all-vs-all DIAMOND on $sample\n" if $quiet == 0;
 			`diamond makedb --in $blast_in --db $output_dir/$sample.diamond_db 2>/dev/null`;
 			
-			# split file and run in parallel 
-			#`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "diamond blastp -d $output_dir/$sample.diamond_db --masking 0 --evalue 1E-6 --max-hsps 1 --threads 1 --outfmt 6 --more-sensitive --max-target-seqs 0" > $blast_out 2>/dev/null`; # --evalue 10
-			
 			# output format
 			my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore";
 			$outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen" if $hsp_prop_length > 0;
 			
+			# split file and run in parallel 
+			#`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "diamond blastp -d $output_dir/$sample.diamond_db -c 4 --masking 0 --evalue $evalue --max-hsps 1 --threads 1 --outfmt $outfmt --more-sensitive --max-target-seqs 0" > $blast_out 2>/dev/null`;
+
 			# run as one file (faster than parallel)
 			`diamond blastp -q $blast_in -d $output_dir/$sample.diamond_db -c 1 --masking 0 --evalue $evalue --max-hsps 1 --threads $threads --outfmt $outfmt --more-sensitive --max-target-seqs 0 > $blast_out 2>/dev/null`;
 			
