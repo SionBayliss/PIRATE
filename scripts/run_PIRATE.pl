@@ -28,7 +28,7 @@ use File::Basename;
   		run and resulting files are present in output folder]
 
  Paralog classification:
- --para-off	switch off paralog identification [default: off]
+ --para-off	switch off paralog identification [default: on]
 
  Output:
  -a|--align	align all genes and produce core/pangenome alignments 
