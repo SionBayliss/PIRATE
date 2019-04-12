@@ -29,6 +29,10 @@ use File::Basename;
 
  Paralog classification:
  --para-off	switch off paralog identification [default: on]
+ --para-args	options to pass to paralog splitting algorithm
+ 		[default: none] 
+ --classify-off	do not classify paralogs, assumes this has been
+		run previously [default: on]
 
  Output:
  -a|--align	align all genes and produce core/pangenome alignments 
@@ -70,6 +74,9 @@ my $para_off = 0;
 my $r_plots = '';
 my $align = 0;
 
+my $split_args = "";
+my $classify_off = 0;
+
 my $pan_off = 0;
 my $threads = 2; 
 my $quiet = 0;
@@ -87,8 +94,10 @@ GetOptions(
 	'k|pan-opt=s' => \$pan_options,
 	'nucl' => \$nucleotide,
 
+	'classify-off' => \$classify_off,
 	'para-off' => \$para_off,
 	'para-align' => \$para_align,
+	'para-args=s' => \$split_args,
 	
 	'align' => \$align,
 	'rplots'		=> \$r_plots,
@@ -301,6 +310,16 @@ if ( $pan_off == 0 ){
 	print " - completed in: ", time() - $time_start,"s\n";
 	print "\n-------------------------------\n\n";
 	
+	# parse pangenome files
+	print "Parsing pangenome files:\n\n";
+	$time_start = time();
+	chdir("$pirate_dir") or die "$!";
+	my $parse_results = `perl $script_path/parse_pangenomes.pl $it_dir $steps $genome2loci $pirate_dir`; 
+	die " - ERROR: parse_pangenomes.pl failed.\n" if $?;
+	print "$parse_results";
+	print "\n - completed in: ", time() - $time_start,"s\n";
+	print "\n-------------------------------\n";
+
 	# clean up
 	unlink "$pirate_dir/gff_parser_log.txt" if -z "$pirate_dir/gff_parser_log.txt";
 	
@@ -320,16 +339,6 @@ else{
 	print "\n-------------------------------\n\n";
 
 }
-
-# parse pangenome files
-print "Parsing pangenome files:\n\n";
-$time_start = time();
-chdir("$pirate_dir") or die "$!";
-my $parse_results = `perl $script_path/parse_pangenomes.pl $it_dir $steps $genome2loci $pirate_dir`; 
-die " - ERROR: parse_pangenomes.pl failed.\n" if $?;
-print "$parse_results";
-print "\n - completed in: ", time() - $time_start,"s\n";
-print "\n-------------------------------\n";
 
 # [optional] Classify paralogs and split paralog families.  
 if ( $para_off == 0 ){
@@ -365,29 +374,41 @@ if ( $para_off == 0 ){
 		print " - completed in: ", time() - $time_start,"s\n\n";	
 
 	}else{
-
-		# Classify paralogous clusters using blast
-		print "\nClassifing paralogous clusters:\n";
-		$time_start = time();
 		
-		my @para_args = ();
-		push(@para_args, "--nucleotide") if $nucleotide == 1;
-		push(@para_args, "-k") if $retain == 2;
-		my $para_args_cmd = join(" ", @para_args);
+		if ($classify_off == 0){
 		
-		system("perl $script_path/classify_paralogs.pl -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --threads $threads $para_args_cmd");
-		die " - ERROR: identify_paralogs.pl failed.\n" if $?;
+			# Classify paralogous clusters using blast
+			print "\nClassifing paralogous clusters:\n";
+			$time_start = time();
 		
-		print " - completed in: ", time() - $time_start,"s\n";
-		print "\n-------------------------------\n\n";
+			my @para_args = ();
+			push(@para_args, "--nucleotide") if $nucleotide == 1;
+			push(@para_args, "-k") if $retain == 2;
+			my $para_args_cmd = join(" ", @para_args);
+		
+			system("perl $script_path/classify_paralogs.pl -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --threads $threads $para_args_cmd");
+			die " - ERROR: identify_paralogs.pl failed.\n" if $?;
+		
+			print " - completed in: ", time() - $time_start,"s\n";
+			print "\n-------------------------------\n\n";
+			
+		}else{
+			print "Paralog classification switched off\n";
+			print "\n-------------------------------\n\n";
+		}
 	
 	}
 
 	# Separate paralogous clusters if dosage == 1 per genome at any threshold.
 	print "Split paralogous clusters:\n\n";
 	$time_start = time();
-	system( "perl $script_path/split_paralogs_runner.pl $pirate_dir/loci_paralog_categories.tab $pirate_dir/loci_list.tab $pirate_dir/ $threads");
+	
+	$split_args =~ s/\+\-\+/ /g;
+	$split_args =~ s/"//g;
+	
+	system( "perl $script_path/split_paralogs_runner.pl -p $pirate_dir/loci_paralog_categories.tab -l $pirate_dir/loci_list.tab -o $pirate_dir/ -t $threads $split_args");
 	die " - ERROR: split_paralogs failed.\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
 	print "\n-------------------------------\n\n";
 
 	# Make annotated output tables (families and alleles) 
@@ -487,7 +508,7 @@ if ($retain < 2){
 	
 	unlink "$pirate_dir/paralog_loci.sorted";
 	unlink "$pirate_dir/split_paralog_loci.tab";
-	unlink "$pirate_dir/paralog_clusters.tab";
+	#unlink "$pirate_dir/paralog_clusters.tab";
 	
 	unlink glob "$pirate_dir/paralog_working/*";
 	rmdir "$pirate_dir/paralog_working/";
