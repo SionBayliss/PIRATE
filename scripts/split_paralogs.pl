@@ -55,12 +55,8 @@ sub process_family { # Process hashes of alleles in decending order of threshold
 		$loci{$l} = 1;
 				
 		# genome
-		my $gn = "";
-		if (!$loci_info{$l}{"ge"}){
-			$gn = $loci_info{$l}{"ge"};
-		}else{
-			die " - problem with loci $l";
-		}
+		my $gn = $loci_info{$l}{"ge"};
+		
 		# store loci into truncation groups per genome		
 		if( $loci_info{$l}{"tg"} ){
 			if ( !$tg_clusters { $gn }{ $loci_info{$l}{"tg"} } ){
@@ -551,6 +547,10 @@ while (<PARA>){
 	
 	my @split =  split(/\t/, $line, -1);
 	
+	# sanity check 
+	die " - ERROR: malformed line in paralog categories file: $line\n" if @split < 7;
+	
+	# store variables
 	my $cloci = $split[0];
 	my $mc = $split[3];
 	my $trunc_group = $split[5];
@@ -596,6 +596,14 @@ while ( <LOCI> ){
 	
 	# Format: loci	family	threshold	allele_name	genome
 	my ( $loci, $group, $threshold, $allele, $genome ) = split( /\t/ , $line, -1);
+	
+	# SANITY CHECK: check loci family info matches info in paralog file
+	if ( $loci_info{$loci}{"ge"} ne $genome ){
+		die " - ERROR: genomes in loci list and paralog categories files do not match for $loci ($loci_info{$loci}{ge}/$genome)";
+	}
+	if ( $loci_info{$loci}{"fa"} ne $group ){
+		die " - ERROR: gene families in loci list and paralog categories files do not match for $loci ($loci_info{$loci}{fa}/$group)";
+	}
 	
 	# check for group change. 
 	if( $curr_group ne $group ) {

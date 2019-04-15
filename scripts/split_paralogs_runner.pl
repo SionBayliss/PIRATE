@@ -245,7 +245,6 @@ print " - $split_groups paralogous groups split into $new_groups additional core
 my $cat_line = join(" ", @o_file);
 `cat $cat_line > $output_file`;
 
-
 exit; ######
 # tidy up working files
 unless ( $split_org == 1 ){
