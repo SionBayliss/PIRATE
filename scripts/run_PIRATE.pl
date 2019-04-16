@@ -409,17 +409,17 @@ if ( $para_off == 0 ){
 	system( "perl $script_path/split_paralogs_runner.pl -p $pirate_dir/loci_paralog_categories.tab -l $pirate_dir/loci_list.tab -o $pirate_dir/ -t $threads $split_args");
 	die " - ERROR: split_paralogs failed.\n" if $?;
 	print " - completed in: ", time() - $time_start,"s\n";
-	print "\n-------------------------------\n\n";
+	print "\n-------------------------------\n";
 
 	# Make annotated output tables (families and alleles) 
-	print "Linking clusters between thresholds:\n";
+	print "\nLinking clusters between thresholds:\n";
 	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -l $pirate_dir/split_paralog_loci.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --paralogs $pirate_dir/loci_paralog_categories.tab -e $pirate_dir/paralog_clusters.tab --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;
 	
 }else{
 
 	# Make annotated output tables (families and alleles) 
-	print "Linking clusters between thresholds:\n";
+	print "\nLinking clusters between thresholds:\n";
 	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;
 

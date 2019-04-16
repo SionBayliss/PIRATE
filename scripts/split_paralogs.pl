@@ -183,7 +183,7 @@ sub process_family { # Process hashes of alleles in decending order of threshold
 				}
 				
 				# feedback
-				print "($n_a_genomes == $n_cutoff) && ($n_tgs <= $tg_cutoff)\n";
+				print "$a($t) = ($n_a_genomes == $n_cutoff) && ($n_tgs <= $tg_cutoff)\n" if $n_a_genomes > 0;
 			}
 			
 		}
@@ -239,7 +239,7 @@ sub process_family { # Process hashes of alleles in decending order of threshold
 							$group_info {$group_number} {"S"} = $scores{$t}{$a}{"s"};
 							
 							# feedback
-							###print "Split - $t -$a - $group_info{$group_number}{C}/$n_cutoff - $group_info{$group_number}{TC} - $group_info{$group_number}{S}\n";
+							print "Split ($group_number) - $t -$a - $group_info{$group_number}{C}/$n_cutoff - $group_info{$group_number}{TC} - $group_info{$group_number}{S}\n";
 						
 						} 
 					}
@@ -308,6 +308,7 @@ sub process_family { # Process hashes of alleles in decending order of threshold
 			$tg_cutoff = $n_genomes_new;
 			
 			###print "reset no. genomes\n";
+			###exit; ####
 			
 		}else{
 	
@@ -357,11 +358,6 @@ sub process_family { # Process hashes of alleles in decending order of threshold
 	my $no_assigned = keys %allele_assignment;
 	###print "loci - $no_loci\t no assigned $no_assigned\n";
 	
-	# count split groups	
-	my $split_groups = $group_number + 1;
-	$split_groups = $group_number if $no_loci == $no_assigned;
-	$split_groups = 1 if $split_groups == 0;
-	
 	# add any remaining isolates as an additional group
 	++$group_number; 
 	my %rem_loci = ();
@@ -410,9 +406,12 @@ sub process_family { # Process hashes of alleles in decending order of threshold
 		$group_info {$group_number} {"S"} = "0";
 	
 	}
-		
+	
+	# set gruop number to one if the family was not processed
+	$group_number = 1 if $group_number == 1;
+	
 	# Return group info
-	return (\%allele_assignment, \%group_info, $split_groups);
+	return (\%allele_assignment, \%group_info, $group_number);
 	
 }
 
@@ -669,8 +668,8 @@ if ( $paralog == 1 ) {
 }
 
 # feedback
-my $total = $split_no+$paralog_check;
+my $total = $split_total+$paralog_check;
 print " - $paralog_check of $no_paralog_families paralog families found in loci list.\n";
-print " - $split_total families split into $split_no additional core/accessory alleles - $total total\n";
+print " - $split_no families split into $split_total additional core/accessory alleles - $total total\n";
 print " - $print_loci loci printed to file of $file_loci loci found in file\n";
 exit;
