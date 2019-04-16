@@ -43,6 +43,8 @@ use File::Basename;
 			with --nucleotide [default: off]
 	--hsp-prop	remove BLAST hsps that are < hsp_prop proportion
 			of query length/query hsp length [default: 0]
+	--hsp-len	remove BLAST hsps that are < hsp_len proportion
+			of query length [default: 0]
 	
 	MCL options:
 	-f|--flat	MCL inflation value [default: 1.5]
@@ -79,6 +81,7 @@ my $cd_step = 0.5;
 my $evalue = "1E-6";
 my $inflation_value = 1.5;
 my $hsp_prop_length = 0.0;
+my $hsp_length = 0;
 
 my $cdhit_aS = 0.9;
 
@@ -110,6 +113,7 @@ GetOptions(
 	'flat=f' 	=> \$inflation_value,
 	'evalue=f' => \$evalue,
 	'hsp-prop=f' => \$hsp_prop_length,
+	'hsp-length=f' => \$hsp_length, 
 	'diamond' => \$diamond,
 
 	'nucleotide' => \$nucleotide,
@@ -205,7 +209,8 @@ else{
 for (@thresholds) { if ( $_ !~ /^\d+$/ ) { die "Threshold value $_ is not numeric.\n" } }
 
 # check prop is not > 1
-die " - ERROR: hsp_prop is a proportion and must be < 1.\n" if $hsp_prop_length > 1; 
+die " - ERROR: hsp-prop is a proportion and must be < 1.\n" if $hsp_prop_length > 1; 
+die " - ERROR: hsp-length is a proportion and must be < 1.\n" if $hsp_length > 1; 
 
 # check files exist and have correct suffix.
 my @suffix_list = (".aa.fasta" , ".fasta" , ".fa" , ".fas");
@@ -221,7 +226,7 @@ for my $file( @files ){
 
 # check for conflicts between cd-hit low and %id threshold
 my $max_thresh = $thresholds[scalar(@thresholds)-1];
-die "Lowest cd-hit threshold ($cd_low) is below blast % id value ($max_thresh)" if $cd_low < $max_thresh;
+die " - WARNING: lowest cd-hit threshold ($cd_low) is below blast % id value ($max_thresh)" if $cd_low < $max_thresh;
 
 # parse and check loci list if passed via -l
 my %loci;
@@ -647,7 +652,7 @@ for my $file( @files ){
 			
 			# output format
 			my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore";
-			$outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen" if $hsp_prop_length > 0;
+			$outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen" if ( ($hsp_prop_length > 0) || ($hsp_length > 0) );
 			
 			# split file and run in parallel 
 			#`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "diamond blastp -d $output_dir/$sample.diamond_db -c 4 --masking 0 --evalue $evalue --max-hsps 1 --threads 1 --outfmt $outfmt --more-sensitive --max-target-seqs 0" > $blast_out 2>/dev/null`;
@@ -672,7 +677,7 @@ for my $file( @files ){
 			
 			# output format
 			my $outfmt = "\'6\'";
-			$outfmt = "\'6 std qlen slen\'" if $hsp_prop_length > 0;
+			$outfmt = "\'6 std qlen slen\'" if ( ($hsp_prop_length > 0) || ($hsp_length > 0) );
 			
 			# run blastp
 			`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "blastp -max_hsps 1 -outfmt $outfmt -num_threads 1 -max_target_seqs 10000 -evalue $evalue -query - -db $blast_in" > $blast_out`;
@@ -684,7 +689,7 @@ for my $file( @files ){
 	
 		# output format
 		my $outfmt = "\'6\'";
-		$outfmt = "\'6 std qlen slen\'" if $hsp_prop_length > 0;
+		$outfmt = "\'6 std qlen slen\'" if ( ($hsp_prop_length > 0) || ($hsp_length > 0) );
 	
 		print "\n - running all-vs-all BLASTN on $sample\n" if $quiet == 0;
 		`makeblastdb -in $blast_in -dbtype nucl`;
@@ -724,6 +729,22 @@ for my $file( @files ){
 			#$av_bit = $line[11] if $av_bit eq "";
 			#$av_bit = ($av_bit + $line[11]) / 2;
 		
+		}
+		# [optional] filter on hsp length as a proportion of the total length of the quesry sequence
+		elsif( $hsp_length > 0 ){
+	
+			my $q_len = $line[12];
+			my $q_hsp_len = ($line[7] - $line[6]) + 1;
+		
+			# test hsp length against original sequence length and subject hsp alignment length vs query hsp length.			
+			my $hspVSq = $q_hsp_len / $q_len;
+			$hspVSq = 1 - ($hspVSq - 1) if $hspVSq > 1; 
+		
+			# print if both are > hsp_prop_length
+			if ( ( $hspVSq > $hsp_length ) ){
+				print BLAST_TEMP "$line";
+			}
+				
 		}
 		# [optional] filter on hsp length hsp percentage length < hsp_prop_length removed.
 		elsif( $hsp_prop_length > 0 ){
