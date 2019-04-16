@@ -78,7 +78,9 @@ my $cd_low = 98;
 my $cd_step = 0.5;
 my $evalue = "1E-6";
 my $inflation_value = 1.5;
-my $hsp_prop_length = 0;
+my $hsp_prop_length = 0.0;
+
+my $cdhit_aS = 0.9;
 
 my $diamond = 0;
 
@@ -103,6 +105,7 @@ GetOptions(
 	'cd-low=i' => \$cd_low,
 	'cd-step=f' => \$cd_step,
 	'cd-core-off' => \$core_off,
+	'cd-hit-aS' => \$cdhit_aS,
 	
 	'flat=f' 	=> \$inflation_value,
 	'evalue=f' => \$evalue,
@@ -436,7 +439,7 @@ for my $file( @files ){
 			}
 
 			# run cd-hit
-			my $cd_hit_command = "$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log";
+			my $cd_hit_command = "$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -aS $cdhit_aS -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log";
 			#print " - command: \"$cd_hit_command\"\n";
 			$cd_hit_out = `$cd_hit_command`;
 			
@@ -463,7 +466,7 @@ for my $file( @files ){
 			}
 		
 			# run cdhit est
-			my $cd_hit_command = "$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log";
+			my $cd_hit_command = "$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -aS $cdhit_aS -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log";
 			#print " - command: \"$cd_hit_command\"\n";
 			$cd_hit_out = `$cd_hit_command`;
 		}

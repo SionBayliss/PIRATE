@@ -15,9 +15,9 @@ use Cwd 'abs_path';
 
  Input-Output:	
  -i|--input		input PIRATE.gene_families.tsv file [required]
- -g|--gene-family		name of gene family  [required]
+ -g|--gene-family	regular expression for gene family  [required]
  -b|--blast		blast file [required]
- -o|--output	path to output file [required]
+ -o|--output		path to output file [required]
  
  General:
  -h|--help 		usage information
@@ -84,7 +84,7 @@ while (<IN>){
 		# variables
 		my $family = $vars[1];
 		
-		if ($ family eq $gene_family ){ 
+		if ( $family =~ /$gene_family/ ){ 
 		
 			# loop through loci for selected genomes.
 			my @genome_out = ();

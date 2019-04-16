@@ -14,10 +14,10 @@ use Cwd 'abs_path';
  analyse_loci_list.pl -i /path/to/PIRATE.gene_families.tsv -g "gene_family" -b /path/to/blast_file/  -o /path/to/output_file
 
  Input-Output:	
- -i|--input		input PIRATE.gene_families.tsv file [required]
- -g|--gene-family		name of gene family  [required]
- -l|--loci-list		blast file [required]
- -o|--output	path to output file [required]
+ -i|--input		input	PIRATE.gene_families.tsv file [required]
+ -g|--gene-family	regular expression for gene family  [required]
+ -l|--loci-list		loci_list.tab file [required]
+ -o|--output		path to output file [required]
  
  General:
  -h|--help 		usage information
@@ -84,7 +84,7 @@ while (<IN>){
 		# variables
 		my $family = $vars[1];
 		
-		if ( $family eq $gene_family ){
+		if ( $family =~ /$gene_family/ ){
 		
 			my $g_count = 0;
 			for my $i (@header_idx){
