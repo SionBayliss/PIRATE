@@ -10,7 +10,7 @@ PIRATE is implemented in Perl and is freely available under an GNU GPL 3 open so
 The [PIRATE wiki](https://github.com/SionBayliss/PIRATE/wiki) contains additional information on the methodology and outputs. 
 
 #### Referencing
-An application note is in preparation/submission.
+The manuscript has been submitted. The preprint can be found at [here](https://www.biorxiv.org/content/10.1101/598391v1). 
 
 ## Dependencies 
 |software|version|required|
@@ -33,7 +33,13 @@ phangorn \(R\)|2.2.0|n
 PIRATE was developed and tested using Ubuntu 14.04 and 16.04. It has a number or required and optional dependencies that are simple to install. More options for installation on other systems and package managers is planned.
 
 #### Conda
-Installation using conda has been tested on Ubuntu 16.04.
+Installation using conda has been tested on Ubuntu 16.04. It relies on the default bioconda channels so ensure you have run the following lines after installing conda/miniconda:
+```
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+```
+PIRATE can then be installed via:
 ```
 # PIRATE package
 conda install -c sionbayliss pirate 
