@@ -32,7 +32,7 @@ phangorn \(R\)|2.2.0|n
 ## Installation
 PIRATE was developed and tested using Ubuntu 14.04 and 16.04. It has a number or required and optional dependencies that are simple to install. More options for installation on other systems and package managers is planned.
 
-#### Conda
+#### Conda (Linux)
 Installation using conda has been tested on Ubuntu 16.04. It relies on the default bioconda channels so ensure you have run the following lines after installing conda/miniconda:
 ```
 conda config --add channels defaults
@@ -47,6 +47,27 @@ conda install -c sionbayliss pirate
 # optional dependencies for plotting figures in R
 conda install r==3.5.1 r-ggplot2==3.1.0 r-dplyr==0.7.6 bioconductor-ggtree==1.14.4 r-phangorn==2.4.0 r-gridextra
 ```
+
+#### Conda (Mac)
+Installation using conda has been tested on MacOS. It relies on the default bioconda channels so ensure you have run the following lines after installing conda/miniconda:
+```
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+```
+The dependencies can be installed via:
+```
+# required dependencies
+conda install perl-bioperl==1.7.2 mcl>=14.137 mafft==7.310 cd-hit>=4.6.4 fasttree>=2.1.10 diamond>=0.9.14 blast>=2.2.31 parallel>=20170422
+
+# optional dependencies for plotting figures in R
+conda install r==3.5.1 r-ggplot2==3.1.0 r-dplyr==0.7.6 bioconductor-ggtree==1.14.4 r-phangorn==2.4.0 r-gridextra
+```
+PIRATE can then be cloned from github and run using the file located at /PIRATE/bin/PIRATE
+```
+git clone https://github.com/SionBayliss/PIRATE.git
+```
+
 #### Ubuntu 14.04/16.04
 
 PIRATE dependencies [optional: DIAMOND will need to be installed manually and added to path]:
