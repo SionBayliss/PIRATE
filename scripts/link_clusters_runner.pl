@@ -230,7 +230,7 @@ sub build_index {
 	my $offset     = 0;
 
 	while (<$data_file>) {
-    		print $index_file pack("N", $offset);
+    		print $index_file pack("q", $offset);
     		$offset = tell($data_file);
 	}
 }
@@ -245,11 +245,11 @@ sub build_index {
       my $i_offset;           # offset into the index of the entry
       my $entry;              # index entry
       my $d_offset;           # offset into the data file
-      $size = length(pack("N", 0));
+      $size = length(pack("q", 0));
       $i_offset = $size * ($line_number-1);
       seek($index_file, $i_offset, 0) or return;
       read($index_file, $entry, $size);
-      $d_offset = unpack("N", $entry);
+      $d_offset = unpack("q", $entry);
       seek($data_file, $d_offset, 0);
       return scalar(<$data_file>);
   }

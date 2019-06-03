@@ -47,16 +47,16 @@ GetOptions(
 	
 ) or pod2usage(1);
 pod2usage(1) if $help;
-pod2usage( {-message => q{paralog categories file is a required arguement}, -exitval => 1, -verbose => 1 } ) if $paralog_cat eq ''; 
-pod2usage( {-message => q{loci_list is a required arguement}, -exitval => 1, -verbose => 1 } ) if $loci_list eq ''; 
-pod2usage( {-message => q{output directory is a required arguement}, -exitval => 1, -verbose => 1 } ) if $output_dir eq ''; 
+pod2usage( {-message => q{paralog categories file is a required argument}, -exitval => 1, -verbose => 1 } ) if $paralog_cat eq ''; 
+pod2usage( {-message => q{loci_list is a required argument}, -exitval => 1, -verbose => 1 } ) if $loci_list eq ''; 
+pod2usage( {-message => q{output directory is a required argument}, -exitval => 1, -verbose => 1 } ) if $output_dir eq ''; 
 
 # script path
 my $script_path = abs_path(dirname($0));
 
 # output file paths
-my $index_file = "$loci_list.idx";
-my $index_file_pc = "$paralog_cat.idx";
+my $ind_file = "$loci_list.idx";
+my $ind_file_pc = "$paralog_cat.idx";
 my $sub_loci_lists = "$output_dir/loci_list.paralog_sub"; 
 my $sub_pg_lists = "$output_dir/paralog_categories.paralog_sub"; 
 my $sub_split = "$output_dir/sub_split"; 
@@ -97,6 +97,7 @@ if ( $no_para_groups == 0 ){
 # parse input file and store line numbers for all paralogs of interest
 my %para_lines = ();
 my $count = 0;
+print " - storing line indices for sequence groups\n";
 open LOCI, $loci_list or die " - ERROR: $loci_list would not open.\n";
 while (<LOCI>){
 
@@ -115,14 +116,17 @@ while (<LOCI>){
 my $no_para_groups_check = scalar(keys(%para_lines));
 print " - ERROR: number of paralogous groups ($no_para_groups) not equal to number found in loci file ($no_para_groups_check)\n" if ( $no_para_groups_check != $no_para_groups );
 
+# feedback
+print " - building indexes for loci list and paralog categories files\n";
+
 # index loci list
 open my $input, $loci_list or die " - ERROR: $loci_list would not open.\n";
-open(my $index, "+>", $index_file);
+open(my $index, "+>", $ind_file);
 build_index($input, $index);
 
 # index paralog categories
 open my $input_pc, $paralog_cat or die " - ERROR: $paralog_cat would not open.\n";
-open(my $index_pc, "+>", $index_file_pc);
+open(my $index_pc, "+>", $ind_file_pc);
 build_index($input_pc, $index_pc);
 
 # make variable containing --threads bins for $no_para_groups groups
@@ -142,6 +146,7 @@ for my $i ( 0..($no_para_groups-1) ){
 }
 
 # print loci for each group into --threads input file for split_paralogs
+print " - assigning loci to sub files for parallel processing\n";
 my $f_count = 0;
 my $b_prev = 0;
 my @o_file = ();
@@ -245,7 +250,6 @@ print " - $split_groups paralogous groups split into $new_groups additional core
 my $cat_line = join(" ", @o_file);
 `cat $cat_line > $output_file`;
 
-exit; ######
 # tidy up working files
 unless ( $split_org == 1 ){
 	for (@log_outline) { unlink($_) } ;
@@ -255,7 +259,7 @@ for (@i_file){ unlink($_) };
 for (@o_file){ unlink($_) }; 
 unlink($temp_parallel);
 unlink($log);
-unlink($index_file);
+unlink($ind_file);
 
 # sub functions - from : https://docstore.mik.ua/orelly/perl4/cook/ch08_28.htm
 
@@ -267,7 +271,7 @@ sub build_index {
 	my $offset     = 0;
 
 	while (<$data_file>) {
-    		print $index_file pack("N", $offset);
+    		print $index_file pack("q", $offset);
     		$offset = tell($data_file);
 	}
 }
@@ -282,11 +286,11 @@ sub build_index {
       my $i_offset;           # offset into the index of the entry
       my $entry;              # index entry
       my $d_offset;           # offset into the data file
-      $size = length(pack("N", 0));
+      $size = length(pack("q", 0));
       $i_offset = $size * ($line_number-1);
       seek($index_file, $i_offset, 0) or return;
       read($index_file, $entry, $size);
-      $d_offset = unpack("N", $entry);
+      $d_offset = unpack("q", $entry);
       seek($data_file, $d_offset, 0);
       return scalar(<$data_file>);
   }
