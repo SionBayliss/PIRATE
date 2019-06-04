@@ -707,7 +707,7 @@ for my $file( @files ){
 	while (<BLAST_OUT>){
 	
 		my $line = $_;
-		my @line = split(/\t/, $line);
+		my @line = split(/\t/, $line, -1);
 	
 		# identify same-same lines
 		if( $line[0] eq $line[1] ){
@@ -724,7 +724,7 @@ for my $file( @files ){
 			$line[2] = "100.0";			
 			
 			# print line 
-			print BLAST_TEMP "$line";
+			print BLAST_TEMP join("\t", @line);
 			
 			# removed - used to use average and print existing lines
 			#$av_bit = $line[11] if $av_bit eq "";
