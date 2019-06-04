@@ -712,15 +712,16 @@ for my $file( @files ){
 		# identify same-same lines
 		if( $line[0] eq $line[1] ){
 		
-			# don't print same same line - they are added later using placeholder values
-			$rep { $line[0] } = 1; # print placeholder line
+			# same-same comparison exists - do not print 
+			#$rep { $line[0] } = 1; # print placeholder line
+			$rep { $line[0] } = 2; # do not print placeholder line
 			
 			# find max bit score
 			$max_bit = $line[11] if $max_bit eq "";
 			$max_bit = $line[11] if $line[11] < $max_bit; 
 			
-			# check for all same-same representative sequences  
-			$rep { $line[0] } = 2; # do not print placeholder line
+			# ensure comparison has 100% identity
+			$line[2] = "100.0";			
 			
 			# print line 
 			print BLAST_TEMP "$line";
@@ -786,7 +787,12 @@ for my $file( @files ){
 		if ( $rep{$rloci} == 1){
 		
 			# uses a placeholder value for a same-same sequence - previously used av_bit/max bit
-			print BLAST_OUT "$rloci	$rloci	100	1234	0	0	1	1234	1	1234	0	2335\n";
+			
+			if ( ($hsp_prop_length > 0) || ($hsp_length > 0) ){
+				print BLAST_OUT "$rloci	$rloci	100	1234	0	0	1	1234	1	1234	0	2335	1234	1234\n";
+			}else{
+				print BLAST_OUT "$rloci	$rloci	100	1234	0	0	1	1234	1	1234	0	2335\n";
+			}
 			#print BLAST_OUT "$rloci	$rloci	100.00	100	0	0	1	100	1	100	0.0e+00	$max_bit\n";
 		} 
 		
