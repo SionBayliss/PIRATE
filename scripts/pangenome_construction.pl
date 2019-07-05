@@ -718,7 +718,7 @@ for my $file( @files ){
 			
 			# find max bit score
 			$max_bit = $line[11] if $max_bit eq "";
-			$max_bit = $line[11] if $line[11] < $max_bit; 
+			$max_bit = $line[11] if $line[11] < $max_bit;
 			
 			# ensure comparison has 100% identity
 			$line[2] = "100.0";			

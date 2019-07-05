@@ -413,26 +413,32 @@ if ( $para_off == 0 ){
 
 	# Make annotated output tables (families and alleles) 
 	print "\nLinking clusters between thresholds:\n";
+	$time_start = time();
 	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -l $pirate_dir/split_paralog_loci.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --paralogs $pirate_dir/loci_paralog_categories.tab -e $pirate_dir/paralog_clusters.tab --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
 	
 }else{
 
 	# Make annotated output tables (families and alleles) 
 	print "\nLinking clusters between thresholds:\n";
+	$time_start = time();
 	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
 
 }
 print "\n-------------------------------\n\n";
 
 # sort gene_families file on pangenome graph
+$time_start = time();
 system( "perl $script_path/pangenome_graph.pl -i $pirate_dir/PIRATE.gene_families.tsv -gff $pirate_dir/modified_gffs/ -o $pirate_dir/ --gfa --dosage 1.1");
 if ($?){
 	print " - ERROR: pangenome_graph failed.\n" if $?; 
 }else{
 	system( "perl $script_path/sort_on_clusters.pl -i $pirate_dir/PIRATE.gene_families.tsv -c $pirate_dir/pangenome.order.tsv -s -o $pirate_dir/PIRATE.gene_families.ordered.tsv");
 	print " - ERROR: failed to sort PIRATE.gene_families.ordered.tsv.\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
 }
 print "\n-------------------------------\n\n";
 
@@ -440,6 +446,7 @@ print "\n-------------------------------\n\n";
 if (`command -v fasttree;`){
 
 	print "Creating binary tree\n";
+	$time_start = time();
 	system ("perl $script_path/gene_cluster_to_binary_fasta.pl $pirate_dir/PIRATE.gene_families.tsv $pirate_dir/binary_presence_absence.fasta");
 	print " - ERROR: could not create binary presence/absence fasta file.\n" if $?;
 
@@ -449,6 +456,7 @@ if (`command -v fasttree;`){
 		system( "fasttree -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
 		print " - ERROR: fasttree failed.\n" if $?;
 	}
+	print " - completed in: ", time() - $time_start,"s\n";
 	
 }else{
 	print " - WARNING: fasttree is not in path - cannot create binary tree\n";
@@ -486,18 +494,24 @@ if ( $align == 1 ){
 	my $aln_file  = "$pirate_dir/PIRATE.gene_families.tsv";
 	$aln_file = "$pirate_dir/PIRATE.gene_families.ordered.tsv" if -f "$pirate_dir/PIRATE.gene_families.ordered.tsv";
 	
-	system( "perl $script_path/align_feature_sequences.pl -i $aln_file -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads $align_args_in");
+	$time_start = time();
+	system( "perl $script_path/align_feature_sequences.pl --dosage 1.25 -i $aln_file -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads $align_args_in");
 	print "\n - ERROR: aligning pangenome sequences failed - is mafft in PATH?\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
 	
 	unless($?){
 	
 		print "\nCreating full pangenome alignment:\n";
-		system("perl $script_path/create_pangenome_alignment.pl -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
+		$time_start = time();
+		system("perl $script_path/create_pangenome_alignment.pl --dosage 1.25 -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
 		print "\n - ERROR: creating pangenome concatenate failed\n" if $?;
+		print " - completed in: ", time() - $time_start,"s\n";
 		
 		print "\nCreating core alignment:\n";
-		system("perl $script_path/create_pangenome_alignment.pl -t 95 -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/core_alignment.fasta -g $pirate_dir/core_alignment.gff");
+		$time_start = time();
+		system("perl $script_path/create_pangenome_alignment.pl --dosage 1.25 -t 95 -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/core_alignment.fasta -g $pirate_dir/core_alignment.gff");
 		print "\n - ERROR: creating core concatenate failed\n" if $?;
+		print " - completed in: ", time() - $time_start,"s\n";
 	}
 	
 	print "\n-------------------------------\n\n";
