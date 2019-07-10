@@ -85,7 +85,7 @@ if( $no_seqs == 1 ){
 
 # check number of iterations is suitable for the number of sequences
 if ( $no_seqs > 10000 ){ # 60000 is maximum
-	`mafft --retree 2 --leavegappyregion --quiet --op 1.5 --ep 0.2 --lop -4 --lep -1 --lexp -0.2 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`; 
+	`mafft --retree 2 --leavegappyregion --quiet --op 1.5 --ep 0.2 --lop -4 --lep -1 --lexp -0.2  --maxiterate 10 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`; 
 	print "error - mafft threw an error at $isolate\n" if $?;
 }else{
 	`mafft --retree 2 --leavegappyregion --quiet --op 1.5 --ep 0.2 --lop -4 --lep -1 --lexp -0.2 --maxiterate 2 $out_dir/$isolate.temp.fasta > $out_dir/$isolate.aa.fasta`;

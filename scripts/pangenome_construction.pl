@@ -39,8 +39,10 @@ use File::Basename;
 	
 	BLAST options:
 	-e|--evalue	e-value used for blast hit filtering [default: 1E-6]
-	-d|--diamond	use diamond instead of BLAST - incompatible 
+	--diamond	use diamond instead of BLAST - incompatible 
 			with --nucleotide [default: off]
+	--diamond-split	split diamond files into batches for processing 
+			[default: off] 	
 	--hsp-prop	remove BLAST hsps that are < hsp_prop proportion
 			of query length/query hsp length [default: 0]
 	--hsp-len	remove BLAST hsps that are < hsp_len proportion
@@ -78,7 +80,7 @@ my $perc = 98;
 my $steps = "50,60,70,80,90,95,98";
 my $cd_low = 98;
 my $cd_step = 0.5;
-my $evalue = "1E-6";
+my $evalue = ""; # 0.001 for diamond
 my $inflation_value = 1.5;
 my $hsp_prop_length = 0.0;
 my $hsp_length = 0;
@@ -86,6 +88,7 @@ my $hsp_length = 0;
 my $cdhit_aS = 0.9;
 
 my $diamond = 0;
+my $diamond_split = 0;
 
 my $exit_status = 1; 
 my $core_off = 0;
@@ -114,7 +117,9 @@ GetOptions(
 	'evalue=f' => \$evalue,
 	'hsp-prop=f' => \$hsp_prop_length,
 	'hsp-length=f' => \$hsp_length, 
+	
 	'diamond' => \$diamond,
+	'diamond-split' => \$diamond_split,
 
 	'nucleotide' => \$nucleotide,
 	
@@ -244,6 +249,15 @@ if( $loci_list ne '' ){
 	$no_loci = scalar ( keys(%loci) );
 	my %no_g = map {$_ => 1} values(%loci);
 	$no_genomes =  scalar( keys (%no_g) );
+}
+
+# set BLAST/DIAMOND e-value filter 
+if ($evalue eq ""){
+	if ( $diamond == 1 ){
+		$evalue = "0.001";
+	}else{
+		$evalue = "1E-6";
+	}
 }
 
 # user feedback
@@ -654,11 +668,20 @@ for my $file( @files ){
 			my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore";
 			$outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen" if ( ($hsp_prop_length > 0) || ($hsp_length > 0) );
 			
-			# split file and run in parallel 
-			#`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "diamond blastp -d $output_dir/$sample.diamond_db -c 4 --masking 0 --evalue $evalue --max-hsps 1 --threads 1 --outfmt $outfmt --more-sensitive --max-target-seqs 0" > $blast_out 2>/dev/null`;
+			# set query coverage as %
+			my $q_cov = $hsp_length*100;
+			
+			if ($diamond_split == 1){
+			
+				# split file and run in parallel 
+				`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "diamond blastp -d $output_dir/$sample.diamond_db -c 1 --query-cover $q_cov --masking 0 --evalue $evalue --max-hsps 1 --threads 1 --outfmt $outfmt --sensitive --max-target-seqs 0" > $blast_out 2>/dev/null`;
+				
+			}else{
 
-			# run as one file (faster than parallel)
-			`diamond blastp -q $blast_in -d $output_dir/$sample.diamond_db -c 1 --masking 0 --evalue $evalue --max-hsps 1 --threads $threads --outfmt $outfmt --more-sensitive --max-target-seqs 0 > $blast_out 2>/dev/null`;
+				# run as one file (faster than parallel)
+				`diamond blastp -q $blast_in -d $output_dir/$sample.diamond_db -c 1 --query-cover $q_cov --masking 0 --evalue $evalue --max-hsps 1 --threads $threads --outfmt $outfmt --sensitive --max-target-seqs 0 > $blast_out 2>/dev/null`;
+				
+			}
 			
 			# error check
 			die "diamond blastp failed.\n" if $?;

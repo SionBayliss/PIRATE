@@ -184,7 +184,7 @@ if ( $pan_options ne ""){
 	for my $arg ( split(/\+\-\+/, $pan_options) ){ 		
 		if ( ($arg eq "-d") || ($arg eq "--diamond") ){
 			unless ($nucleotide == 1){
-				push(@pargs, "-d");
+				push(@pargs, "--diamond");
 				print " - Pangenome contruction will use diamond instead of BLAST\n";
 			}
 		}else{
