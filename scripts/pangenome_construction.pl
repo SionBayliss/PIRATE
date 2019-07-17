@@ -825,6 +825,10 @@ for my $file( @files ){
 	# clear representative sequence variable 
 	%rep = ();
 	
+	# make mcl log file
+	my $mcl_log = "$output_dir/$sample.mcl_log.txt";
+	`echo -n "" > $mcl_log`;
+	
 	# Filter BLAST files at all thresholds and perform MCL on filtered hits.
 	# Iterate through all clusters at higher thresholds.
 	#print "\n - running mcl on $sample\n" if $quiet == 0;
@@ -843,7 +847,7 @@ for my $file( @files ){
 		if( $threshold ==  $thresholds[0] ){
 	
 			# reformat to abc and run mcl on bitscores normalised by hsp length
-			`mcxdeblast --line-mode=abc --m9 --score=r $output_dir/$sample.$threshold.blast 2>/dev/null | mcl - --abc -te $threads -I $inflation_value -o $output_dir/$sample.mcl_$threshold.clusters 2>/dev/null`;
+			`mcxdeblast --line-mode=abc --m9 --score=r $output_dir/$sample.$threshold.blast 2>> $mcl_log | mcl - --abc -te $threads -I $inflation_value -o $output_dir/$sample.mcl_$threshold.clusters 2>> $mcl_log`;
 			die "mcl failed at $threshold" if $?;
 			
 			# set working file for next iteration
@@ -909,7 +913,7 @@ for my $file( @files ){
 			}close TEMP;			
 			
 			# run mcl in parallel. 
-			`parallel -a $output_dir/mcl_sub/list.txt --jobs $threads --colsep '\t' \"mcxdeblast --line-mode=abc --m9 --score=r {1} 2>/dev/null | mcl - --abc -te 1 -I $inflation_value -o {2} 2>/dev/null \"`;
+			`parallel -a $output_dir/mcl_sub/list.txt --jobs $threads --colsep '\t' \"mcxdeblast --line-mode=abc --m9 --score=r {1} 2>>$mcl_log | mcl - --abc -te 1 -I $inflation_value -o {2} 2>>$mcl_log \"`;
 			die " - ERROR: mcl failed at $threshold\n" if $?;
 			
 			# compile clusters into one file for next iteration and remove original mcl cluster file.
