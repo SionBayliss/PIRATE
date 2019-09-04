@@ -29,6 +29,10 @@ use File::Basename;
 
  Paralog classification:
  --para-off	switch off paralog identification [default: on]
+ --para-args	options to pass to paralog splitting algorithm
+ 		[default: none] 
+ --classify-off	do not classify paralogs, assumes this has been
+		run previously [default: on]
 
  Output:
  -a|--align	align all genes and produce core/pangenome alignments 
@@ -70,10 +74,14 @@ my $para_off = 0;
 my $r_plots = '';
 my $align = 0;
 
+my $split_args = "";
+my $classify_off = 0;
+
 my $pan_off = 0;
 my $threads = 2; 
 my $quiet = 0;
 my $retain = 1;
+
 my $help = 0;
 
 pod2usage(1) if scalar(@ARGV) == 0;
@@ -87,8 +95,10 @@ GetOptions(
 	'k|pan-opt=s' => \$pan_options,
 	'nucl' => \$nucleotide,
 
+	'classify-off' => \$classify_off,
 	'para-off' => \$para_off,
 	'para-align' => \$para_align,
+	'para-args=s' => \$split_args,
 	
 	'align' => \$align,
 	'rplots'		=> \$r_plots,
@@ -105,6 +115,11 @@ pod2usage(1) if $help;
 # check dependencies
 system( "perl $script_path/check_dependencies.pl" );
 die " - ERROR: dependencies missing - see above\n" if $?;
+
+# set fasttree executable
+my $ft = 0; 
+$ft = "FastTree" if `command -v FastTree;`;
+$ft = "fasttree" if `command -v fasttree;`;
 
 # variables 
 my $no_files = 0;
@@ -175,7 +190,7 @@ if ( $pan_options ne ""){
 	for my $arg ( split(/\+\-\+/, $pan_options) ){ 		
 		if ( ($arg eq "-d") || ($arg eq "--diamond") ){
 			unless ($nucleotide == 1){
-				push(@pargs, "-d");
+				push(@pargs, "--diamond");
 				print " - Pangenome contruction will use diamond instead of BLAST\n";
 			}
 		}else{
@@ -301,6 +316,16 @@ if ( $pan_off == 0 ){
 	print " - completed in: ", time() - $time_start,"s\n";
 	print "\n-------------------------------\n\n";
 	
+	# parse pangenome files
+	print "Parsing pangenome files:\n\n";
+	$time_start = time();
+	chdir("$pirate_dir") or die "$!";
+	my $parse_results = `perl $script_path/parse_pangenomes.pl $it_dir $steps $genome2loci $pirate_dir`; 
+	die " - ERROR: parse_pangenomes.pl failed.\n" if $?;
+	print "$parse_results";
+	print "\n - completed in: ", time() - $time_start,"s\n";
+	print "\n-------------------------------\n";
+
 	# clean up
 	unlink "$pirate_dir/gff_parser_log.txt" if -z "$pirate_dir/gff_parser_log.txt";
 	
@@ -317,19 +342,9 @@ else{
 	
 	print "\n-------------------------------\n\n";	
 	print "Using previous pangenome files\n";
-	print "\n-------------------------------\n\n";
+	print "\n-------------------------------\n";
 
 }
-
-# parse pangenome files
-print "Parsing pangenome files:\n\n";
-$time_start = time();
-chdir("$pirate_dir") or die "$!";
-my $parse_results = `perl $script_path/parse_pangenomes.pl $it_dir $steps $genome2loci $pirate_dir`; 
-die " - ERROR: parse_pangenomes.pl failed.\n" if $?;
-print "$parse_results";
-print "\n - completed in: ", time() - $time_start,"s\n";
-print "\n-------------------------------\n";
 
 # [optional] Classify paralogs and split paralog families.  
 if ( $para_off == 0 ){
@@ -365,69 +380,89 @@ if ( $para_off == 0 ){
 		print " - completed in: ", time() - $time_start,"s\n\n";	
 
 	}else{
-
-		# Classify paralogous clusters using blast
-		print "\nClassifing paralogous clusters:\n";
-		$time_start = time();
 		
-		my @para_args = ();
-		push(@para_args, "--nucleotide") if $nucleotide == 1;
-		push(@para_args, "-k") if $retain == 2;
-		my $para_args_cmd = join(" ", @para_args);
+		if ($classify_off == 0){
 		
-		system("perl $script_path/classify_paralogs.pl -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --threads $threads $para_args_cmd");
-		die " - ERROR: identify_paralogs.pl failed.\n" if $?;
+			# Classify paralogous clusters using blast
+			print "\nClassifing paralogous clusters:\n";
+			$time_start = time();
 		
-		print " - completed in: ", time() - $time_start,"s\n";
-		print "\n-------------------------------\n\n";
+			my @para_args = ();
+			push(@para_args, "--nucleotide") if $nucleotide == 1;
+			push(@para_args, "-k") if $retain == 2;
+			my $para_args_cmd = join(" ", @para_args);
+		
+			system("perl $script_path/classify_paralogs.pl -p $pirate_dir/paralog_clusters.tab -c $pirate_dir/loci_list.tab -f $pirate_dir/pan_sequences.fasta -o $pirate_dir/ -m 3 --threshold $thresholds[0] --threads $threads $para_args_cmd");
+			die " - ERROR: identify_paralogs.pl failed.\n" if $?;
+		
+			print " - completed in: ", time() - $time_start,"s\n";
+			print "\n-------------------------------\n\n";
+			
+		}else{
+			print "Paralog classification switched off\n";
+			print "\n-------------------------------\n\n";
+		}
 	
 	}
 
 	# Separate paralogous clusters if dosage == 1 per genome at any threshold.
 	print "Split paralogous clusters:\n\n";
 	$time_start = time();
-	system( "perl $script_path/split_paralogs_runner.pl $pirate_dir/loci_paralog_categories.tab $pirate_dir/loci_list.tab $pirate_dir/ $threads");
+	
+	$split_args =~ s/\+\-\+/ /g;
+	$split_args =~ s/"//g;
+	
+	system( "perl $script_path/split_paralogs_runner.pl -p $pirate_dir/loci_paralog_categories.tab -l $pirate_dir/loci_list.tab -o $pirate_dir/ -t $threads $split_args");
 	die " - ERROR: split_paralogs failed.\n" if $?;
-	print "\n-------------------------------\n\n";
+	print " - completed in: ", time() - $time_start,"s\n";
+	print "\n-------------------------------\n";
 
 	# Make annotated output tables (families and alleles) 
-	print "Linking clusters between thresholds:\n";
+	print "\nLinking clusters between thresholds:\n";
+	$time_start = time();
 	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -l $pirate_dir/split_paralog_loci.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --paralogs $pirate_dir/loci_paralog_categories.tab -e $pirate_dir/paralog_clusters.tab --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
 	
 }else{
 
 	# Make annotated output tables (families and alleles) 
-	print "Linking clusters between thresholds:\n";
+	print "\nLinking clusters between thresholds:\n";
+	$time_start = time();
 	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
 
 }
 print "\n-------------------------------\n\n";
 
 # sort gene_families file on pangenome graph
+$time_start = time();
 system( "perl $script_path/pangenome_graph.pl -i $pirate_dir/PIRATE.gene_families.tsv -gff $pirate_dir/modified_gffs/ -o $pirate_dir/ --gfa --dosage 1.1");
 if ($?){
 	print " - ERROR: pangenome_graph failed.\n" if $?; 
 }else{
 	system( "perl $script_path/sort_on_clusters.pl -i $pirate_dir/PIRATE.gene_families.tsv -c $pirate_dir/pangenome.order.tsv -s -o $pirate_dir/PIRATE.gene_families.ordered.tsv");
 	print " - ERROR: failed to sort PIRATE.gene_families.ordered.tsv.\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
 }
 print "\n-------------------------------\n\n";
 
-# create binary fasta file for fastree
+# create binary fasta file for fasttree
 if (`command -v fasttree;`){
 
 	print "Creating binary tree\n";
+	$time_start = time();
 	system ("perl $script_path/gene_cluster_to_binary_fasta.pl $pirate_dir/PIRATE.gene_families.tsv $pirate_dir/binary_presence_absence.fasta");
 	print " - ERROR: could not create binary presence/absence fasta file.\n" if $?;
 
-	# make binary accessory gene tree in fastree
+	# make binary accessory gene tree in fasttree
 	unless ($?){
 		print " - running fasttree\n";
-		system( "fasttree -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
+		system( "$ft -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
 		print " - ERROR: fasttree failed.\n" if $?;
 	}
+	print " - completed in: ", time() - $time_start,"s\n";
 	
 }else{
 	print " - WARNING: fasttree is not in path - cannot create binary tree\n";
@@ -465,18 +500,24 @@ if ( $align == 1 ){
 	my $aln_file  = "$pirate_dir/PIRATE.gene_families.tsv";
 	$aln_file = "$pirate_dir/PIRATE.gene_families.ordered.tsv" if -f "$pirate_dir/PIRATE.gene_families.ordered.tsv";
 	
-	system( "perl $script_path/align_feature_sequences.pl -i $aln_file -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads $align_args_in");
+	$time_start = time();
+	system( "perl $script_path/align_feature_sequences.pl --dosage 1.25 -i $aln_file -g $gff_dir/ -o $pirate_dir/feature_sequences/ -p $threads $align_args_in");
 	print "\n - ERROR: aligning pangenome sequences failed - is mafft in PATH?\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
 	
 	unless($?){
 	
 		print "\nCreating full pangenome alignment:\n";
-		system("perl $script_path/create_pangenome_alignment.pl -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
+		$time_start = time();
+		system("perl $script_path/create_pangenome_alignment.pl --dosage 1.25 -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/pangenome_alignment.fasta -g $pirate_dir/pangenome_alignment.gff");
 		print "\n - ERROR: creating pangenome concatenate failed\n" if $?;
+		print " - completed in: ", time() - $time_start,"s\n";
 		
 		print "\nCreating core alignment:\n";
-		system("perl $script_path/create_pangenome_alignment.pl -t 95 -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/core_alignment.fasta -g $pirate_dir/core_alignment.gff");
+		$time_start = time();
+		system("perl $script_path/create_pangenome_alignment.pl --dosage 1.25 -t 95 -i $aln_file -f $pirate_dir/feature_sequences/ -o $pirate_dir/core_alignment.fasta -g $pirate_dir/core_alignment.gff");
 		print "\n - ERROR: creating core concatenate failed\n" if $?;
+		print " - completed in: ", time() - $time_start,"s\n";
 	}
 	
 	print "\n-------------------------------\n\n";
@@ -487,7 +528,7 @@ if ($retain < 2){
 	
 	unlink "$pirate_dir/paralog_loci.sorted";
 	unlink "$pirate_dir/split_paralog_loci.tab";
-	unlink "$pirate_dir/paralog_clusters.tab";
+	#unlink "$pirate_dir/paralog_clusters.tab";
 	
 	unlink glob "$pirate_dir/paralog_working/*";
 	rmdir "$pirate_dir/paralog_working/";

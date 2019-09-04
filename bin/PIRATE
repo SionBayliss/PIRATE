@@ -6,8 +6,10 @@ use warnings qw(all);
 use Getopt::Long qw(GetOptions :config no_ignore_case pass_through);
 use Cwd 'abs_path';
 use File::Basename;
+use File::Temp qw/ tempdir /;
 
 # wrapper for run_PIRATE.pl - allows for verbose on/off
+my $version_details = "1.0 (release)";
 
 # path to executing script
 my $script_path = abs_path(dirname($0));
@@ -20,6 +22,7 @@ my $quiet = 0;
 my $help = 0;
 my $test = 0;
 my $test_n = 0;
+my $version = 0;
 
 # preprocess ARGV to allow for commented options.
 my @temp_args = ();
@@ -40,12 +43,17 @@ GetOptions(
 	'help'		=> \$help,
 	'check'		=> \$test,
 	'check-n'		=> \$test_n,
+	'version'		=>\$version,
 ) or system("perl $script_path/run_PIRATE.pl -h");
 
-# help 
+# help/version
 if ($help == 1){
 	system("perl $script_path/run_PIRATE.pl -h");
-	exit(1);
+	exit(0);
+}
+if ($version == 1){
+	print("PIRATE $version_details\n");
+	exit(0);
 }
 
 # check for test state
@@ -75,28 +83,22 @@ unless( -d $pirate_dir ){ unless ( mkdir $pirate_dir ) { die " - ERROR: could no
 # make command line
 push(@ARGV, "-h") if $help == 1;
 my $commands = join(" ", @ARGV);
-
+	
 # run PIRATE with verbose on/off or run test
 if( ($test == 1) || ($test_n == 1) ){
+
+	# set temp directory
+	my $tempdir = tempdir(CLEANUP=>1);
 	
 	# check dependencies
 	system( "perl $script_path/check_dependencies.pl" );
 	die " - ERROR: dependencies missing" if $?;
 	
-	# remove previous test files.
-	unlink "$output_dir/modified_gffs/HO_5096_0412_test.gff" if "$output_dir/modified_gffs/HO_5096_0412_test.gff";
-	unlink "$output_dir/pan_sequences.fasta" if "$output_dir/pan_sequences.fasta";
-	unlink "$output_dir/pangenome_iterations/pan_sequences.50.reclustered.reinflated" if "$output_dir/pangenome_iterations/pan_sequences.50.reclustered.reinflated";
-	unlink "$output_dir/paralog_working/g02.abc" if "$output_dir/paralog_working/g02.abc";
- 	unlink "$output_dir/PIRATE.gene_families.tsv" if "$output_dir/PIRATE.gene_families.tsv";
-	unlink "$output_dir/binary_presence_absence.nwk" if "$output_dir/binary_presence_absence.nwk";
- 	unlink "$output_dir/PIRATE_plots.pdf" if "$output_dir/PIRATE_plots.pdf";	
-
 	# run on test files
 	print "\nRunning PIRATE on test files:\n";
 	my $opt_args = "";
 	$opt_args = "--nucl" if $test_n == 1;
-	system("perl $script_path/run_PIRATE.pl -i $input_dir -o $output_dir -s \"50,75,98\" -r $opt_args > $output_dir/PIRATE.log");
+	system("perl $script_path/run_PIRATE.pl -i $input_dir -o $tempdir -s \"50,75,98\" -r $opt_args -z 0 > $tempdir/PIRATE.log");
 	
 	# check for clean run
 	if( $? ){
@@ -123,5 +125,8 @@ if( ($test == 1) || ($test_n == 1) ){
 	system("perl $script_path/run_PIRATE.pl -i $input_dir -o $output_dir $commands | tee $output_dir/PIRATE.log");
 
 }
+
+# report on test files
+#print " - temporary files saved to $tempdir\n\n";
 
 exit

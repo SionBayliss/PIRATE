@@ -10,7 +10,7 @@ use Pod::Usage;
 
 =head1  SYNOPSIS
 
- run_IdentifyParalogs.pl [required: -p ./* -c ./* -f ./* --threshold * -o ./* ]
+ classify_paralogs.pl [required: -p ./* -c ./* -f ./* --threshold * -o ./* ]
 	
  -p|--paralogs		paralog cluster file [required] 
  -c|--clusters		cluster loci file [required] 

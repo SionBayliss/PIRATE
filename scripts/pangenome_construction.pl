@@ -39,10 +39,14 @@ use File::Basename;
 	
 	BLAST options:
 	-e|--evalue	e-value used for blast hit filtering [default: 1E-6]
-	-d|--diamond	use diamond instead of BLAST - incompatible 
+	--diamond	use diamond instead of BLAST - incompatible 
 			with --nucleotide [default: off]
+	--diamond-split	split diamond files into batches for processing 
+			[default: off] 	
 	--hsp-prop	remove BLAST hsps that are < hsp_prop proportion
 			of query length/query hsp length [default: 0]
+	--hsp-len	remove BLAST hsps that are < hsp_len proportion
+			of query length [default: 0]
 	
 	MCL options:
 	-f|--flat	MCL inflation value [default: 1.5]
@@ -76,11 +80,15 @@ my $perc = 98;
 my $steps = "50,60,70,80,90,95,98";
 my $cd_low = 98;
 my $cd_step = 0.5;
-my $evalue = "1E-6";
+my $evalue = ""; # 0.001 for diamond
 my $inflation_value = 1.5;
-my $hsp_prop_length = 0;
+my $hsp_prop_length = 0.0;
+my $hsp_length = 0;
+
+my $cdhit_aS = 0.9;
 
 my $diamond = 0;
+my $diamond_split = 0;
 
 my $exit_status = 1; 
 my $core_off = 0;
@@ -103,11 +111,15 @@ GetOptions(
 	'cd-low=i' => \$cd_low,
 	'cd-step=f' => \$cd_step,
 	'cd-core-off' => \$core_off,
+	'cd-hit-aS' => \$cdhit_aS,
 	
 	'flat=f' 	=> \$inflation_value,
 	'evalue=f' => \$evalue,
 	'hsp-prop=f' => \$hsp_prop_length,
+	'hsp-length=f' => \$hsp_length, 
+	
 	'diamond' => \$diamond,
+	'diamond-split' => \$diamond_split,
 
 	'nucleotide' => \$nucleotide,
 	
@@ -202,7 +214,8 @@ else{
 for (@thresholds) { if ( $_ !~ /^\d+$/ ) { die "Threshold value $_ is not numeric.\n" } }
 
 # check prop is not > 1
-die " - ERROR: hsp_prop is a proportion and must be < 1.\n" if $hsp_prop_length > 1; 
+die " - ERROR: hsp-prop is a proportion and must be < 1.\n" if $hsp_prop_length > 1; 
+die " - ERROR: hsp-length is a proportion and must be < 1.\n" if $hsp_length > 1; 
 
 # check files exist and have correct suffix.
 my @suffix_list = (".aa.fasta" , ".fasta" , ".fa" , ".fas");
@@ -218,7 +231,7 @@ for my $file( @files ){
 
 # check for conflicts between cd-hit low and %id threshold
 my $max_thresh = $thresholds[scalar(@thresholds)-1];
-die "Lowest cd-hit threshold ($cd_low) is below blast % id value ($max_thresh)" if $cd_low < $max_thresh;
+die " - WARNING: lowest cd-hit threshold ($cd_low) is below blast % id value ($max_thresh)" if $cd_low < $max_thresh;
 
 # parse and check loci list if passed via -l
 my %loci;
@@ -236,6 +249,15 @@ if( $loci_list ne '' ){
 	$no_loci = scalar ( keys(%loci) );
 	my %no_g = map {$_ => 1} values(%loci);
 	$no_genomes =  scalar( keys (%no_g) );
+}
+
+# set BLAST/DIAMOND e-value filter 
+if ($evalue eq ""){
+	if ( $diamond == 1 ){
+		$evalue = "0.001";
+	}else{
+		$evalue = "1E-6";
+	}
 }
 
 # user feedback
@@ -408,10 +430,10 @@ for my $file( @files ){
 		}
 		
 		# calculate memory for cdhit
-		my $m_required = -s "$output_dir/$sample.temp.fasta";
-		$m_required = int($m_required/1000000); #Mb
+		my $m_required = -s "$output_dir/$sample.temp.fasta"; # bytes
+		$m_required = int($m_required/1000000); #MB
 		$m_required *= 3; # triple
-		$m_required = 2000 if($m_required < 2000); # set lowest
+		$m_required = 2000 if($m_required < 2000); # set minimum
 		
 		# run cdhit
 		print " - Passing $no_included loci to cd-hit at $i%  \n" if $quiet == 0;
@@ -436,7 +458,7 @@ for my $file( @files ){
 			}
 
 			# run cd-hit
-			my $cd_hit_command = "$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log";
+			my $cd_hit_command = "$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -aS $cdhit_aS -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log";
 			#print " - command: \"$cd_hit_command\"\n";
 			$cd_hit_out = `$cd_hit_command`;
 			
@@ -463,7 +485,7 @@ for my $file( @files ){
 			}
 		
 			# run cdhit est
-			my $cd_hit_command = "$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log";
+			my $cd_hit_command = "$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -aS $cdhit_aS -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log";
 			#print " - command: \"$cd_hit_command\"\n";
 			$cd_hit_out = `$cd_hit_command`;
 		}
@@ -644,13 +666,22 @@ for my $file( @files ){
 			
 			# output format
 			my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore";
-			$outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen" if $hsp_prop_length > 0;
+			$outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen" if ( ($hsp_prop_length > 0) || ($hsp_length > 0) );
 			
-			# split file and run in parallel 
-			#`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "diamond blastp -d $output_dir/$sample.diamond_db -c 4 --masking 0 --evalue $evalue --max-hsps 1 --threads 1 --outfmt $outfmt --more-sensitive --max-target-seqs 0" > $blast_out 2>/dev/null`;
+			# set query coverage as %
+			my $q_cov = $hsp_length*100;
+			
+			if ($diamond_split == 1){
+			
+				# split file and run in parallel 
+				`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "diamond blastp -d $output_dir/$sample.diamond_db -c 1 --query-cover $q_cov --masking 0 --evalue $evalue --max-hsps 1 --threads 1 --outfmt $outfmt --sensitive --max-target-seqs 0" > $blast_out 2>/dev/null`;
+				
+			}else{
 
-			# run as one file (faster than parallel)
-			`diamond blastp -q $blast_in -d $output_dir/$sample.diamond_db -c 1 --masking 0 --evalue $evalue --max-hsps 1 --threads $threads --outfmt $outfmt --more-sensitive --max-target-seqs 0 > $blast_out 2>/dev/null`;
+				# run as one file (faster than parallel)
+				`diamond blastp -q $blast_in -d $output_dir/$sample.diamond_db -c 1 --query-cover $q_cov --masking 0 --evalue $evalue --max-hsps 1 --threads $threads --outfmt $outfmt --sensitive --max-target-seqs 0 > $blast_out 2>/dev/null`;
+				
+			}
 			
 			# error check
 			die "diamond blastp failed.\n" if $?;
@@ -669,7 +700,7 @@ for my $file( @files ){
 			
 			# output format
 			my $outfmt = "\'6\'";
-			$outfmt = "\'6 std qlen slen\'" if $hsp_prop_length > 0;
+			$outfmt = "\'6 std qlen slen\'" if ( ($hsp_prop_length > 0) || ($hsp_length > 0) );
 			
 			# run blastp
 			`cat $blast_in | parallel --recstart '>' --jobs $threads --pipe "blastp -max_hsps 1 -outfmt $outfmt -num_threads 1 -max_target_seqs 10000 -evalue $evalue -query - -db $blast_in" > $blast_out`;
@@ -681,7 +712,7 @@ for my $file( @files ){
 	
 		# output format
 		my $outfmt = "\'6\'";
-		$outfmt = "\'6 std qlen slen\'" if $hsp_prop_length > 0;
+		$outfmt = "\'6 std qlen slen\'" if ( ($hsp_prop_length > 0) || ($hsp_length > 0) );
 	
 		print "\n - running all-vs-all BLASTN on $sample\n" if $quiet == 0;
 		`makeblastdb -in $blast_in -dbtype nucl`;
@@ -699,28 +730,45 @@ for my $file( @files ){
 	while (<BLAST_OUT>){
 	
 		my $line = $_;
-		my @line = split(/\t/, $line);
+		my @line = split(/\t/, $line, -1);
 	
 		# identify same-same lines
 		if( $line[0] eq $line[1] ){
 		
-			# don't print same same line - they are added later using placeholder values
-			$rep { $line[0] } = 1; # print placeholder line
+			# same-same comparison exists - do not print 
+			#$rep { $line[0] } = 1; # print placeholder line
+			$rep { $line[0] } = 2; # do not print placeholder line
 			
 			# find max bit score
 			$max_bit = $line[11] if $max_bit eq "";
-			$max_bit = $line[11] if $line[11] < $max_bit; 
+			$max_bit = $line[11] if $line[11] < $max_bit;
 			
-			# check for all same-same representative sequences  
-			$rep { $line[0] } = 2; # do not print placeholder line
+			# ensure comparison has 100% identity
+			$line[2] = "100.0";			
 			
 			# print line 
-			print BLAST_TEMP "$line";
+			print BLAST_TEMP join("\t", @line);
 			
 			# removed - used to use average and print existing lines
 			#$av_bit = $line[11] if $av_bit eq "";
 			#$av_bit = ($av_bit + $line[11]) / 2;
 		
+		}
+		# [optional] filter on hsp length as a proportion of the total length of the quesry sequence
+		elsif( $hsp_length > 0 ){
+	
+			my $q_len = $line[12];
+			my $q_hsp_len = ($line[7] - $line[6]) + 1;
+		
+			# test hsp length against original sequence length and subject hsp alignment length vs query hsp length.			
+			my $hspVSq = $q_hsp_len / $q_len;
+			$hspVSq = 1 - ($hspVSq - 1) if $hspVSq > 1; 
+		
+			# print if both are > hsp_prop_length
+			if ( ( $hspVSq > $hsp_length ) ){
+				print BLAST_TEMP "$line";
+			}
+				
 		}
 		# [optional] filter on hsp length hsp percentage length < hsp_prop_length removed.
 		elsif( $hsp_prop_length > 0 ){
@@ -762,7 +810,12 @@ for my $file( @files ){
 		if ( $rep{$rloci} == 1){
 		
 			# uses a placeholder value for a same-same sequence - previously used av_bit/max bit
-			print BLAST_OUT "$rloci	$rloci	100	1234	0	0	1	1234	1	1234	0	2335\n";
+			
+			if ( ($hsp_prop_length > 0) || ($hsp_length > 0) ){
+				print BLAST_OUT "$rloci	$rloci	100	1234	0	0	1	1234	1	1234	0	2335	1234	1234\n";
+			}else{
+				print BLAST_OUT "$rloci	$rloci	100	1234	0	0	1	1234	1	1234	0	2335\n";
+			}
 			#print BLAST_OUT "$rloci	$rloci	100.00	100	0	0	1	100	1	100	0.0e+00	$max_bit\n";
 		} 
 		
@@ -771,6 +824,10 @@ for my $file( @files ){
 		
 	# clear representative sequence variable 
 	%rep = ();
+	
+	# make mcl log file
+	my $mcl_log = "$output_dir/$sample.mcl_log.txt";
+	`echo -n "" > $mcl_log`;
 	
 	# Filter BLAST files at all thresholds and perform MCL on filtered hits.
 	# Iterate through all clusters at higher thresholds.
@@ -790,7 +847,7 @@ for my $file( @files ){
 		if( $threshold ==  $thresholds[0] ){
 	
 			# reformat to abc and run mcl on bitscores normalised by hsp length
-			`mcxdeblast --line-mode=abc --m9 --score=r $output_dir/$sample.$threshold.blast 2>/dev/null | mcl - --abc -te $threads -I $inflation_value -o $output_dir/$sample.mcl_$threshold.clusters 2>/dev/null`;
+			`mcxdeblast --line-mode=abc --m9 --score=r $output_dir/$sample.$threshold.blast 2>> $mcl_log | mcl - --abc -te $threads -I $inflation_value -o $output_dir/$sample.mcl_$threshold.clusters 2>> $mcl_log`;
 			die "mcl failed at $threshold" if $?;
 			
 			# set working file for next iteration
@@ -856,7 +913,7 @@ for my $file( @files ){
 			}close TEMP;			
 			
 			# run mcl in parallel. 
-			`parallel -a $output_dir/mcl_sub/list.txt --jobs $threads --colsep '\t' \"mcxdeblast --line-mode=abc --m9 --score=r {1} 2>/dev/null | mcl - --abc -te 1 -I $inflation_value -o {2} 2>/dev/null \"`;
+			`parallel -a $output_dir/mcl_sub/list.txt --jobs $threads --colsep '\t' \"mcxdeblast --line-mode=abc --m9 --score=r {1} 2>>$mcl_log | mcl - --abc -te 1 -I $inflation_value -o {2} 2>>$mcl_log \"`;
 			die " - ERROR: mcl failed at $threshold\n" if $?;
 			
 			# compile clusters into one file for next iteration and remove original mcl cluster file.

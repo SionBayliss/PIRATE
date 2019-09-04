@@ -10,7 +10,7 @@ PIRATE is implemented in Perl and is freely available under an GNU GPL 3 open so
 The [PIRATE wiki](https://github.com/SionBayliss/PIRATE/wiki) contains additional information on the methodology and outputs. 
 
 #### Referencing
-The manuscript has been submitted. The preprint can be found at [here](https://www.biorxiv.org/content/10.1101/598391v1). 
+You can find the preprint at the [bioarchive](https://www.biorxiv.org/content/10.1101/598391v1). The technical note is in submission.
 
 ## Dependencies 
 |software|version|required|

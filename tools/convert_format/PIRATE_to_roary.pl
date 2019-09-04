@@ -88,7 +88,7 @@ while(<CLUSTERS>){
 		}
 		
 		# print appropriate variables
-		my @out_vars = ( "$vars[0]--$vars[1]", $vars[2], $vars[3], $vars[6], "0", $vars[7], $gf, $owf, "NA", "NA", "", $vars[16], $vars[17], $vars[18]);
+		my @out_vars = ( "$vars[0]\_\_$vars[1]", $vars[2], $vars[3], $vars[6], "0", $vars[7], $gf, $owf, "NA", "NA", "", $vars[16], $vars[17], $vars[18]);
 		
 		# join and print outputs
 		print OUTPUT "\"", join("\",\"", @out_vars, @vars[$idx..$#vars])."\"\n";
