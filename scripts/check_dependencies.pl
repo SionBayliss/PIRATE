@@ -51,6 +51,7 @@ print " - WARNING: R not found in system path, cannot use -r command.\n" if $R =
 # fasttree
 my $ft = 0; 
 $ft = 1 if `command -v fasttree;`;
+$ft = 1 if `command -v FastTree;`;
 print " - WARNING: fasttree not found in system path, a binary presence-absence tree will not be created.\n" if $ft == 0;
 
 exit

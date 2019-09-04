@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # Align a nucleotide fasta file using the translated aa sequence.
 

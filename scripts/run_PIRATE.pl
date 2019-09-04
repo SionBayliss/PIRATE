@@ -81,6 +81,7 @@ my $pan_off = 0;
 my $threads = 2; 
 my $quiet = 0;
 my $retain = 1;
+
 my $help = 0;
 
 pod2usage(1) if scalar(@ARGV) == 0;
@@ -114,6 +115,11 @@ pod2usage(1) if $help;
 # check dependencies
 system( "perl $script_path/check_dependencies.pl" );
 die " - ERROR: dependencies missing - see above\n" if $?;
+
+# set fasttree executable
+my $ft = 0; 
+$ft = "FastTree" if `command -v FastTree;`;
+$ft = "fasttree" if `command -v fasttree;`;
 
 # variables 
 my $no_files = 0;
@@ -442,7 +448,7 @@ if ($?){
 }
 print "\n-------------------------------\n\n";
 
-# create binary fasta file for fastree
+# create binary fasta file for fasttree
 if (`command -v fasttree;`){
 
 	print "Creating binary tree\n";
@@ -450,10 +456,10 @@ if (`command -v fasttree;`){
 	system ("perl $script_path/gene_cluster_to_binary_fasta.pl $pirate_dir/PIRATE.gene_families.tsv $pirate_dir/binary_presence_absence.fasta");
 	print " - ERROR: could not create binary presence/absence fasta file.\n" if $?;
 
-	# make binary accessory gene tree in fastree
+	# make binary accessory gene tree in fasttree
 	unless ($?){
 		print " - running fasttree\n";
-		system( "fasttree -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
+		system( "$ft -fastest -nocat -nome -noml -nosupport -nt $pirate_dir/binary_presence_absence.fasta > $pirate_dir/binary_presence_absence.nwk 2>/dev/null" );
 		print " - ERROR: fasttree failed.\n" if $?;
 	}
 	print " - completed in: ", time() - $time_start,"s\n";

@@ -112,10 +112,10 @@ while (<DATA>){
 }
 
 # calculate memory for cdhit
-#my $m_required = -s "$working/$group.fasta";
-#$m_required = int($m_required/1000000); # MB
-#$m_required *= 3; # triple
-#$m_required = 2000 if($m_required < 2000); # set lowest
+my $m_required = -s "$working/$group.fasta";
+$m_required = int($m_required/1000000); # MB
+$m_required *= 2; # double
+$m_required = 1000 if($m_required < 1000); # set minimum
 		
 # run cd-hit on input fasta
 my $cdhit_log = "$working/$group.cdhit.log";
@@ -139,7 +139,7 @@ if( $nucleotide == 0 ){
 	}
 
 	# run cd-hit	
-	`$cd_hit_bin -i $working/$group.fasta -o $working/$group.cdhit -c $threshold -s $length_threshold -T 1 -g 1 -n $n -d 256 >> $cdhit_log`; # -M $m_required
+	`$cd_hit_bin -i $working/$group.fasta -o $working/$group.cdhit -c $threshold -s $length_threshold -T 1 -g 1 -n $n -d 256 -M $m_required >> $cdhit_log`; # -M $m_required
 
 	`mv $working/$group.cdhit $working/$group.cdhit.fasta`;
 	
@@ -165,7 +165,7 @@ if( $nucleotide == 0 ){
 	}
 	
 	# run cd-hit
-	`$cd_hit_est_bin -i $working/$group.fasta -o $working/$group.cdhit -c $threshold -s $length_threshold  -T 1 -g 1 -n $n -d 256 -r 0 >> $cdhit_log`; # -M $m_required
+	`$cd_hit_est_bin -i $working/$group.fasta -o $working/$group.cdhit -c $threshold -s $length_threshold  -T 1 -g 1 -n $n -d 256 -r 0 -M $m_required >> $cdhit_log`; # -M $m_required
 
 	`mv $working/$group.cdhit $working/$group.cdhit.fasta`;
 }
