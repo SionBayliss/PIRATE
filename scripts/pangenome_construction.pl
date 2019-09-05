@@ -432,7 +432,7 @@ for my $file( @files ){
 		# calculate memory for cdhit
 		my $m_required = -s "$output_dir/$sample.temp.fasta"; # bytes
 		$m_required = int($m_required/1000000); #MB
-		$m_required *= 3; # triple
+		$m_required *= 5; # triple
 		$m_required = 2000 if($m_required < 2000); # set minimum
 		
 		# run cdhit
