@@ -36,6 +36,8 @@ use File::Basename;
 	--cd-step	cdhit step size [default: 0.5]
 	--cd-core-off	don't extract core families during cdhit clustering 
 			[default: on]
+	--cd-mem	specify amount of memory required for CD-HIT in MB 
+			[default: 5*input file size]
 	
 	BLAST options:
 	-e|--evalue	e-value used for blast hit filtering [default: 1E-6]
@@ -86,6 +88,7 @@ my $hsp_prop_length = 0.0;
 my $hsp_length = 0;
 
 my $cdhit_aS = 0.9;
+my $m_required = 0;
 
 my $diamond = 0;
 my $diamond_split = 0;
@@ -112,6 +115,7 @@ GetOptions(
 	'cd-step=f' => \$cd_step,
 	'cd-core-off' => \$core_off,
 	'cd-hit-aS' => \$cdhit_aS,
+	'cd-mem=i' => \$m_required,
 	
 	'flat=f' 	=> \$inflation_value,
 	'evalue=f' => \$evalue,
@@ -429,11 +433,13 @@ for my $file( @files ){
 		
 		}
 		
-		# calculate memory for cdhit
-		my $m_required = -s "$output_dir/$sample.temp.fasta"; # bytes
-		$m_required = int($m_required/1000000); #MB
-		$m_required *= 5; # triple
-		$m_required = 2000 if($m_required < 2000); # set minimum
+		# calculate memory for cdhit if not specified
+		if ($m_required == 0){
+			$m_required = -s "$output_dir/$sample.temp.fasta"; # bytes
+			$m_required *= 5; # triple
+			$m_required = int($m_required/1000000); #MB
+			$m_required = 2000 if($m_required < 2000); # set minimum
+		}
 		
 		# run cdhit
 		print " - Passing $no_included loci to cd-hit at $i%  \n" if $quiet == 0;

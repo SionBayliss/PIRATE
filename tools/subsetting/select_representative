@@ -9,13 +9,13 @@ use Cwd 'abs_path';
 use File::Basename;
 use Bio::Seq;
 
-# Align cluster sequences using MAFFT.
+# select representative sequences from each gene family
 
 # Usage:
 
 =head1  SYNOPSIS
 
- align_feature_sequence.pl -i /path/to/PIRATE.gene_families.tab -g /path/to/gff/files/
+ select_representative -i /path/to/PIRATE.gene_families.tab -g /path/to/gff/files/
 
  -i|--input		input PIRATE.gene_families.tab file [required]
  -g|--gff		gff file directory [required]
