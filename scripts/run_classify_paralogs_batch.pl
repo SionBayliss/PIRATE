@@ -62,7 +62,7 @@ pod2usage(1) unless $group ;
 pod2usage(1) unless $fasta;
 pod2usage(1) unless $data;
 pod2usage(1) unless $working;
-pod2usage(1) unless $threshold;
+#pod2usage(1) unless $threshold;
 pod2usage(1) unless $n;
 
 # check file locations
@@ -134,8 +134,8 @@ if( $nucleotide == 0 ){
 	}else{
 		$threshold = 0.4;
 		$n = 2;
-		print " - WARNING: cluster threshold below recommended setting.";
-		print " - Setting cluster threshold to 0.4 and n to 2";
+		print " - WARNING: cluster threshold below recommended setting.\n";
+		print " - Setting cluster threshold to 0.4 and n to 2\n";
 	}
 
 	# run cd-hit	
@@ -160,8 +160,8 @@ if( $nucleotide == 0 ){
 	}else{
 		$threshold = 0.8;
 		$n = 4;
-		print " - WARNING: cluster threshold below recommended setting.";
-		print " - Setting cluster threshold to 0.8 and n to 4";
+		print " - WARNING: cluster threshold below recommended setting.\n";
+		print " - Setting cluster threshold to 0.8 and n to 4\n";
 	}
 	
 	# run cd-hit

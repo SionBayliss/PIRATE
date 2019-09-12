@@ -68,7 +68,7 @@ pod2usage(1) if $help;
 pod2usage(1) unless $output_dir;
 pod2usage(1) unless $paralog_clusters;
 pod2usage(1) unless $cluster_loci;
-pod2usage(1) unless $threshold;
+#pod2usage(1) unless $threshold;
 pod2usage(1) unless $input_fasta;
 
 # make threshold a proportion
@@ -243,7 +243,7 @@ if ($n eq ""){
 			$threshold = 0.4;
 			$n = 2;
 			print " - WARNING: cluster threshold below recommended setting.\n";
-			print " - Setting cluster threshold to 0.4 and n to 2";
+			print " - Setting cluster threshold to 0.4 and n to 2\n";
 		}
 	
 	}else{
@@ -263,7 +263,7 @@ if ($n eq ""){
 			$threshold = 0.8;
 			$n = 4;
 			print " - WARNING: cluster threshold below recommended setting.\n";
-			print " - Setting cluster threshold to 0.8 and n to 4";
+			print " - Setting cluster threshold to 0.8 and n to 4\n";
 		}
 	
 	}

@@ -156,8 +156,8 @@ if ( $steps eq '' ){
 	$steps=join(",", @thresholds);
 	for (@thresholds){
 		pod2usage( {-message => " - ERROR: $_ is not an integer in threshold list", -exitval => 1, -verbose => 1 } ) unless $_ =~ /\d+\z/;
-		pod2usage( {-message => " - ERROR: $_ is not between 1-100%", -exitval => 1, -verbose => 1 } ) if $_>100;
-		pod2usage( {-message => " - ERROR: $_ is not between 1-100%", -exitval => 1, -verbose => 1 } ) if $_<=0;
+		pod2usage( {-message => " - ERROR: $_ is not between 0-100%", -exitval => 1, -verbose => 1 } ) if $_>100;
+		pod2usage( {-message => " - ERROR: $_ is not between 0-100%", -exitval => 1, -verbose => 1 } ) if $_<0;
 	}
 }
 my $no_thresholds = scalar(@thresholds);

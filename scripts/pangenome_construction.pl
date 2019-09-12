@@ -444,7 +444,7 @@ for my $file( @files ){
 		# run cdhit
 		print " - Passing $no_included loci to cd-hit at $i%  \n" if $quiet == 0;
 		my $n = "";
-		my $cd_hit_out = "";
+		#my $cd_hit_out = "";
 		if( $nucleotide == 0 ){
 		
 			# select appropriate word size
@@ -465,8 +465,8 @@ for my $file( @files ){
 
 			# run cd-hit
 			my $cd_hit_command = "$cd_hit_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -aS $cdhit_aS -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 >> $cdhit_log";
-			#print " - command: \"$cd_hit_command\"\n";
-			$cd_hit_out = `$cd_hit_command`;
+			print " - command: \"$cd_hit_command\"\n";
+			`$cd_hit_command`;
 			
 
 		}else{
@@ -492,10 +492,10 @@ for my $file( @files ){
 		
 			# run cdhit est
 			my $cd_hit_command = "$cd_hit_est_bin -i $output_dir/$sample.temp.fasta -o $output_dir/$sample.$i -aS $cdhit_aS -c $curr_thresh -T $threads -g 1 -n $n -M $m_required -d 256 -r 0 >> $cdhit_log";
-			#print " - command: \"$cd_hit_command\"\n";
-			$cd_hit_out = `$cd_hit_command`;
+			print " - command: \"$cd_hit_command\"\n";
+			`$cd_hit_command`;
 		}
-		die " - ERROR: cdhit failed - $cd_hit_out.\n" if $?;
+		die " - ERROR: cdhit failed - the errors are logged at $cdhit_log\n" if $?;
 		
 		# variables
 		my $c_name = "";
