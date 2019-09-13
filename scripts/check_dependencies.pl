@@ -33,15 +33,11 @@ if ( ($cd_hit == 0) || ($blast == 0) || ($mcl == 0) || ($parallel == 0) ) { exit
 # check optional dependencies
 
 # diamond
-my $diamond_mkdb = ""; 
-my $diamond_bin = "";
-$diamond_mkdb = "diamond makedb" if `command -v diamond makedb;`;
-$diamond_bin = "diamond blastp" if `command -v diamond blastp;`;
+my $diamond = 0; 
+$diamond = 1 if `command -v diamond;`;
 
 my $diamond_err = 0;
-$diamond_err++ if $diamond_mkdb eq "";
-$diamond_err++ if $diamond_bin eq "";
-print "\n - WARNING: cannot find diamond binaries, cannot use --diamond command.\n" if $diamond_err == 2;
+print "\n - WARNING: cannot find diamond binary, cannot use --diamond command.\n" if $diamond == 0;
 
 # R
 my $R = 0; 
