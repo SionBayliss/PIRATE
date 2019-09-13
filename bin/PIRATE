@@ -9,7 +9,7 @@ use File::Basename;
 use File::Temp qw/ tempdir /;
 
 # wrapper for run_PIRATE.pl - allows for verbose on/off
-my $version_details = "1.0 (release)";
+my $version_details = "1.0.1";
 
 # path to executing script
 my $script_path = abs_path(dirname($0));
