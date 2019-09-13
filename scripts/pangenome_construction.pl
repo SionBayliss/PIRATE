@@ -9,6 +9,7 @@ use Getopt::Long qw(GetOptions);
 use Pod::Usage;
 use Cwd 'abs_path';
 use File::Basename;
+use File::Copy;
 
 # Version
 
@@ -365,6 +366,7 @@ for my $file( @files ){
 	# Print to all sequences file.
 	open TEMP, ">$output_dir/$sample.all_sequences.fasta" or die $!;
 	print TEMP join("\n", @seq_out[@idx]);
+	close TEMP;
 	
 	# sanity checks - number of sequences in file.
 	my $no_sequences = scalar ( @seq_out );
@@ -383,7 +385,12 @@ for my $file( @files ){
 	open CORE, ">$output_dir/$sample.core_clusters.tab" or die "couldn't open $sample.core_clusters.tab\n";
 	
 	# make temporary fasta file for cd-hit
-	`cp $output_dir/$sample.all_sequences.fasta $output_dir/$sample.temp.fasta`;
+	if ( -f "$output_dir/$sample.all_sequences.fasta" ){
+	 	copy( "$output_dir/$sample.all_sequences.fasta" , "$output_dir/$sample.temp.fasta") or die " - ERROR: could not create $output_dir/$sample.temp.fasta" ;
+	}else{
+		die " - ERROR: $output_dir/$sample.all_sequences.fasta was not found - did you run out of memory?" ;
+	}
+	
 	my $no_reduced = 0;
 	
 	# run cd-hit at multiple thresholds.
@@ -426,7 +433,7 @@ for my $file( @files ){
 			close FASTA_OUT;
 		
 			# make filtered file the working file
-			`mv $output_dir/$sample.temp2.fasta $output_dir/$sample.temp.fasta`;
+			move( "$output_dir/$sample.temp2.fasta" , "$output_dir/$sample.temp.fasta") or die " - ERROR: could not rename $output_dir/$sample.temp.fasta";
 		
 			# Sanity check
 			die "Number of samples in $output_dir/$sample.temp.fasta ($no_included) does not match number of included loci ($sample_check).\n" if $sample_check != $no_included;
@@ -807,7 +814,7 @@ for my $file( @files ){
 	close BLAST_TEMP;
 	
 	# replace original file.
-	`mv $blast_out.temp $blast_out`;
+	move( "$blast_out.temp" , "$blast_out") or die " - ERROR: could not rename $blast_out.temp";
 	
 	# Add same-same hits for each representative sequence - this ensures none are lost by filtering/MCL.
 	open BLAST_OUT, ">>$blast_out" or die $!;
@@ -994,7 +1001,7 @@ for my $file( @files ){
 		
 		# add core clusters
 		`cat $output_dir/$sample.core_clusters.tab $output_dir/$sample.$t.reclustered.reinflated > $output_dir/temp.txt`;
-		`mv $output_dir/temp.txt $output_dir/$sample.$t.reclustered.reinflated`;
+		move("$output_dir/temp.txt" , "$output_dir/$sample.$t.reclustered.reinflated") or die " - ERROR: could not rename $output_dir/temp.txt";
 		
 		# check number of clusters in final file matches input.
 		die "Reinflated sequences (", ($seq_count+$core_cluster_no) , ") does not match input number of sequences ($no_sequences) at $t threshold in sample $sample.\n" if ($seq_count+$core_cluster_no) != $no_sequences;

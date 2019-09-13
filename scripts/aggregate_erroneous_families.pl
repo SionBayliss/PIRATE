@@ -141,7 +141,7 @@ if( $no_clusters ne $clusters_found ){
 # Parse all co-ordinate files for position in sequence of feature and extract sequence.
 
 # Create directory for sequences
-unless ( -e  "$pirate_dir/erroneous_nucleotide_sequences" ){ `mkdir $pirate_dir/erroneous_nucleotide_sequences/`; }
+unless ( -e  "$pirate_dir/erroneous_nucleotide_sequences" ){ mkdir "$pirate_dir/erroneous_nucleotide_sequences/"; }
 
 # create empty fasta files
 foreach( keys %group_list ){ `echo -n "" > $pirate_dir/erroneous_nucleotide_sequences/$_.fasta` }
@@ -243,7 +243,7 @@ if ($fail_check > 0){ die "$fail_check loci sequences missing for input files.\n
 
 # Align all sequences using mafft on aa sequence and back translate to nucleotide sequence.
 print " - Translating nucleotide sequences to AA.\n";
-unless ( -e "$pirate_dir/erroneous_aa_sequences" ){ `mkdir $pirate_dir/erroneous_aa_sequences`; } 
+unless ( -e "$pirate_dir/erroneous_aa_sequences" ){ mkdir "$pirate_dir/erroneous_aa_sequences"; } 
 
 # Temp files for parallel.
 my $temp1 = "$pirate_dir/temp.tab";
