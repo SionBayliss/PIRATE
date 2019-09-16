@@ -5,9 +5,9 @@ use warnings;
 
 use Getopt::Long qw(GetOptions);
 use Pod::Usage;
-use Cwd 'abs_path';
 use File::Basename;
 use Bio::Seq;
+use Cwd 'abs_path';
 
 # select representative sequences from each gene family
 
@@ -32,9 +32,6 @@ use Bio::Seq;
  -h|--help		usage information
 
 =cut
-
-# path to executing script
-#my $script_path = abs_path(dirname($0));
 
 # switch off buffering
 $| = 1; # turn off buffering for real time feedback.

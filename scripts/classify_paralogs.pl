@@ -3,10 +3,12 @@
 # Dependencies
 use strict; 
 use warnings;
-use Cwd 'abs_path';
 use File::Basename;
 use Getopt::Long qw(GetOptions :config no_ignore_case);
 use Pod::Usage;
+use FindBin;
+use Cwd 'abs_path';
+my $script_path = abs_path($FindBin::RealBin);
 
 =head1  SYNOPSIS
 
@@ -76,10 +78,6 @@ $threshold = $threshold/100 if $threshold > 1;
 
 # check output directory exists.
 die "- ERROR: $output_dir is not a directory\n" unless -d $output_dir;
-
-# identify_parralogs is expected in same folder as run_identify_paralogs.
-my $script_path = abs_path(dirname($0));
-$output_dir = abs_path($output_dir);
 
 # variables 
 my %paralogs = ();

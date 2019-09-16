@@ -4,8 +4,10 @@ use strict;
 use warnings;
 use Getopt::Long qw(GetOptions);
 use Pod::Usage;
-use Cwd 'abs_path';
 use File::Basename;
+use FindBin;
+use Cwd 'abs_path';
+my $script_path = abs_path($FindBin::RealBin);
 
 # create input files from a PIRATE pangenome output directory and run treeWAS on all variants.
 
@@ -114,9 +116,6 @@ if ( $treeWAS_path  ne "" ){
 unless ( -e $output_dir ){
 	die " - ERROR: could not make output directory ($output_dir)\n" unless mkdir($output_dir); 
 }
-
-# path to executing script
-my $script_path = abs_path(dirname($0));
 
 # make variable containing all tests to run - check inputs
 my @variants = split(/,/ , $variant_list);

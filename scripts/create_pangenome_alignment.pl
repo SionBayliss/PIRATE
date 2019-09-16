@@ -5,9 +5,11 @@ use warnings;
 
 use Getopt::Long qw(GetOptions);
 use Pod::Usage;
-use Cwd 'abs_path';
 use File::Basename;
 use Text::Wrap;
+use FindBin;
+use Cwd 'abs_path';
+my $script_path = abs_path($FindBin::RealBin);
 
 # Create pangenome alignment from collection of aligned sequence files.
 
@@ -41,9 +43,6 @@ use Text::Wrap;
 
 # switch off buffering
 $|++;
-
-# path to executing script
-my $script_path = abs_path(dirname($0));
 
 # command line options
 my $help = 0;

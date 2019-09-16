@@ -7,13 +7,14 @@ use Getopt::Long qw(GetOptions :config no_ignore_case pass_through);
 use Cwd 'abs_path';
 use File::Basename;
 use File::Temp qw/ tempdir /;
+use FindBin;
+use Cwd 'abs_path';
 
 # wrapper for run_PIRATE.pl - allows for verbose on/off
-my $version_details = "1.0.1";
+my $version_details = "1.0.2";
 
 # path to executing script
-my $script_path = abs_path(dirname($0));
-$script_path = "$script_path/../scripts/";
+my $script_path = abs_path("$FindBin::RealBin/../scripts"); 
  
 # command line options
 my $input_dir = '';
@@ -71,14 +72,13 @@ $input_dir = abs_path($input_dir);
 
 # check output directory is valid/ attempt to make output directory
 $output_dir = "$input_dir/PIRATE" if $output_dir eq '';
-unless( -d "$output_dir" ){
-	 die " - ERROR: could not make working directory in $output_dir\n" unless mkdir "$output_dir"; 
+if( ($test == 1) || ($test_n == 1) ){
+	$output_dir = tempdir(CLEANUP=>0);
+}else{
+	unless( -d "$output_dir" ){
+		die " - ERROR: could not make working directory in $output_dir\n" unless mkdir "$output_dir"; 
+	}
 }
-$output_dir = abs_path($output_dir);
-
-# make PIRATE output directory
-my $pirate_dir = "$output_dir";
-unless( -d $pirate_dir ){ unless ( mkdir $pirate_dir ) { die " - ERROR: could not make PIRATE results directory in $output_dir\n" } };
 
 # make command line
 push(@ARGV, "-h") if $help == 1;
@@ -86,10 +86,6 @@ my $commands = join(" ", @ARGV);
 	
 # run PIRATE with verbose on/off or run test
 if( ($test == 1) || ($test_n == 1) ){
-
-	# set temp directory
-	my $tempdir = tempdir(CLEANUP=>0);
-	#$tempdir->unlink_on_destroy( 0 );
 
 	# check dependencies
 	system( "perl $script_path/check_dependencies.pl" );
@@ -99,23 +95,23 @@ if( ($test == 1) || ($test_n == 1) ){
 	print "\nRunning PIRATE on test files:\n";
 	my $opt_args = "";
 	$opt_args = "--nucl" if $test_n == 1;
-	system("perl $script_path/run_PIRATE.pl -i $input_dir -o $tempdir -s \"50,75,98\" -r $opt_args -z 0 > $tempdir/PIRATE.log");
+	system("perl $script_path/run_PIRATE.pl -i $input_dir -o $output_dir -s \"50,75,98\" -r $opt_args -z 0 > $output_dir/PIRATE.log");
 	
 	# check for clean run
 	if( $? ){
 		print " - ERROR: PIRATE did not run correctly:\n";
-		print " - ERROR: PIRATE was not able to parse GFFs\n" unless -f "$tempdir/modified_gffs/HO_5096_0412_test.gff";
-		print " - ERROR: PIRATE was not able to extract sequences from GFFS\n" unless -f "$tempdir/pan_sequences.fasta";
-		print " - ERROR: PIRATE was not able to construct pangenome\n" unless -f "$tempdir/pangenome_iterations/pan_sequences.50.reclustered.reinflated";
-		print " - ERROR: PIRATE was not able to classify paralogs\n" unless -f "$tempdir/paralog_working/g02.abc";
-		print " - ERROR: PIRATE could not make summary files\n" unless -f "$tempdir/PIRATE.gene_families.tsv";
-		print "\n - WARNING: PIRATE could not make binary tree (is fasttree installed)\n" unless -f "$tempdir/binary_presence_absence.nwk";
-		print " - WARNING: PIRATE could not make R plots (are dependencies installed)\n" unless -f "$tempdir/PIRATE_plots.pdf";	
+		print " - ERROR: PIRATE was not able to parse GFFs\n" unless -f "$output_dir/modified_gffs/HO_5096_0412_test.gff";
+		print " - ERROR: PIRATE was not able to extract sequences from GFFS\n" unless -f "$output_dir/pan_sequences.fasta";
+		print " - ERROR: PIRATE was not able to construct pangenome\n" unless -f "$output_dir/pangenome_iterations/pan_sequences.50.reclustered.reinflated";
+		print " - ERROR: PIRATE was not able to classify paralogs\n" unless -f "$output_dir/paralog_working/g02.abc";
+		print " - ERROR: PIRATE could not make summary files\n" unless -f "$output_dir/PIRATE.gene_families.tsv";
+		print "\n - WARNING: PIRATE could not make binary tree (is fasttree installed)\n" unless -f "$output_dir/binary_presence_absence.nwk";
+		print " - WARNING: PIRATE could not make R plots (are dependencies installed)\n" unless -f "$output_dir/PIRATE_plots.pdf";	
 
 	}else{
 		print "\n - PIRATE completed with no errors\n";
-		print "\n - WARNING: PIRATE could not make binary tree (is fastree installed?)\n" unless -f "$tempdir/binary_presence_absence.nwk";
-		print " - WARNING: PIRATE could not make R plots (are dependencies installed?)\n" unless -f "$tempdir/PIRATE_plots.pdf";	
+		print "\n - WARNING: PIRATE could not make binary tree (is fastree installed?)\n" unless -f "$output_dir/binary_presence_absence.nwk";
+		print " - WARNING: PIRATE could not make R plots (are dependencies installed?)\n" unless -f "$output_dir/PIRATE_plots.pdf";	
 	}
 	print "\n - tests completed\n\n";
 
@@ -128,6 +124,6 @@ if( ($test == 1) || ($test_n == 1) ){
 }
 
 # report on test files
-#print " - temporary files saved to $tempdir\n\n";
+print " - temporary files saved to $output_dir\n\n" if( ($test == 1) || ($test_n == 1) );
 
 exit

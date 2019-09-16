@@ -6,9 +6,10 @@ use warnings;
 use List::Util qw(first max maxstr min minstr reduce shuffle sum);
 use Getopt::Long qw(GetOptions :config no_ignore_case);
 use Pod::Usage;
-
-use Cwd 'abs_path';
 use File::Basename;
+use FindBin;
+use Cwd 'abs_path';
+my $script_path = abs_path($FindBin::RealBin);
 
 # Version
 
@@ -17,9 +18,6 @@ use File::Basename;
 	PIRATE -i /path/to/directory/containing/gffs/ 
 
 =cut
-
-# script path
-my $script_path = abs_path(dirname($0));
 
 # variables
 my @loci_file = ();

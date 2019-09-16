@@ -7,6 +7,9 @@ use Getopt::Long qw(GetOptions :config no_ignore_case);
 use Pod::Usage;
 use Cwd 'abs_path';
 use File::Basename;
+use FindBin;
+my $script_path = abs_path($FindBin::RealBin);
+
 
 =head1  SYNOPSIS
 
@@ -48,9 +51,6 @@ use File::Basename;
  -h|--help 	usage information
  
 =cut
-
-# path to executing script
-my $script_path = abs_path(dirname($0));
 
 # switch off buffering
 $| = 1; # turn off buffering for real time feedback.

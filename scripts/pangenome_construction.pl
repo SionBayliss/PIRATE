@@ -7,9 +7,11 @@ use warnings;
 
 use Getopt::Long qw(GetOptions);
 use Pod::Usage;
-use Cwd 'abs_path';
 use File::Basename;
 use File::Copy;
+use FindBin;
+use Cwd 'abs_path';
+my $script_path = abs_path($FindBin::RealBin);
 
 # Version
 
@@ -61,9 +63,6 @@ use File::Copy;
 	-h|--help 	usage information
 
 =cut
-
-# path to executing script
-my $script_path = abs_path(dirname($0));
 
 # switch off buffering
 $| = 1; # turn off buffering for real time feedback.

@@ -5,8 +5,10 @@ use warnings;
 
 use Getopt::Long qw(GetOptions :config no_ignore_case);
 use Pod::Usage;
-use Cwd 'abs_path';
 use File::Basename;
+use FindBin;
+use Cwd 'abs_path';
+my $script_path = abs_path($FindBin::RealBin);
 
 # split paralogs classified with classify_paralogs.pl
 
@@ -50,9 +52,6 @@ pod2usage(1) if $help;
 pod2usage( {-message => q{paralog categories file is a required argument}, -exitval => 1, -verbose => 1 } ) if $paralog_cat eq ''; 
 pod2usage( {-message => q{loci_list is a required argument}, -exitval => 1, -verbose => 1 } ) if $loci_list eq ''; 
 pod2usage( {-message => q{output directory is a required argument}, -exitval => 1, -verbose => 1 } ) if $output_dir eq ''; 
-
-# script path
-my $script_path = abs_path(dirname($0));
 
 # output file paths
 my $ind_file = "$loci_list.idx";

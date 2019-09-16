@@ -5,8 +5,10 @@ use warnings;
 
 use Getopt::Long qw(GetOptions);
 use Pod::Usage;
-use Cwd 'abs_path';
 use File::Basename;
+use FindBin;
+use Cwd 'abs_path';
+my $script_path = abs_path($FindBin::RealBin);
 
 # Align cluster sequences using MAFFT.
 
@@ -44,9 +46,6 @@ die "Dependencies missing.\n" if $dep_err == 1;
  -h|--help		usage information
 
 =cut
-
-# path to executing script
-my $script_path = abs_path(dirname($0));
 
 # switch off buffering
 $| = 1; # turn off buffering for real time feedback.
