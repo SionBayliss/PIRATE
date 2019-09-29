@@ -67,6 +67,10 @@ PIRATE can then be cloned from github and run using the file located at /PIRATE/
 ```
 git clone https://github.com/SionBayliss/PIRATE.git
 ```
+#### Homebrew / Linuxbrew
+```
+brew install brewsci/bio/pirate
+```
 
 #### Ubuntu 14.04/16.04
 
