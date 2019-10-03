@@ -292,7 +292,8 @@ if ( $pan_off == 0 ){
 	die " - ERROR: extract_feature_sequences.pl failed\n" if $?;
 	
 	my $panseq_file = "$pirate_dir/pan_sequences.fasta";
-	`cat $pirate_dir/genome_list.txt | xargs -I {} cat $pirate_dir/genome_multifastas/{}.fasta > $pirate_dir/pan_sequences.fasta`;
+	`parallel -k -j 1 -a $pirate_dir/genome_list.txt "cat $pirate_dir/genome_multifastas/{}.fasta" > $panseq_file`;
+	die " - ERROR: failed to generate $panseq_file" if $?;
 	
 	print " - completed in: ", time() - $time_start,"s\n";
 	print "\n-------------------------------\n\n";
