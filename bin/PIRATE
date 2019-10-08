@@ -11,7 +11,7 @@ use FindBin;
 use Cwd 'abs_path';
 
 # wrapper for run_PIRATE.pl - allows for verbose on/off
-my $version_details = "1.0.2";
+my $version_details = "1.0.3";
 
 # path to executing script
 my $script_path = abs_path("$FindBin::RealBin/../scripts"); 
