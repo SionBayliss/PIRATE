@@ -42,7 +42,7 @@ conda config --add channels conda-forge
 PIRATE can then be installed via:
 ```
 # PIRATE package
-conda install -c sionbayliss pirate 
+conda install pirate 
 
 # optional dependencies for plotting figures in R
 conda install r==3.5.1 r-ggplot2==3.1.0 r-dplyr==0.7.6 bioconductor-ggtree==1.14.4 r-phangorn==2.4.0 r-gridextra
