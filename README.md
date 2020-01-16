@@ -133,10 +133,10 @@ The core functionality of PIRATE is invoked using the ```PIRATE``` command. A nu
  Output:
  -a|--align	    align all genes and produce core/pangenome alignments 
  		        [default: off]
- -r|--rplots	plot summaries using R [requires dependencies]
+ -r|--rplots	    plot summaries using R [requires dependencies]
 
  Usage:
- -t|--threads	number of threads/cores used by PIRATE [default: 2]
+ -t|--threads	    number of threads/cores used by PIRATE [default: 2]
  -q|--quiet	    switch off verbose
  -z		        retain intermediate files [0 = none, 1 = retain pangenome 
  		        files (default - re-run using --pan-off), 2 = all]
@@ -185,17 +185,21 @@ PIRATE allows for more fine-scale control of the parameters used for pangenome c
                     [default: amino acid]
 
     CDHIT options: 
-    --cd-low        cdhit lowest percentage id [default: 98]
-    --cd-step       cdhit step size [default: 0.5]
+    --cd-low	    cdhit lowest percentage id [default: 98]
+    --cd-step	    cdhit step size [default: 0.5]
     --cd-core-off   don't extract core families during cdhit clustering 
-                    [default: on]
-
-    BLAST options:
-    -e|--evalue     e-value used for blast hit filtering [default: 1E-6]
-    -d|--diamond    use diamond instead of BLAST - incompatible 
-                    with --nucleotide [default: off]
-    --hsp_prop      remove BLAST hsps that are < hsp_prop proportion
-                    of query length/query hsp length [default: off]
+			[default: on]
+    --cd-mem	    specify amount of memory required for CD-HIT in MB 
+			[default: 5*input file size]
+	
+     BLAST options:
+     -e|--evalue     e-value used for blast hit filtering [default: 1E-6]
+     --diamond	     use diamond instead of BLAST - incompatible 
+			with --nucleotide [default: off]
+     --diamond-split split diamond files into batches for processing 
+			[default: off] 	
+     --hsp-len	     remove BLAST hsps that are < hsp_len proportion
+			of query length [default: 0]
 
     MCL options:
     -f|--flat       mcl inflation value [default: 1.5]
@@ -208,9 +212,9 @@ Create a pangenome by initially clustering the input fasta file with cdhit using
 ```
 PIRATE -i /path/to/gff/files/ -s "90,91,92,93,94,95" -k "--cd-step 1 --cd-low 95"
 ```
-Create a pangenome for a collection of highly similar genomes. Initially only cluster using cdhit at 100% (-cdl) over a range of high thresholds (-s). Use a stringent homology e-value cutoff (-e) and exclude hits that do not have HSPs that are greater than 50% of the length of the query or input sequence (--hsp_prop)
+Create a pangenome for a collection of highly similar genomes. Initially only cluster using cdhit at 100% (-cdl) over a range of high thresholds (-s). Use a stringent homology e-value cutoff (-e). Exclude HSPs (hits) where the query/subject sequence length is less than 50% of the sequence length of the subject/query (--hsp-len). This final setting is useful for seperating related gene families of genes containing conserved domains/sequences. 
 ```
-PIRATE -i /path/to/gff/files/ -s "95,96,97,98,99,100" -k "--cd-low 100 --e 1E-12 --hsp_prop 0.5"
+PIRATE -i /path/to/gff/files/ -s "95,96,97,98,99,100" -k "--cd-low 100 --e 1E-12 --hsp-len 0.5"
 ```
 A complicated one. Create a pangenome including a range of sequence features (-f), using nucleotide sequence homology (implied by non-CDS features), over a closely related range of % identity thresholds (-s), using a lower cut-off for cd-hit (-k and -cdl), stringent homology parameters (-k and -e). Finally, align all sequence features (-a) and produce R plots (-r).
 ```
