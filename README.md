@@ -103,7 +103,7 @@ biocLite("ggtree")
 PIRATE accepts GFF3 annotation files containing matching nucleotide sequence at the end of the file. This is the format produced by [Prokka](http://www.vicbioinformatics.com/software.prokka.shtml). PIRATE will verify and discard files that do not follow the accepted GFF3 format and do not have a .gff extension before running. GFF3 files obtained from other sources, such as RAST or the NCBI, may sometime cause problems as they may not adhere to the accepted format. It is recommended that the nucleotide FASTA is downloaded (use ncbi-genome-download) and annotated with Prokka. If this is not possible to do so, for instance you wish to retain the reference genome naming scheme, then it is recommended that you check the fasta header matches the first field in the annotation and that the file contains locus_tag and or ID fields. 
 
 ### Locus Tags/IDs
-PIRATE renames locus_tag and ID to adhere to a standardised format (name of genome[underscore]locus number). The previous nomenclature is retained in the modified GFF3 files present in the "modified\_gffs" directory under previous_ID and previous_locustag fields. The old nomenclature can be transferred to the output files using the subsample_outputs.pl script and the field of interest e.g. --prev_locustag.
+PIRATE renames locus_tag and ID to adhere to a standardised format (name of genome[underscore]locus number). The previous nomenclature is retained in the modified GFF3 files present in the "modified\_gffs" directory under previous_ID and previous_locus fields. The old nomenclature can be transferred to the output files using the subsample_outputs.pl script and the field of interest e.g. --prev_locus.
 
 ## Usage
 
@@ -284,7 +284,7 @@ PIRATE.gene_families.tsv and PIRATE.unique_alleles.tsv share the same file forma
 A number of support scripts have been supplied to subset, rename and convert the outputs of PIRATE into other common formats. Support scripts can be found in the tools directory. 
 
 #### Subset Outputs
-Subsample PIRATE.gene_families.ordered.tsv file and rename loci in output. Allows for recalculation of number of genomes gene_families are present in PIRATE.gene_families.ordered.tsv using only a subset of samples (NOTE: currently this will not recalculate the number of duplications/fission-fusion genes). Also, by default, PIRATE will rename locus tags to a standardised scheme in order to make ensure inputs are comparable and unique. This script allows for renaming of locus tags with additional fields from the original files or with original locus_tag info (prev_locustag in modified_gffs directory).
+Subsample PIRATE.gene_families.ordered.tsv file and rename loci in output. Allows for recalculation of number of genomes gene_families are present in PIRATE.gene_families.ordered.tsv using only a subset of samples (NOTE: currently this will not recalculate the number of duplications/fission-fusion genes). Also, by default, PIRATE will rename locus tags to a standardised scheme in order to make ensure inputs are comparable and unique. This script allows for renaming of locus tags with additional fields from the original files or with original locus_tag info (prev_locus in modified_gffs directory).
 ```
 # subsample output using list of samples (one per line)
 subsample_outputs.pl -i /path/to/PIRATE.gene_families.tsv -g /path/to/PIRATE/modified_gffs/  -o /path/to/output_file.tsv
@@ -292,7 +292,7 @@ subsample_outputs.pl -i /path/to/PIRATE.gene_families.tsv -g /path/to/PIRATE/mod
 
 # rename with original locus tag form input files
 subsample_outputs.pl -i /path/to/PIRATE.gene_families.tsv -g /path/to/PIRATE/modified_gffs/  -o /path/to/output_file.tsv
---field "prev_locustag"
+--field "prev_locus"
 ```
 #### Subset alignments
 Recreate gene alignments and allow filtering for genomes, alleles or genes of interest. Output can be filtered on genomes (--list-genomes), alleles (--list-alleles, requires a PIRATE.unique_alleles.tsv as input) and/or percentage of samples (-t|--threshold). Samples with multiple sequences are by default replaced with a single sequences of ?s. This can be modified with --multi-include or -r|--rep-include. NOTE: this only subsets the fasta files, it does not realign sequences.  
