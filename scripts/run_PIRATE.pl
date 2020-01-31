@@ -450,7 +450,7 @@ if ($?){
 print "\n-------------------------------\n\n";
 
 # create binary fasta file for fasttree
-if (`command -v fasttree;`){
+if ( $ft ne "0" ){
 
 	print "Creating binary tree\n";
 	$time_start = time();

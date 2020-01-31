@@ -53,12 +53,12 @@ GetOptions(
 	'list=s' => \$list,
 	
 ) or pod2usage(1);
-pod2usage(1) if $help == 1;
+pod2usage(1) if $help;
  
 # file check
-die " - ERROR: no input file specified" if $input eq "";
-die " - ERROR: no gffs directory specified" if $gff_dir eq "";
-die " - ERROR: no output file specified" if $output  eq "";
+pod2usage( {-message => q{ - ERROR: no input file specified}, -exitval => 1, -verbose => 1 } ) if $input eq ''; 
+pod2usage( {-message => q{ - ERROR: no gffs directory specified}, -exitval => 1, -verbose => 1 } ) if $gff_dir eq ''; 
+pod2usage( {-message => q{ - ERROR: no output file specified}, -exitval => 1, -verbose => 1 } ) if $output eq '';
 
 # parse all gff files in gff_dir and store locus_tag conversions
 $gff_dir = abs_path($gff_dir);
