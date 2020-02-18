@@ -26,8 +26,9 @@ use Cwd 'abs_path';
  			[default: off]
  -d|--dosage		upper threshold of dosage to exclude from alignment 
  			[default: off]
- -p|--protein 	output translated sequence [default: nucleotide]
- -a|--alleles	store sequence for alleles not gene families [default: off]
+ -p|--protein 		output translated sequence [default: nucleotide]
+ -a|--alleles		store sequence for alleles not gene families 
+ 			[default: off]
  -q|--quiet		verbose off [default: on]
  -h|--help		usage information
 
