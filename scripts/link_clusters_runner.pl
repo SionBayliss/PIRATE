@@ -180,9 +180,9 @@ for my $list_idx (0..$#loci_file){
 	# tidy up working files
 	#for (@o_file){ unlink($_) }; 
 	for (@i_file){ unlink($_) }; 
-	unlink($temp_parallel);
-	unlink($log);
-	unlink($index_file);
+	#unlink($temp_parallel);
+	#unlink($log);
+	#unlink($index_file);
 	
 	# output file list
 	push(@m, @o_file);
@@ -210,7 +210,7 @@ for my $o (@exts){
 		}close F;
 		
 		# tidy up working files
-		unlink("$r.$o");
+		#unlink("$r.$o");
 		
 	}
 

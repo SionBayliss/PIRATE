@@ -360,12 +360,12 @@ sub print_summaries {
 				for my $current_loci ( keys( %{$cluster_loci{$threshold}{$cluster_id}} ) ){
 			
 					if(!$info_hash{$current_loci}){
-						print " - Error - loci not found = $_\n";
+						print " - Error - loci not found = $current_loci\n";
 					}else{
 				
 						my @vals = split(/_-_/, $info_hash{$current_loci});
 					
-						push( @lengths, $vals[2]);
+						push( @lengths, $vals[2] );
 						$product_info{$vals[1]}++;
 						$name_info{$vals[0]}++;
 					
@@ -404,7 +404,7 @@ sub print_summaries {
 				my $max_l = "NA";
 				my $mean_l = "NA";
 		
-				if(scalar(@lengths) == 0){
+				if(scalar(@lengths) == 1){
 					$mean_l = $lengths[0];
 					$min_l = $lengths[0];
 					$max_l = $lengths[0];
@@ -413,6 +413,11 @@ sub print_summaries {
 					$min_l = min(@lengths);
 					$max_l = max(@lengths);
 				}
+				
+				# check for initialised values
+				print " - mean length not initialised for $group_name\n" unless length($mean_l);
+				print " - min length not initialised for $group_name\n" unless length($min_l);
+				print " - max length not initialised for $group_name\n" unless length($max_l);
 			
 				# Count number of alleles at highest iteration. 
 				my $max_threshold = $thresholds[$#thresholds];

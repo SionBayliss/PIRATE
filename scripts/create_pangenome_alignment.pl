@@ -252,10 +252,16 @@ while(<GC>){
 my $no_groups =  scalar ( keys %group_list );
 print " - $no_groups clusters to be printed to output\n" unless $quiet == 1;
 
-# Check from fasta files present for all genomes.
-foreach my $cluster ( keys %group_list ){
-	die "No fasta file for $cluster found in $fasta_dir" unless -f "$fasta_dir/$cluster.nucleotide.fasta";	
+# Check from fasta files present for all genomes - alt is a temp patch 
+my @group_order_alt = ();
+foreach my $cluster ( @group_order ){
+	if (-f "$fasta_dir/$cluster.nucleotide.fasta") {
+		push(@group_order_alt, $cluster);
+	}else{
+		print " - WARNING: no fasta file for $cluster found in $fasta_dir\n" unless -f "$fasta_dir/$cluster.nucleotide.fasta";	
+	}
 }
+@group_order = @group_order_alt;
 
 # Create output hash
 my %sequence_out;
@@ -346,7 +352,7 @@ for my $file ( @group_order ){
 			$seq = join ( "", ($gap_character x $l_raw) );	
 			$seq =~ s/\\//g;
 		}
-		# exclude isolate for multile sequences (dashes)
+		# exclude isolate with multiple sequences (dashes)
 		elsif ( ($seq_count{$g} > 1) && ($exclude_multiple == 1) ){
 			$seq = join ( "", ("-" x $l_raw) );
 			$seq =~ s/\\//g;
