@@ -65,21 +65,20 @@ GetOptions(
 ) or pod2usage(1);
 pod2usage(1) if $help;
 
-# check for mandatory input arguments
-pod2usage( {-message => q{input directory is a required argument}, -exitval => 1, -verbose => 1 } ) if $input_dir eq ''; 
-pod2usage( {-message => q{output directory is a required argument}, -exitval => 1, -verbose => 1 } ) if $output_dir eq ''; 
-pod2usage( {-message => q{gff directory is a required argument}, -exitval => 1, -verbose => 1 } ) if $gff_dir eq '';
+# make paths absolute
+$input_file = abs_path($input_file);
+$gff_dir = abs_path($gff_dir);
 
 # expand input and output files/directories
 die "Input file not found.\n" unless -f "$input_file";
 my $input_dir = dirname(abs_path($input_file));
 
-# make paths absolute
-$input_file = abs_path($input_file);
-$gff_dir = abs_path($gff_dir);
+# chack gff directory exists.
+die " - ERROR: GFF directory not found.\n" unless -d "$gff_dir";
 
-# check gff directory exists.
-die " - ERROR: GFF directory not found.\n" unless -d "$gff_dir"; 
+# check for mandatory input arguments
+pod2usage( {-message => q{input directory is a required argument}, -exitval => 1, -verbose => 1 } ) if $input_dir eq ''; 
+pod2usage( {-message => q{output directory is a required argument}, -exitval => 1, -verbose => 1 } ) if $output_dir eq ''; 
 
 # Group/Loci variables
 my %loci_group; # group of loci
@@ -408,5 +407,8 @@ for my $k ( sort keys %stored_seq ) {
 	print OUTPUTN "$header\n$seq\n";
 	print OUTPUTA "$header\n$seq_aa\n";
 }
+
+print " - complete\n";
+	
 
 exit

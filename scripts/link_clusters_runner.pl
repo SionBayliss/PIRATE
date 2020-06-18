@@ -92,7 +92,6 @@ for my $list_idx (0..$#loci_file){
 	
 		if (/^\S+\t(\S+)\t/){
 			push(@{$lines{$1}}, $count) if !$err_clusters{$1};
-			####print "$1\n";
 		}
 	 
 	}close LOCI;
@@ -178,11 +177,11 @@ for my $list_idx (0..$#loci_file){
 	`parallel -a $temp_parallel --jobs $threads --colsep '\t' perl $script_path/link_clusters.pl -l {1} -o {2} -c $coord_dir --parallel 1 -t $aa_identities $args > $log`;
 	
 	# tidy up working files
-	#for (@o_file){ unlink($_) }; 
+	for (@o_file){ unlink($_) }; 
 	for (@i_file){ unlink($_) }; 
-	#unlink($temp_parallel);
+	unlink($temp_parallel);
 	#unlink($log);
-	#unlink($index_file);
+	unlink($index_file);
 	
 	# output file list
 	push(@m, @o_file);
@@ -210,7 +209,7 @@ for my $o (@exts){
 		}close F;
 		
 		# tidy up working files
-		#unlink("$r.$o");
+		unlink("$r.$o");
 		
 	}
 

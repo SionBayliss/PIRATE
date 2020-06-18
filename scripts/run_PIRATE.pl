@@ -77,6 +77,7 @@ my $align = 0;
 my $split_args = "";
 my $classify_off = 0;
 
+my $rep_off = 0;
 my $pan_off = 0;
 my $threads = 2; 
 my $quiet = 0;
@@ -92,7 +93,7 @@ GetOptions(
 
 	'steps=s'	=> \$steps,
 	'features=s' => \$features,
-	'k|pan-opt=s' => \$pan_options,
+	'k|pan-opt|p=s' => \$pan_options,
 	'nucl' => \$nucleotide,
 
 	'classify-off' => \$classify_off,
@@ -101,8 +102,9 @@ GetOptions(
 	'para-args=s' => \$split_args,
 	
 	'align' => \$align,
-	'rplots'		=> \$r_plots,
+	'rplots|r'		=> \$r_plots,
 	'pan-off'		=> \$pan_off,
+	'rep-off'	=> \$rep_off,
 	
 	'threads=i'	=> \$threads,
 	'z=i' => \$retain,
@@ -168,7 +170,7 @@ pod2usage( {-message => " - ERROR: only one threshold supplied.\n", -exitval => 
 # return command line summary
 if( $quiet == 0 ){
 	print "\n-------------------------------\n\n";
-	print "PIRATE input options:\n";
+	print "PIRATE input options:\n\n";
 	print " - Input Directory = $input_dir\n";
 	print " - Output directory = $pirate_dir\n";
 	print " - PIRATE will run using $threads cores\n";
@@ -212,7 +214,7 @@ if ( $pan_off == 0 ){
 
 	# standardise and check input gffs (contain sequence and annotation matches contig nomenclature) 
 	print "\n-------------------------------\n\n";
-	print "Standardising and checking input files:\n";
+	print "Standardising and checking input files:\n\n";
 	
 	$time_start = time();
 	
@@ -342,7 +344,7 @@ else{
 	}
 	
 	print "\n-------------------------------\n\n";	
-	print "Using previous pangenome files\n";
+	print "Using previously generated pangenome files\n";
 	print "\n-------------------------------\n";
 
 }
@@ -385,7 +387,7 @@ if ( $para_off == 0 ){
 		if ($classify_off == 0){
 		
 			# Classify paralogous clusters using blast
-			print "\nClassifing paralogous clusters:\n";
+			print "\nClassifing paralogous clusters:\n\n";
 			$time_start = time();
 		
 			my @para_args = ();
@@ -428,7 +430,7 @@ if ( $para_off == 0 ){
 }else{
 
 	# Make annotated output tables (families and alleles) 
-	print "\nLinking clusters between thresholds:\n";
+	print "\nLinking clusters between thresholds:\n\n";
 	$time_start = time();
 	system( "perl $script_path/link_clusters_runner.pl -l $pirate_dir/loci_list.tab -t $steps -o $pirate_dir/ -c $pirate_dir/co-ords/ --parallel $threads");
 	die " - ERROR: link_clusters.pl failed.\n" if $?;
@@ -438,6 +440,7 @@ if ( $para_off == 0 ){
 print "\n-------------------------------\n\n";
 
 # sort gene_families file on pangenome graph
+print "Ordering gene families on pangenome graph\n\n";
 $time_start = time();
 system( "perl $script_path/pangenome_graph.pl -i $pirate_dir/PIRATE.gene_families.tsv -gff $pirate_dir/modified_gffs/ -o $pirate_dir/ --gfa --dosage 1.1");
 if ($?){
@@ -452,7 +455,7 @@ print "\n-------------------------------\n\n";
 # create binary fasta file for fasttree
 if ( $ft ne "0" ){
 
-	print "Creating binary tree\n";
+	print "Creating binary tree\n\n";
 	$time_start = time();
 	system ("perl $script_path/gene_cluster_to_binary_fasta.pl $pirate_dir/PIRATE.gene_families.tsv $pirate_dir/binary_presence_absence.fasta");
 	print " - ERROR: could not create binary presence/absence fasta file.\n" if $?;
@@ -470,10 +473,20 @@ if ( $ft ne "0" ){
 }
 print "\n-------------------------------\n\n";
 
+# make representative sequence multifasta files
+unless ($rep_off == 1){
+	print "Creating representative sequence multifasta files\n\n";
+	$time_start = time();
+	system ("perl $script_path/select_representative.pl -i $pirate_dir/PIRATE.gene_families.tsv -g $pirate_dir/modified_gffs/ -o $pirate_dir/representative_sequences");
+	print " - ERROR: could not create representative sequence multifasta files.\n" if $?;
+	print " - completed in: ", time() - $time_start,"s\n";
+	print "\n-------------------------------\n\n";
+}
+
 # [optional] summary figures in R
 if ( $r_plots ne '' ){
 
-	print "Printing summary figures\n";
+	print "Printing summary figures\n\n";
 	$time_start = time();
 	system( "Rscript $script_path/plot_summary.R $pirate_dir >/dev/null 2>/dev/null" );
 	print " - ERROR: plotting summary figures failed - are R dependencies installed?\n" if $?;
@@ -481,7 +494,6 @@ if ( $r_plots ne '' ){
 	print "\n-------------------------------\n\n";
 
 }
-
 
 # print summary of gene families
 print "Summary of pangenome clusters:\n\n";

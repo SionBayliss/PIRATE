@@ -8,7 +8,6 @@ use Cwd 'abs_path';
 use File::Basename;
 use File::Temp qw/ tempdir /;
 use FindBin;
-use Cwd 'abs_path';
 
 # wrapper for run_PIRATE.pl - allows for verbose on/off
 my $version_details = "1.0.4";

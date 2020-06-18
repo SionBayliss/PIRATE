@@ -237,6 +237,8 @@ PIRATE produces number of output files. These have been summarised below:
 
 * **modified_gffs directory** - GFF3 files which have been standardised for PIRATE (see above). Loci in gene_families/unique allele files correspond to the annotation in these files.   
 
+* **representative_sequences.ffn|.faa** - representative multifasta sequences for each gene family as nucleotide (ffn) and amino acid (faa) sequence. The longest sequence per gene family selected as a representive (genomes are ordered alphabetically). Information on the isolate and gene family is included in the fasta header.    
+
 * [optional -r] **PIRATE_plots.pdf** - summary plots of the PIRATE pangenome. 
 
 * [optional -a] **core_alignment/pangenome_alignment.fasta** - gene-by-gene nucleotide alignments of the core and full pangenome created using MAFFT. Loci are ordered using the PIRATE.gene_families.ordered.tsv file. If the pangenome was created from translated CDS then the resulting alignments were reverse-translated from the amino acid sequence to retain the codon structure of the genes. **Note** - If a genome has a gene dosage/copy number of >1 for the gene family then the seqeuence is replaced with ?s in the alignment. 
@@ -299,7 +301,11 @@ Recreate gene alignments and allow filtering for genomes, alleles or genes of in
 ```
 subset_alignments.pl -i /path/to/PIRATE.gene_families.tab[PIRATE.unique_alleles.tsv] -f /path/to/PIRATE/feature_sequences/ -o ./path/to/output_directory/
 ```
-
+#### identify representative sequences for gene families/alleles
+Identify the representaive sequence for each cluster in a PIRATE.*.tsv file. The file can be found at PIRATE/scripts/representative_sequences.pl. Creates nucleotide and amino acid multifasta files by default. Can be thresholded on minimum proportion of isolates (-t), maximum proportion of isolates (-m) or gene dosage (-d). Modify the input PIRATE file if you wish representative sequence for a specific set of genes.
+```
+select_representative -i /path/to/PIRATE.*.tsv -g /path/to/modified_gffs/ -o /path/to/output_file_root
+```
 #### Unique gene sequences
 Identify unique gene sequences for gene alignments, analogous to the output from BIGSdb. Creates a fasta and a presence/absence matrix.
 ```

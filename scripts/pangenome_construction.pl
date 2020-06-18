@@ -155,26 +155,26 @@ $dep_err = 1 if $cdhit_check == 0;
 
 unless( `command -v blastp;` ){ 
 	$dep_err = 1;
-	print "blastp binary not found in system path.\n";
+	print " - ERROR: blastp binary not found in system path.\n";
 }
 unless( `command -v blastn;` ){ 
 	$dep_err = 1;
-	print "blastn binary not found in system path.\n";
+	print " - ERROR: blastn binary not found in system path.\n";
 }
 unless( `command -v makeblastdb;` ){ 
 	$dep_err = 1;
-	print "makeblastdb binary not found in system path.\n";
+	print " - ERROR: makeblastdb binary not found in system path.\n";
 }
 unless( `command -v mcl;` ){ 
 	$dep_err = 1;
-	print "mcl binary not found in system path.\n";
+	print " - ERROR: mcl binary not found in system path.\n";
 }
 unless( `command -v mcxdeblast;` ){ 
 	$dep_err = 1;
-	print "mcxdeblast binary not found in system path.\n";
+	print " - ERROR: mcxdeblast binary not found in system path.\n";
 }
 unless( (`command -v diamond makedb;`) && (`command -v diamond blastp;`) ){ 
-	print "diamond binaries not found in system path.\n";
+	print " - WARNING: diamond binaries not found in system path.\n";
 	$diamond_err = 1;
 }
 die " - ERROR: dependecies missing.\n" if $dep_err == 1;
@@ -266,7 +266,7 @@ if ($evalue eq ""){
 
 # user feedback
 if ($quiet == 0 ){
-	print "------------------------\n\nOptions:\n\n";
+	print "\nOptions:\n\n";
 	print " - WARNING: cannot extract core loci during cdhit clustering unless loci list is provided!\n" if ( ($cdhit_core == 1) && ($loci_list eq '') );
 
 	print " - Creating pangenome on nucleotide % identity.\n" if $nucleotide == 1;
@@ -281,7 +281,6 @@ if ($quiet == 0 ){
 	print " - Recipocal length cutoff: $hsp_prop_length\n" if $hsp_prop_length > 0;
 	print " - Loci file contains $no_loci loci from $no_genomes genomes.\n" if $loci_list ne '';
 	print " - Extracting core loci during cdhit clustering\n" if ( ($cdhit_core == 1) && ($loci_list ne '') );
-	print "\n------------------------\n";
 }
 
 # make mcl temp dir

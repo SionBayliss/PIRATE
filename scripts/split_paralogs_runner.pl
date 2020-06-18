@@ -259,6 +259,7 @@ for (@o_file){ unlink($_) };
 unlink($temp_parallel);
 unlink($log);
 unlink($ind_file);
+unlink($ind_file_pc);
 
 # sub functions - from : https://docstore.mik.ua/orelly/perl4/cook/ch08_28.htm
 
