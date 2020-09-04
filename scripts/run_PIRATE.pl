@@ -26,7 +26,6 @@ my $script_path = abs_path($FindBin::RealBin);
  -f|--features	choose features to use for pangenome construction. 
  		Multiple may be entered, seperated by a comma [default: CDS]
  -n|--nucl	CDS are not translated to AA sequence [default: off]
- --min-length	Minimum feature length to extract [default: 120]
  --pan-opt	additional arguments to pass to pangenome_contruction	
  --pan-off	don't run pangenome tool [assumes PIRATE has been previously
   		run and resulting files are present in output folder]
@@ -68,7 +67,6 @@ my $steps = '';
 my $features = "CDS";
 my $pan_options = "";
 my $nucleotide = 0;
-my $min_length = 120;
 
 my $para_align = 0;
 my $para_off = 0;
@@ -97,7 +95,6 @@ GetOptions(
 	'features=s' => \$features,
 	'k|pan-opt|p=s' => \$pan_options,
 	'nucl' => \$nucleotide,
-	'min-length=i' => \$min_length,
 
 	'classify-off' => \$classify_off,
 	'para-off' => \$para_off,
@@ -293,7 +290,7 @@ if ( $pan_off == 0 ){
 	my $e_args = join(" ", @extract_args); 
 
 	# extract sequences.
-	`cat $pirate_dir/genome_list.txt | parallel -k -j $threads \"perl $script_path/extract_feature_sequences.pl -t $min_length -s {} -d $pirate_dir -o $pirate_dir/genome_multifastas/{}.fasta $e_args >> $pirate_dir/gff_parser_log.txt 2>> $pirate_dir/gff_parser_log.txt\"`;
+	`cat $pirate_dir/genome_list.txt | parallel -k -j $threads \"perl $script_path/extract_feature_sequences.pl -s {} -d $pirate_dir -o $pirate_dir/genome_multifastas/{}.fasta $e_args >> $pirate_dir/gff_parser_log.txt 2>> $pirate_dir/gff_parser_log.txt\"`;
 	die " - ERROR: extract_feature_sequences.pl failed\n" if $?;
 	
 	my $panseq_file = "$pirate_dir/pan_sequences.fasta";
