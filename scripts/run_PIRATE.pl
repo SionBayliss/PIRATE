@@ -48,6 +48,7 @@ my $script_path = abs_path($FindBin::RealBin);
  -z		retain intermediate files [0 = none, 1 = retain pangenome 
  		files (default - re-run using --pan-off), 2 = all]  
  -c|--check	check installation and run on example files
+ --check-n	check installation and run on example files using --nucl
  -h|--help 	usage information
  
 =cut

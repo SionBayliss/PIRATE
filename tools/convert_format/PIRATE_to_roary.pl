@@ -11,10 +11,10 @@ use File::Basename;
 
 =head1  SYNOPSIS
 
- convert_to_roary.pl -i /path/to/PIRATE.*.tsv/ -o /path/to/output_file.tsv
+ convert_to_roary.pl -i /path/to/PIRATE.*.tsv -o /path/to/output_file.tsv
 
  Input/Output:
- -i|--input		input PIRATE directory [required]
+ -i|--input		input PIRATE file [required]
  -o|--output		output file [required]	
 
  -h|--help		usage information
