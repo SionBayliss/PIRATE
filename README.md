@@ -302,7 +302,7 @@ Recreate gene alignments and allow filtering for genomes, alleles or genes of in
 subset_alignments.pl -i /path/to/PIRATE.gene_families.tab[PIRATE.unique_alleles.tsv] -f /path/to/PIRATE/feature_sequences/ -o ./path/to/output_directory/
 ```
 #### identify representative sequences for gene families/alleles
-Identify the representaive sequence for each cluster in a PIRATE.*.tsv file. The file can be found at PIRATE/scripts/representative_sequences.pl. Creates nucleotide and amino acid multifasta files by default. Can be thresholded on minimum proportion of isolates (-t), maximum proportion of isolates (-m) or gene dosage (-d). Modify the input PIRATE file if you wish representative sequence for a specific set of genes.
+Identify the representative sequence for each cluster in a PIRATE.*.tsv file. The file can be found at PIRATE/scripts/representative_sequences.pl. Creates nucleotide and amino acid multifasta files by default. Can be thresholded on minimum proportion of isolates (-t), maximum proportion of isolates (-m) or gene dosage (-d). Modify the input PIRATE file if you wish representative sequence for a specific set of genes.
 ```
 select_representative -i /path/to/PIRATE.*.tsv -g /path/to/modified_gffs/ -o /path/to/output_file_root
 ```
