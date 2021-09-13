@@ -29,7 +29,7 @@ my $script_path = abs_path($FindBin::RealBin);
  --pan-opt	additional arguments to pass to pangenome_contruction	
  --pan-off	don't run pangenome tool [assumes PIRATE has been previously
   		run and resulting files are present in output folder]
- --min-len  minimum lengt for feature extraction [default: 120]
+ --min-len  	minimum length for feature extraction [default: 120]
 
  Paralog classification:
  --para-off	switch off paralog identification [default: on]
