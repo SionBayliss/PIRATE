@@ -212,6 +212,7 @@ my $panargs = join(" ", @pargs);
 my $genome2loci = "$pirate_dir/genome2loci.tab";
 my $it_dir = "$pirate_dir/pangenome_iterations";
 my $gff_dir = "$pirate_dir/modified_gffs";
+my @input_gffs = (<$input_dir/*.gff>);
 
 # only perform pre-processing if constructing original pangenome.
 if ( $pan_off == 0 ){
@@ -228,7 +229,10 @@ if ( $pan_off == 0 ){
 	# clear existing gffs
 	unlink glob "$gff_dir/*.gff";
 	`echo -n "" > $pirate_dir/gff_parser_log.txt`;
-	`ls $input_dir/*.gff | parallel -j $threads \"perl $script_path/parse_GFF.pl {} $gff_dir >> $pirate_dir/gff_parser_log.txt 2>> $pirate_dir/gff_parser_log.txt\"`;
+
+	while ( my @chunk = splice @input_gffs, 0, $threads ) {
+		`parallel -j $threads \"perl $script_path/parse_GFF.pl {} $gff_dir >> $pirate_dir/gff_parser_log.txt 2>> $pirate_dir/gff_parser_log.txt\" ::: @chunk`;
+	}
 
 	# check number of successfully standardised gff files
 	opendir(DIR, $gff_dir);
