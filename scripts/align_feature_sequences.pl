@@ -42,6 +42,7 @@ die "Dependencies missing.\n" if $dep_err == 1;
  -d|--dosage		upper threshold of dosage to exclude from alignment 
  			[default: off]
  -n|--nucleotide 	align nucleotide sequence [default: off]
+ -a|--align-off		switch alignment off [default: off]
  -q|--quiet		verbose off [default: on]
  -h|--help		usage information
 
@@ -60,6 +61,8 @@ my $threshold = 0;
 my $max_threshold = 100;
 my $dosage_threshold = 0;
 
+my $no_align = 0;
+
 my $input_file = '';
 my $gff_dir = '';
 my $output_dir = '';
@@ -76,6 +79,7 @@ GetOptions(
 	'max-threshold=f' => \$max_threshold,
 	'dosage=f'	=> \$dosage_threshold,
 	'nucleotide' => \$nucleotide,
+	'align-off' => \$no_align,
 	
 ) or pod2usage(1);
 pod2usage(1) if $help;
@@ -386,6 +390,12 @@ for my $genome ( @genomes ){
 # Check all sequenced have been extracted.
 for my $l_check ( sort keys %loci_group ){
 	die " - ERROR: No sequence found for $l_check.\n" unless $stored_loci {$l_check};
+}
+
+# [optional] exit prior to alignment using MAFFT - output is unaligned sequences
+if ( $no_align == 1){
+	print " - no alignment requested. Output files contain unaligned feature sequence.\n";
+	exit;
 }
 
 # Align aa/nucleotide sequence using mafft in parallel - back-translate if amino acid sequence.
