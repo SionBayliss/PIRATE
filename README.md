@@ -324,6 +324,6 @@ Convert to a binary presence/absence table for each allele/gene_family. Allows f
 PIRATE_to_Rtab.pl -i /path/to/PIRATE.*.tsv/ -o /path/to/output_file.tsv
 
 # paralog presence-absence
-PIRATE_to_Rtab.pl -i /path/to/PIRATE.*.tsv/ -o /path/to/output_file.tsv
+paralogs_to_Rtab.pl -i /path/to/PIRATE.*.tsv/ -o /path/to/output_file.tsv
 ```
 
