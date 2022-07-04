@@ -4,7 +4,14 @@
 
 use strict;
 use warnings;
-use Bio::Perl;
+
+# bioperl <1.72
+#use Bio::Perl;
+
+# bioperl >1.72
+use Bio::Seq;
+use Bio::SeqIO;
+
 use Getopt::Long qw(GetOptions :config no_ignore_case);
 use Pod::Usage;
 
@@ -166,7 +173,14 @@ while(<COORDS>){
 		
 			# revcomp if necessary.
 			if( $strand eq "Reverse" ){
-				$seq = reverse_complement($seq)->seq();
+			
+				# bioperl <1.72
+				#$seq = reverse_complement($seq)->seq();
+				
+				# bioperl >1.72
+				my $seqobj = Bio::Seq->new(-seq => $seq);
+				$seq = $seqobj->revcom()->seq();
+
 			}
 		
 			# check for errors
@@ -207,12 +221,17 @@ while(<COORDS>){
 			}
 		
 			if ( ($include == 1) || ( $check == 1 ) ){
-		
+			
 				# optionally translate to amino acid sequence.
 				if( $nuc == 0 ){
 			
-					$seq = translate($seq)->seq();
-				
+					# bioperl <1.72
+					#$seq = translate($seq)->seq(); 
+					
+					# bioperl >1.72
+					my $seqobj = Bio::Seq->new(-seq => $seq);
+					$seq = $seqobj->translate()->seq();
+					
 					# check for stop codons in middle of sequence
 					my $stop_count  = () = $seq =~ /\*/g;
 				
