@@ -10,7 +10,7 @@ use File::Temp qw/ tempdir /;
 use FindBin;
 
 # wrapper for run_PIRATE.pl - allows for verbose on/off
-my $version_details = "1.0.4";
+my $version_details = "1.0.5";
 
 # path to executing script
 my $script_path = abs_path("$FindBin::RealBin/../scripts"); 
